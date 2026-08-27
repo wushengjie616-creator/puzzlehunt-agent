@@ -1,0 +1,35 @@
+{
+  "session_id": "aa6868814f2643bd9c68fe85e284be4d",
+  "initial_state": {
+    "puzzle": {
+      "title": "雨后换乘",
+      "flavor_text": "每座站台混入了一件不属于另外三件同类事物的行李。先找出每站的异类及其标签，再根据换乘记录恢复唯一线路。",
+      "content": "| 站台 | 行李 | 异类背面的标签 |\n|---|---|---|\n| K | copper, iron, silver, willow | O |\n| Q | square, triangle, circle, Tuesday | P |\n| M | violin, cello, harp, pepper | C |\n| R | Paris, Lima, Cairo, helium | S |\n| B | robin, eagle, finch, salmon | M |\n| T | running, cycling, swimming, marble | S |\n| H | apple, pear, peach, beet | A |\n\n换乘记录：\n- R 在 H 之后、T 之前。\n- Q 紧跟 B。\n- K 紧跟 M。\n- H 紧跟 Q。\n- T 是终点。\n- B 紧跟 K。",
+      "notes": null
+    },
+    "artifacts": {},
+    "required_artifacts": [],
+    "missing_artifacts": [],
+    "status": "READY",
+    "stage": "INTAKE",
+    "revision": 0,
+    "observations": [],
+    "flavor_associations": [],
+    "hypotheses": [],
+    "plan": [],
+    "attempts": [],
+    "evidence": [],
+    "intermediate_answers": [],
+    "extractions": [],
+    "answer_candidates": [],
+    "open_questions": [],
+    "blockers": [],
+    "budget": {
+      "max_calls": 6,
+      "calls_used": 0
+    },
+    "last_node": null,
+    "next_node": "intake",
+    "final_answer": null
+  }
+}

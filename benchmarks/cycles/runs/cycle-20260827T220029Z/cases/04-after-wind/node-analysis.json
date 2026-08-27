@@ -1,0 +1,90 @@
+[
+  {
+    "node": "intake",
+    "expected_activation": true,
+    "activated": false,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  },
+  {
+    "node": "artifact_inventory",
+    "expected_activation": true,
+    "activated": false,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  },
+  {
+    "node": "human_interrupt",
+    "expected_activation": false,
+    "activated": false,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  },
+  {
+    "node": "observe_classify",
+    "expected_activation": true,
+    "activated": false,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  },
+  {
+    "node": "hypothesize_plan",
+    "expected_activation": true,
+    "activated": false,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  },
+  {
+    "node": "tool_dispatch",
+    "expected_activation": true,
+    "activated": false,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  },
+  {
+    "node": "evaluate_evidence",
+    "expected_activation": true,
+    "activated": false,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  },
+  {
+    "node": "verify_answer",
+    "expected_activation": true,
+    "activated": false,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  }
+]

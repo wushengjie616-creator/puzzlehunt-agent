@@ -1,0 +1,128 @@
+[
+  {
+    "node": "intake",
+    "expected_activation": true,
+    "cases_total": 5,
+    "activated_cases": 0,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_count": 0,
+    "usefulness_counts": {
+      "UNASSESSABLE": 5
+    },
+    "issues": [
+      "NOT_ACTIVATED_IN_5_CASES"
+    ]
+  },
+  {
+    "node": "artifact_inventory",
+    "expected_activation": true,
+    "cases_total": 5,
+    "activated_cases": 0,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_count": 0,
+    "usefulness_counts": {
+      "UNASSESSABLE": 5
+    },
+    "issues": [
+      "NOT_ACTIVATED_IN_5_CASES"
+    ]
+  },
+  {
+    "node": "human_interrupt",
+    "expected_activation": false,
+    "cases_total": 5,
+    "activated_cases": 0,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_count": 0,
+    "usefulness_counts": {
+      "UNASSESSABLE": 5
+    },
+    "issues": []
+  },
+  {
+    "node": "observe_classify",
+    "expected_activation": true,
+    "cases_total": 5,
+    "activated_cases": 0,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_count": 0,
+    "usefulness_counts": {
+      "UNASSESSABLE": 5
+    },
+    "issues": [
+      "NOT_ACTIVATED_IN_5_CASES"
+    ]
+  },
+  {
+    "node": "hypothesize_plan",
+    "expected_activation": true,
+    "cases_total": 5,
+    "activated_cases": 0,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_count": 0,
+    "usefulness_counts": {
+      "UNASSESSABLE": 5
+    },
+    "issues": [
+      "NOT_ACTIVATED_IN_5_CASES"
+    ]
+  },
+  {
+    "node": "tool_dispatch",
+    "expected_activation": true,
+    "cases_total": 5,
+    "activated_cases": 0,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_count": 0,
+    "usefulness_counts": {
+      "UNASSESSABLE": 5
+    },
+    "issues": [
+      "NOT_ACTIVATED_IN_5_CASES"
+    ]
+  },
+  {
+    "node": "evaluate_evidence",
+    "expected_activation": true,
+    "cases_total": 5,
+    "activated_cases": 0,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_count": 0,
+    "usefulness_counts": {
+      "UNASSESSABLE": 5
+    },
+    "issues": [
+      "NOT_ACTIVATED_IN_5_CASES"
+    ]
+  },
+  {
+    "node": "verify_answer",
+    "expected_activation": true,
+    "cases_total": 5,
+    "activated_cases": 0,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_count": 0,
+    "usefulness_counts": {
+      "UNASSESSABLE": 5
+    },
+    "issues": [
+      "NOT_ACTIVATED_IN_5_CASES"
+    ]
+  }
+]

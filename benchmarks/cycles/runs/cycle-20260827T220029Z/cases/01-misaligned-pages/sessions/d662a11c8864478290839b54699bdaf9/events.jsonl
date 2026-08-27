@@ -1,0 +1,4 @@
+{"at":"2026-08-27T22:01:05.709074+00:00","type":"session_created","details":{"max_calls":6}}
+{"at":"2026-08-27T22:01:05.785237+00:00","type":"session_step","details":{"status":"RUNNING","stage":"ARTIFACT_INVENTORY","calls_used":0}}
+{"at":"2026-08-27T22:01:05.822239+00:00","type":"session_step","details":{"status":"RUNNING","stage":"OBSERVE_CLASSIFY","calls_used":0}}
+{"at":"2026-08-27T22:01:33.615938+00:00","type":"session_step","details":{"status":"RUNNING","stage":"HYPOTHESIZE_PLAN","calls_used":1}}

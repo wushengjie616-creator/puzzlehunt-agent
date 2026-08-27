@@ -1,0 +1,238 @@
+{
+  "schema_version": 1,
+  "cycle_id": "cycle-20260827T220029Z",
+  "scheduled_at": "2026-08-28T06:00:29+08:00",
+  "started_at": "2026-08-27T22:01:03.575+00:00",
+  "finished_at": "2026-08-27T22:02:24.528+00:00",
+  "git_commit": "e440c3303518b3c59d018821426e876fd4477c38",
+  "dirty_worktree_at_start": false,
+  "framework": {
+    "prompt_hash": "a0503c77e9caf78fba47358d5f3215f94db501a1c5ed43cc62377dd76f94a501",
+    "tool_registry_hash": "a7f26b282e37438506b05bf1775495c0ce6c55972a9448f6ab1dc4f0002592ee",
+    "dependency_hash": "f0341617d6233d4f14e8cd29e241e03cc2962691f1c6e6c7ef95343a6265e106"
+  },
+  "provider": {
+    "name": "deepseek",
+    "model": "deepseek-v4-pro",
+    "max_calls": 6
+  },
+  "suite": "v1",
+  "timeout_seconds": 3600.0,
+  "cases": [
+    {
+      "case_id": "01-misaligned-pages",
+      "started_at": "2026-08-27T22:01:03.638+00:00",
+      "deadline_at": "2026-08-27T23:01:03.638+00:00",
+      "final_answer_frozen_at": null,
+      "status": "ERROR",
+      "failure_class": "WORKER_ERROR",
+      "timeout": false,
+      "duration_ms": 80890,
+      "normalized_answer": null,
+      "correct": false,
+      "rubric_score": 0.0,
+      "llm_calls": 0,
+      "node_report_path": "cases/01-misaligned-pages/node-analysis.json",
+      "trace_path": "cases/01-misaligned-pages/worker-result.json"
+    },
+    {
+      "case_id": "02-rain-transfer",
+      "started_at": "2026-08-27T22:01:03.638+00:00",
+      "deadline_at": "2026-08-27T23:01:03.638+00:00",
+      "final_answer_frozen_at": null,
+      "status": "ERROR",
+      "failure_class": "WORKER_ERROR",
+      "timeout": false,
+      "duration_ms": 56281,
+      "normalized_answer": null,
+      "correct": false,
+      "rubric_score": 0.0,
+      "llm_calls": 0,
+      "node_report_path": "cases/02-rain-transfer/node-analysis.json",
+      "trace_path": "cases/02-rain-transfer/worker-result.json"
+    },
+    {
+      "case_id": "03-rework-order",
+      "started_at": "2026-08-27T22:01:03.638+00:00",
+      "deadline_at": "2026-08-27T23:01:03.638+00:00",
+      "final_answer_frozen_at": null,
+      "status": "ERROR",
+      "failure_class": "WORKER_ERROR",
+      "timeout": false,
+      "duration_ms": 52453,
+      "normalized_answer": null,
+      "correct": false,
+      "rubric_score": 0.0,
+      "llm_calls": 0,
+      "node_report_path": "cases/03-rework-order/node-analysis.json",
+      "trace_path": "cases/03-rework-order/worker-result.json"
+    },
+    {
+      "case_id": "04-after-wind",
+      "started_at": "2026-08-27T22:01:03.638+00:00",
+      "deadline_at": "2026-08-27T23:01:03.638+00:00",
+      "final_answer_frozen_at": null,
+      "status": "ERROR",
+      "failure_class": "WORKER_ERROR",
+      "timeout": false,
+      "duration_ms": 57047,
+      "normalized_answer": null,
+      "correct": false,
+      "rubric_score": 0.0,
+      "llm_calls": 0,
+      "node_report_path": "cases/04-after-wind/node-analysis.json",
+      "trace_path": "cases/04-after-wind/worker-result.json"
+    },
+    {
+      "case_id": "05-sealed-packets",
+      "started_at": "2026-08-27T22:01:03.638+00:00",
+      "deadline_at": "2026-08-27T23:01:03.638+00:00",
+      "final_answer_frozen_at": null,
+      "status": "ERROR",
+      "failure_class": "WORKER_ERROR",
+      "timeout": false,
+      "duration_ms": 52468,
+      "normalized_answer": null,
+      "correct": false,
+      "rubric_score": 0.0,
+      "llm_calls": 0,
+      "node_report_path": "cases/05-sealed-packets/node-analysis.json",
+      "trace_path": "cases/05-sealed-packets/worker-result.json"
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "correct": 0,
+    "wrong": 0,
+    "timeout": 0,
+    "error": 5
+  },
+  "node_summary": [
+    {
+      "node": "intake",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 0,
+      "activation_count": 0,
+      "wall_time_ms": 0,
+      "written_fields": [],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 5
+      },
+      "issues": [
+        "NOT_ACTIVATED_IN_5_CASES"
+      ]
+    },
+    {
+      "node": "artifact_inventory",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 0,
+      "activation_count": 0,
+      "wall_time_ms": 0,
+      "written_fields": [],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 5
+      },
+      "issues": [
+        "NOT_ACTIVATED_IN_5_CASES"
+      ]
+    },
+    {
+      "node": "human_interrupt",
+      "expected_activation": false,
+      "cases_total": 5,
+      "activated_cases": 0,
+      "activation_count": 0,
+      "wall_time_ms": 0,
+      "written_fields": [],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 5
+      },
+      "issues": []
+    },
+    {
+      "node": "observe_classify",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 0,
+      "activation_count": 0,
+      "wall_time_ms": 0,
+      "written_fields": [],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 5
+      },
+      "issues": [
+        "NOT_ACTIVATED_IN_5_CASES"
+      ]
+    },
+    {
+      "node": "hypothesize_plan",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 0,
+      "activation_count": 0,
+      "wall_time_ms": 0,
+      "written_fields": [],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 5
+      },
+      "issues": [
+        "NOT_ACTIVATED_IN_5_CASES"
+      ]
+    },
+    {
+      "node": "tool_dispatch",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 0,
+      "activation_count": 0,
+      "wall_time_ms": 0,
+      "written_fields": [],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 5
+      },
+      "issues": [
+        "NOT_ACTIVATED_IN_5_CASES"
+      ]
+    },
+    {
+      "node": "evaluate_evidence",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 0,
+      "activation_count": 0,
+      "wall_time_ms": 0,
+      "written_fields": [],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 5
+      },
+      "issues": [
+        "NOT_ACTIVATED_IN_5_CASES"
+      ]
+    },
+    {
+      "node": "verify_answer",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 0,
+      "activation_count": 0,
+      "wall_time_ms": 0,
+      "written_fields": [],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 5
+      },
+      "issues": [
+        "NOT_ACTIVATED_IN_5_CASES"
+      ]
+    }
+  ]
+}
