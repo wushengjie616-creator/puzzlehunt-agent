@@ -16,8 +16,12 @@ from puzzle_agent.tool_registry import (
     interleave_sequences,
     phone_keypad_decode,
     playfair_codec,
+    decode_token_morse,
+    palindrome_mismatch,
     repair_mojibake,
     read_grid_path,
+    solution_position_analysis,
+    unicode_inspect,
 )
 
 
@@ -130,6 +134,33 @@ class DeterministicPuzzleToolTests(unittest.TestCase):
             braille_decode([[7]])
         with self.assertRaisesRegex(ValueError, "operation"):
             playfair_codec("AB", keyword="KEY", operation="guess")
+
+    def test_third_wave_anomaly_and_carrier_tools_known_vectors(self):
+        morse = decode_token_morse(
+            [["short", "long"], ["long", "short", "short", "short"]],
+            dot_token="short",
+            dash_token="long",
+        )
+        self.assertEqual(morse["output"], "AB")
+        comparison = solution_position_analysis(["ABC", "ADC"])
+        self.assertEqual(comparison["invariant_positions"], [
+            {"position": 1, "value": "A"}, {"position": 3, "value": "C"},
+        ])
+        self.assertEqual(comparison["varying_positions"], [
+            {"position": 2, "values": ["B", "D"]},
+        ])
+        mismatch = palindrome_mismatch("ABXCA")
+        self.assertEqual(mismatch["output"], "BC")
+        inspected = unicode_inspect("(（")
+        self.assertEqual([item["codepoint"] for item in inspected["output"]], ["U+0028", "U+FF08"])
+
+    def test_third_wave_tools_reject_ambiguous_or_unbounded_inputs(self):
+        with self.assertRaisesRegex(ValueError, "distinct"):
+            decode_token_morse([["x"]], dot_token="x", dash_token="x")
+        with self.assertRaisesRegex(ValueError, "equal length"):
+            solution_position_analysis(["AB", "A"])
+        with self.assertRaisesRegex(ValueError, "bounded"):
+            unicode_inspect("x" * 10001)
 
 
 if __name__ == "__main__":

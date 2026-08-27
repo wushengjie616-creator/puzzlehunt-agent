@@ -96,9 +96,9 @@ convention / coordinate_system / normalization
 
 ## 6. 当前工具 backlog
 
-已进入 ToolRegistry：二态样式转 bit、严格 mojibake 修复、Playfair、Braille、九键、字符串公共符号、网格变换，以及基础 Caesar/A1Z26/interleave/有限顺序约束。
+已进入 ToolRegistry：二态样式转 bit、严格 mojibake 修复、Playfair、Braille、九键、自定义 token Morse、字符串公共符号、多解逐位差异、回文错位、Unicode 码位检查、网格变换，以及基础 Caesar/A1Z26/interleave/有限顺序约束。
 
-下一批优先候选：自定义 token Morse、旗语、猪圈规范 token、置换、吸收马尔可夫、扫雷解集差异、拉丁方唯一性、拼音韵母/声调比较、HTML/Unicode 括号 token 化。
+下一批优先候选：旗语、猪圈规范 token、置换、吸收马尔可夫、扫雷全解枚举、拉丁方唯一性、拼音韵母/声调比较、HTML 括号语法树。
 
 暂不工具化：开放式文化联想、任意中文字谜、无限词典爆破、未限定纸笔 solver、视觉相似度猜密码。它们缺少可防误报的稳定契约。
 

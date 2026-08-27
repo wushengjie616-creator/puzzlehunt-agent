@@ -100,6 +100,8 @@ INTAKE
 | `decode_bit_patterns` / `repair_mojibake` | 位序显式；编码链必须 allowlist + strict round trip |
 | `common_symbol_intersection` | 共有符号及各字符串位置，可要求唯一 |
 | `phone_keypad_decode` / `braille_decode` / `playfair_codec` | 固定约定的常见密码，非法或歧义输入不猜 |
+| `decode_token_morse` / `solution_position_analysis` | 显式点划 token；比较多解的逐位不变量与差异，不只返回第一个解 |
+| `palindrome_mismatch` / `unicode_inspect` | 回文镜像错位载体；保留易混 Unicode 字符的码位、名称和类别 |
 
 每次调用用 tool+arguments fingerprint 去重。未知工具或参数错误形成 failed attempt，不进入成功 evidence。
 

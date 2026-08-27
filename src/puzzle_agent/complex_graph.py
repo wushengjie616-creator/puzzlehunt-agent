@@ -265,6 +265,7 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
                 "interleave_sequences", "grid_trace", "decode_bit_patterns",
                 "repair_mojibake", "common_symbol_intersection", "grid_transform",
                 "phone_keypad_decode", "braille_decode", "playfair_codec",
+                "decode_token_morse", "solution_position_analysis", "palindrome_mismatch",
             }:
                 extractions.append({
                     "tool": tool,

@@ -4,6 +4,9 @@ from collections import Counter
 from dataclasses import dataclass
 from itertools import permutations
 from typing import Any, Callable
+import unicodedata
+
+from .cipher_workbench import decode_morse
 
 
 def extract_nth(lines: list[str], indices: list[int]) -> str:
@@ -378,6 +381,103 @@ def playfair_codec(
     return {"output": "".join(output), "digraphs": digraphs, "square": square}
 
 
+def decode_token_morse(
+    groups: list[list[str]], *, dot_token: str, dash_token: str
+) -> dict[str, Any]:
+    if not isinstance(dot_token, str) or not isinstance(dash_token, str) or not dot_token or not dash_token:
+        raise ValueError("dot_token and dash_token must be non-empty strings")
+    if dot_token == dash_token:
+        raise ValueError("dot and dash tokens must be distinct")
+    if not isinstance(groups, list) or not groups or len(groups) > 100:
+        raise ValueError("groups must be a bounded non-empty list")
+    patterns: list[str] = []
+    for group in groups:
+        if not isinstance(group, list) or not group or len(group) > 5:
+            raise ValueError("each Morse group must contain 1..5 tokens")
+        pattern: list[str] = []
+        for token in group:
+            if token == dot_token:
+                pattern.append(".")
+            elif token == dash_token:
+                pattern.append("-")
+            else:
+                raise ValueError("Morse group contains an unknown token")
+        patterns.append("".join(pattern))
+    output = decode_morse(" ".join(patterns))
+    if output is None:
+        raise ValueError("token groups do not form valid Morse symbols")
+    return {
+        "output": output,
+        "patterns": patterns,
+        "dot_token": dot_token,
+        "dash_token": dash_token,
+    }
+
+
+def solution_position_analysis(solutions: list[str]) -> dict[str, Any]:
+    if not isinstance(solutions, list) or not 2 <= len(solutions) <= 100 or not all(
+        isinstance(item, str) for item in solutions
+    ):
+        raise ValueError("solutions must contain 2..100 strings")
+    lengths = {len(item) for item in solutions}
+    if len(lengths) != 1:
+        raise ValueError("solutions must have equal length")
+    width = next(iter(lengths))
+    if width > 10_000:
+        raise ValueError("solutions must be bounded")
+    invariant: list[dict[str, Any]] = []
+    varying: list[dict[str, Any]] = []
+    carrier: list[str] = []
+    for index in range(width):
+        values = sorted({item[index] for item in solutions})
+        if len(values) == 1:
+            invariant.append({"position": index + 1, "value": values[0]})
+            carrier.append(values[0])
+        else:
+            varying.append({"position": index + 1, "values": values})
+            carrier.append("?")
+    return {
+        "output": "".join(carrier),
+        "invariant_positions": invariant,
+        "varying_positions": varying,
+        "solution_count": len(solutions),
+    }
+
+
+def palindrome_mismatch(text: str) -> dict[str, Any]:
+    if not isinstance(text, str) or len(text) > 100_000:
+        raise ValueError("text must be a bounded string")
+    mismatches: list[dict[str, Any]] = []
+    positions: set[int] = set()
+    for left in range(len(text) // 2):
+        right = len(text) - left - 1
+        if text[left] != text[right]:
+            mismatches.append({
+                "left_position": left + 1,
+                "left": text[left],
+                "right_position": right + 1,
+                "right": text[right],
+            })
+            positions.update((left, right))
+    return {
+        "output": "".join(text[index] for index in sorted(positions)),
+        "mismatches": mismatches,
+        "is_palindrome": not mismatches,
+    }
+
+
+def unicode_inspect(text: str) -> dict[str, Any]:
+    if not isinstance(text, str) or len(text) > 10_000:
+        raise ValueError("text must be a bounded string")
+    return {"output": [{
+        "position": index + 1,
+        "character": character,
+        "codepoint": f"U+{ord(character):04X}",
+        "name": unicodedata.name(character, "UNKNOWN"),
+        "category": unicodedata.category(character),
+    } for index, character in enumerate(text)]}
+
+
 @dataclass(frozen=True)
 class ToolSpec:
     name: str
@@ -405,6 +505,10 @@ class ToolRegistry:
                 ToolSpec("phone_keypad_decode", phone_keypad_decode),
                 ToolSpec("braille_decode", braille_decode),
                 ToolSpec("playfair_codec", playfair_codec),
+                ToolSpec("decode_token_morse", decode_token_morse),
+                ToolSpec("solution_position_analysis", solution_position_analysis),
+                ToolSpec("palindrome_mismatch", palindrome_mismatch),
+                ToolSpec("unicode_inspect", unicode_inspect),
             )
         }
 
