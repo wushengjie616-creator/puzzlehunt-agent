@@ -53,6 +53,7 @@ related_commits: []
 - 官方文档复核确认 Chat Completions 当前模型 ID 为 `deepseek-v4-pro`/`deepseek-v4-flash`，现配置的 `deepseek-v4-pro` 有效。周期 worker 的单次 HTTP timeout 调为 600 秒；四阶段最坏 2400 秒仍受父进程 3600 秒硬期限约束。
 - 使用 `.env.local` 认证调用官方只读 `/models` 健康检查：认证成功、目标 `deepseek-v4-pro` 在账号可用模型集合中；未输出 key，也未发起计费 completion。
 - 证据驱动 replan RED/GREEN：先证明 evaluate 后只能 verify；加入 `decision=verify|replan`、三调用预算保留与 conditional edge 后，最长阶段序列为 observe→plan→evaluate→replan→evaluate→verify（6 calls）。并修复跨轮 tool/assessment evidence ID 重复，focused 5/5 GREEN。
+- 节点总报告 RED/GREEN：先证明每题虽有报告但缺少 cycle aggregate；随后新增覆盖全部 8 节点的 `node-summary.json` 与 analysis Markdown 表，含跨题激活、耗时、作用标签和 issue，offline cycle 行为测试转绿。
 - DeepSeek scheduler 已热重启并加载 hard gate：runtime PID `48476`，原锚点保持为 2026-08-28 06:00:29 至 2026-08-29 03:00:29（Asia/Hong_Kong）；Git watcher runtime PID `62816`。
 
 ## 后续 todo

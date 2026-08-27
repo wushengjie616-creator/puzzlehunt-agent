@@ -104,6 +104,8 @@ class CycleCaseContractTests(unittest.TestCase):
             )
             run_dir = Path(directory) / "test-cycle"
             manifest = (run_dir / "manifest.json").read_text(encoding="utf-8")
+            analysis = (run_dir / "analysis.md").read_text(encoding="utf-8")
+            node_summary = json.loads((run_dir / "node-summary.json").read_text(encoding="utf-8"))
         self.assertEqual(result["summary"]["total"], 5)
         self.assertEqual(len(result["cases"]), 5)
         for item in result["cases"]:
@@ -112,6 +114,13 @@ class CycleCaseContractTests(unittest.TestCase):
             self.assertIn("final_answer_frozen_at", item)
         self.assertNotIn("oracle", manifest.casefold())
         self.assertNotIn("expected_answer", manifest.casefold())
+        self.assertEqual(len(node_summary), 8)
+        self.assertEqual({item["node"] for item in node_summary}, {
+            "intake", "artifact_inventory", "human_interrupt", "observe_classify",
+            "hypothesize_plan", "tool_dispatch", "evaluate_evidence", "verify_answer",
+        })
+        self.assertIn("Node aggregate", analysis)
+        self.assertIn("verify_answer", analysis)
 
 
 if __name__ == "__main__":

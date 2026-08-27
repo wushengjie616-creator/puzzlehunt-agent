@@ -129,7 +129,7 @@ watcher 每轮先对 allowlisted 工作树内容做 fingerprint，运行完整�
 
 父进程只把 `input.json` 交给 worker；worker 逐节点调用 `SessionManager.step()`，记录公开 state 的字段变化、evidence ID 和 wall time。五个 worker 并发且各自受 monotonic deadline 约束。父进程等待 worker 退出后才读取 oracle，写 `correct/rubric_score`；因此 oracle 不进入 prompt、checkpoint 或 worker trace。
 
-节点报告只依据可观察数据。正确证据链中的写入节点可标 `HELPFUL/ESSENTIAL`；错误答案时保持 `UNASSESSABLE`，避免从失败运行反推虚假的节点因果作用。
+节点报告只依据可观察数据。正确证据链中的写入节点可标 `HELPFUL/ESSENTIAL`；错误答案时保持 `UNASSESSABLE`，避免从失败运行反推虚假的节点因果作用。每轮还生成 `node-summary.json` 和 analysis 中的全节点聚合表，列出跨题激活数、总次数、耗时、写入字段、evidence 数、作用标签计数与未激活/无可观察效果问题。
 
 证据评估默认进入终局验证；若它显式给出 `decision=replan` 且剩余预算至少能容纳“新规划 + 新评估 + 最终验证”三次调用，则回到 `hypothesize_plan`。第二轮能读取上一轮 attempts/evidence，工具和 assessment ID 跨轮次保持唯一。`max_calls=6` 时最长调用路径正好为六次，不形成无限 ReAct loop。
 

@@ -143,6 +143,44 @@ def analyze_node_effects(traces: list[dict[str, Any]], *, correct: bool) -> list
     return result
 
 
+def aggregate_node_effects(reports: list[list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    """Aggregate every declared node without turning correlation into causality."""
+
+    aggregate: list[dict[str, Any]] = []
+    total_cases = len(reports)
+    for node in _GRAPH_NODES:
+        entries = [
+            item for report in reports for item in report if item.get("node") == node
+        ]
+        activated_cases = sum(bool(item.get("activated")) for item in entries)
+        activation_count = sum(int(item.get("activation_count", 0)) for item in entries)
+        written = sorted({field for item in entries for field in item.get("written_fields", [])})
+        evidence = sorted({value for item in entries for value in item.get("new_evidence_ids", [])})
+        usefulness_counts: dict[str, int] = {}
+        for item in entries:
+            label = str(item.get("usefulness", "UNASSESSABLE"))
+            usefulness_counts[label] = usefulness_counts.get(label, 0) + 1
+        issues: list[str] = []
+        expected = node != "human_interrupt"
+        if expected and activated_cases < total_cases:
+            issues.append(f"NOT_ACTIVATED_IN_{total_cases - activated_cases}_CASES")
+        if activated_cases and not written and not evidence:
+            issues.append("NO_OBSERVABLE_STATE_EFFECT")
+        aggregate.append({
+            "node": node,
+            "expected_activation": expected,
+            "cases_total": total_cases,
+            "activated_cases": activated_cases,
+            "activation_count": activation_count,
+            "wall_time_ms": sum(int(item.get("wall_time_ms", 0)) for item in entries),
+            "written_fields": written,
+            "new_evidence_count": len(evidence),
+            "usefulness_counts": usefulness_counts,
+            "issues": issues,
+        })
+    return aggregate
+
+
 def _json_write(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -323,6 +361,7 @@ def run_cycle(
             process_results = list(executor.map(execute, cases))
 
         case_results: list[dict[str, Any]] = []
+        node_reports: list[list[dict[str, Any]]] = []
         for case, process_result in zip(cases, process_results):
             worker = process_result.get("worker_result")
             if worker:
@@ -341,6 +380,7 @@ def run_cycle(
                 normalized_answer = None
                 calls_used = 0
             node_report = analyze_node_effects(trace, correct=correct)
+            node_reports.append(node_report)
             case_output = run_dir / "cases" / case.name
             _json_write(case_output / "node-analysis.json", node_report)
             case_started = datetime.fromtimestamp(
@@ -378,6 +418,7 @@ def run_cycle(
             "timeout": sum(item["status"] == "TIMEOUT" for item in case_results),
             "error": sum(item["status"] == "ERROR" for item in case_results),
         }
+        node_summary = aggregate_node_effects(node_reports)
         manifest = {
             "schema_version": 1,
             "cycle_id": cycle_id,
@@ -396,7 +437,9 @@ def run_cycle(
             "timeout_seconds": timeout_seconds,
             "cases": case_results,
             "summary": summary,
+            "node_summary": node_summary,
         }
+        _json_write(run_dir / "node-summary.json", node_summary)
         _json_write(run_dir / "manifest.json", manifest)
         _write_cycle_analysis(run_dir / "analysis.md", manifest)
         return manifest
@@ -419,6 +462,22 @@ def _write_cycle_analysis(path: Path, manifest: dict[str, Any]) -> None:
         lines.append(
             f"| {item['case_id']} | {item['status']} | {item['duration_ms']} | "
             f"{item['llm_calls']} | {str(item['correct']).lower()} |"
+        )
+    lines.extend([
+        "",
+        "## Node aggregate",
+        "",
+        "| Node | Activated cases | Activations | Time (ms) | Usefulness labels | Issues |",
+        "|---|---:|---:|---:|---|---|",
+    ])
+    for item in manifest.get("node_summary", []):
+        usefulness = ", ".join(
+            f"{name}:{count}" for name, count in sorted(item["usefulness_counts"].items())
+        ) or "none"
+        issues = ", ".join(item["issues"]) or "none"
+        lines.append(
+            f"| {item['node']} | {item['activated_cases']}/{item['cases_total']} | "
+            f"{item['activation_count']} | {item['wall_time_ms']} | {usefulness} | {issues} |"
         )
     lines.extend([
         "",
