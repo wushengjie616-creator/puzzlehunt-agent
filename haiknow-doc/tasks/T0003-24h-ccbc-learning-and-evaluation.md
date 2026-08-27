@@ -48,6 +48,7 @@ related_commits: []
 - 第二梯队完整回归：complex 55/55 GREEN；base 41 passed + 14 capability skips。watcher 自动发布 commit `a96424a`。
 - 全量只读审计：#12/#25/#33/#44/#50 为区域 Meta，#55 为最终 Meta；其余 49 题进入 `source-ledger.json` 与 `nonmeta-manifest.json`。特别固定 `type` 不是 Meta 分类器、题内 meta-style 不等于赛事 Meta。
 - hard runner RED/GREEN：先观察缺少模块；随后 3/3 契约测试通过，覆盖 49 ID 集合、题面/oracle 分离、报告脱敏、缓存清理及重复运行拒绝。官方 #1 JSON 做真实无答案输出探针，转换成功。
+- scheduler 热重启审计发现 stop sentinel 会跨进程残留；新实例取得 exclusive lock 后现在会清除上一进程的 stop request，避免恢复后立即自停。原 `start_at` 与批次状态保持不变。
 - DeepSeek scheduler 已启动：runtime PID `35252`，锚点为 2026-08-28 06:00:29 至 2026-08-29 03:00:29（Asia/Hong_Kong）；Git watcher runtime PID `62816`。
 
 ## 后续 todo

@@ -85,6 +85,9 @@ def run_cycle_scheduler(
         os.close(descriptor)
     except FileExistsError as exc:
         raise RuntimeError("cycle scheduler is already running") from exc
+    # A stop request belongs to the previous process lifetime. The exclusive
+    # lock above proves this is a new scheduler instance.
+    stop.unlink(missing_ok=True)
 
     schedule = build_cycle_schedule(
         start, interval_hours=interval_hours, duration_hours=duration_hours
