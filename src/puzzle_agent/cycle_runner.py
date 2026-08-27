@@ -246,6 +246,8 @@ def run_cycle(
     cycle_id: str | None = None,
     require_clean: bool = True,
     scheduled_at: str | None = None,
+    expected_case_count: int = 5,
+    max_workers: int | None = None,
 ) -> dict[str, Any]:
     """Run all cases concurrently against one frozen Git commit."""
 
@@ -258,8 +260,16 @@ def run_cycle(
     if provider_name not in {"offline", "deepseek"}:
         raise ValueError("provider_name must be offline or deepseek")
     cases = discover_cases(cases_root, suite)
-    if len(cases) != 5 or any(validate_case(case) for case in cases):
-        raise ValueError("cycle suite must contain exactly five valid isolated cases")
+    if expected_case_count < 1:
+        raise ValueError("expected_case_count must be positive")
+    if len(cases) != expected_case_count or any(validate_case(case) for case in cases):
+        raise ValueError(
+            f"cycle suite must contain exactly {expected_case_count} valid isolated cases"
+        )
+    worker_count = max_workers if max_workers is not None else len(cases)
+    if worker_count < 1:
+        raise ValueError("max_workers must be positive")
+    worker_count = min(worker_count, len(cases))
     dirty = bool(_git_output(repository, "status", "--porcelain"))
     if require_clean and dirty:
         raise ValueError("cycle requires a clean frozen Git worktree")
@@ -309,7 +319,7 @@ def run_cycle(
                 timeout_seconds=timeout_seconds,
             )
 
-        with ThreadPoolExecutor(max_workers=len(cases)) as executor:
+        with ThreadPoolExecutor(max_workers=worker_count) as executor:
             process_results = list(executor.map(execute, cases))
 
         case_results: list[dict[str, Any]] = []

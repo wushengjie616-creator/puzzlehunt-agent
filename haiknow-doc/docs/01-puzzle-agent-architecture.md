@@ -115,8 +115,9 @@ INTAKE
 | `tool_registry.py` | 框架中立确定性 puzzle 工具 |
 | `benchmark.py` | runtime input loader、case validator、隔离 evaluator |
 | `automation.py` | allowlist staging、secret gate、稳定快照验证、Git commit/push 与 watcher heartbeat |
-| `cycle_runner.py` | 五题并发 worker、进程树 timeout、step trace、oracle 后置评分和节点报告 |
-| `cycle_scheduler.py` | T+3h…T+24h 可恢复调度、冻结/发布门与 hard gate trigger |
+| `cycle_runner.py` | 有界并发 worker、进程树 timeout、step trace、oracle 后置评分和节点报告 |
+| `cycle_scheduler.py` | T+3h…T+24h 可恢复调度、冻结/发布门与 perfect-score hard gate |
+| `hard_runner.py` | 49 道非-meta官方题的一次性临时转换、限并发执行、脱敏报告与缓存清理 |
 | `providers/deepseek.py` | DeepSeek 官方 Chat Completions 适配器 |
 | `cli.py` | simple、session、benchmark 与 automation CLI |
 
@@ -155,6 +156,8 @@ official puzzle/solution（仅开发者研究）
 ```
 
 validator 递归拒绝 input 中的 `answer/solution/oracle` 字段，并检查答案字面泄漏、官方来源和原创声明。benchmark 输出只报告正确与否，不输出期望答案。
+
+若原创五题在某个正式周期达到 5/5，scheduler 调用一次 `hard_runner`。官方 JSON 只进入 `.puzzle-agent/hard-cache/`，转换器剥离 `answer/solution` 后才生成 worker input；父进程评分结束仅持久化题号、状态、耗时、调用数和错误分类，随后删除临时题面、oracle、checkpoint 与模型答案。`once-result.json` 在网络请求前即写入，因此失败也算一次 attempt，不会静默重试。
 
 ## 10. 当前边界
 

@@ -24,6 +24,8 @@ related_commits: []
 - [x] 实现周期评测 runner、timeout、节点分析与 scheduler。
 - [x] 制作并验证 5 道原创测试题。
 - [x] 汇总首轮 CCBC16 方法论并按证据扩充工具/框架。
+- [x] 审计全部 55 个题目 ID，排除 6 道赛事 Meta，形成 49 题抽象机制账本。
+- [x] 实现 49 题一次性 hard runner：临时文本化、oracle 隔离、限并发、脱敏报告与失败不重试。
 - [ ] 完成周期运行、报告和 24 小时收尾审计。
 
 ## 关键 commit
@@ -43,6 +45,9 @@ related_commits: []
 - 当前 complex fresh GREEN：53/53；base fresh GREEN：53 项成功、14 项按 complex capability gate 跳过；原创 v1 suite 5/5 通过 schema/oracle leak validation。
 - 研究校正：subagent 把经典 Playfair `BMODZB...` 向量错误归给 `MONARCHY` key；实际独立向量使用 `PLAYFAIR EXAMPLE`。测试先失败并暴露错误，未修改算法迎合错误 oracle。
 - 第二梯队工具 GREEN：bit pattern、strict mojibake、common-symbol、grid transform、multitap、Braille、Playfair 共 7 组 known vector 与失败边界通过；graph tool catalog 改为从 registry 动态生成，防新增工具与 prompt 漂移。
+- 第二梯队完整回归：complex 55/55 GREEN；base 41 passed + 14 capability skips。watcher 自动发布 commit `a96424a`。
+- 全量只读审计：#12/#25/#33/#44/#50 为区域 Meta，#55 为最终 Meta；其余 49 题进入 `source-ledger.json` 与 `nonmeta-manifest.json`。特别固定 `type` 不是 Meta 分类器、题内 meta-style 不等于赛事 Meta。
+- hard runner RED/GREEN：先观察缺少模块；随后 3/3 契约测试通过，覆盖 49 ID 集合、题面/oracle 分离、报告脱敏、缓存清理及重复运行拒绝。官方 #1 JSON 做真实无答案输出探针，转换成功。
 - DeepSeek scheduler 已启动：runtime PID `35252`，锚点为 2026-08-28 06:00:29 至 2026-08-29 03:00:29（Asia/Hong_Kong）；Git watcher runtime PID `62816`。
 
 ## 后续 todo

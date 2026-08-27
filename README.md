@@ -181,6 +181,12 @@ CCBC16 只作为离线方法学习来源，不会把官方题面或题解交给 
 
 scheduler 在 T+3h 到 T+24h 共建立 8 个锚点。每批报告写入 `benchmarks/cycles/runs/<cycle-id>/`，包含冻结 commit、逐题耗时/结果和每节点激活、耗时、写入字段与可评估作用。未答对时作用保持 `UNASSESSABLE`，不会把相关性冒充因果贡献。
 
+任一正式批次达到 5/5 后，scheduler 会且只会运行一次 CCBC16 的 49 道非-meta硬测试。原题与 oracle 只在被忽略的临时目录中存在；Git 仅保存脱敏耗时/正确性/错误分类。也可显式调用下列命令，但它会永久消耗“一次”机会并产生大量 API 调用：
+
+```powershell
+& $pa cycle hard-once --provider deepseek --max-workers 5 --timeout 3600
+```
+
 ## Git 自动监视与安全发布
 
 自动发布器只会暂存项目白名单路径；`.env.local`、`.puzzle-agent/` 和未知根文件不会进入 commit。每次发布前会运行完整测试、检查验证期间工作树是否变化、扫描 staged blob 的 token 形态，并在评测锁存在时延后：

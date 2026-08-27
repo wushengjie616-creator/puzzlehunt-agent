@@ -1,29 +1,531 @@
 {
-  "schema_version": 1,
-  "research_scope": "CCBC16 non-meta mechanism study",
-  "copyright_boundary": "URLs and abstract mechanism tags only; no bulk puzzle or solution text",
+  "schema_version": 2,
+  "research_scope": "CCBC16 all non-meta mechanism study",
+  "classification_basis": "Official answer_type and contest dependency topology; rendering type is not a meta classifier.",
+  "excluded_meta_ids": [
+    12,
+    25,
+    33,
+    44,
+    50,
+    55
+  ],
+  "copyright_boundary": "URLs, titles, and abstract mechanism tags only; no bulk puzzle or solution text.",
   "sources": [
-    {"puzzle_id": 1, "title": "一笔画", "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/1", "patterns": ["trajectory reconstruction", "visual artifact"]},
-    {"puzzle_id": 3, "title": "小题大做", "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/3", "patterns": ["surface binary", "bit order"]},
-    {"puzzle_id": 5, "title": "通用机器人", "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/5", "patterns": ["object taxonomy", "letter arithmetic"]},
-    {"puzzle_id": 6, "title": "举旗不定", "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/6", "patterns": ["multiple solutions", "invariant", "semaphore"]},
-    {"puzzle_id": 8, "title": "恶魔斯基", "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/8", "patterns": ["answer as carrier", "custom morse tokens"]},
-    {"puzzle_id": 11, "title": "霓虹七色", "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/11", "patterns": ["flavor association", "external knowledge coverage"]},
-    {"puzzle_id": 13, "title": "浮想联翩", "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/13", "patterns": ["association graph", "missing edge", "path extraction"]},
-    {"puzzle_id": 14, "title": "●■★▲", "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/14", "patterns": ["subpuzzle DAG", "icon consumption", "layered extraction"]},
-    {"puzzle_id": 16, "title": "你想Roll出怎样的比赛", "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/16", "patterns": ["state graph", "absorbing probability"]},
-    {"puzzle_id": 19, "title": "周而复始", "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/19", "patterns": ["physical state", "cycle", "common-symbol invariant"]},
-    {"puzzle_id": 20, "title": "复习资料", "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/20", "patterns": ["generated sequence", "far-index extrapolation", "holdout validation"]},
-    {"puzzle_id": 22, "title": "打卡", "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/22", "patterns": ["program semantics", "historical encoding"]},
-    {"puzzle_id": 23, "title": "高楼大厦", "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/23", "patterns": ["latin square", "projection", "visibility count"]},
-    {"puzzle_id": 27, "title": "烫烫烫", "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/27", "patterns": ["mojibake repair", "bounded codec chain", "missing data"]},
-    {"puzzle_id": 30, "title": "氏毛米页", "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/30", "patterns": ["infer missing clues", "unique solution", "common solution"]},
-    {"puzzle_id": 32, "title": "只剩提取", "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/32", "patterns": ["cipher fingerprint", "heterogeneous extraction"]},
-    {"puzzle_id": 34, "title": "五色方圆", "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/34", "patterns": ["spatial assembly", "edge matching"]},
-    {"puzzle_id": 37, "title": "柏拉图式相爱", "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/37", "patterns": ["polyhedron topology", "opposite faces", "factor extraction"]},
-    {"puzzle_id": 39, "title": "汉字方阵·后半", "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/39", "patterns": ["alternative equivalence", "pinyin final", "tone"]},
-    {"puzzle_id": 41, "title": "福尔摩斯探案集", "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/41", "patterns": ["canonical corpus", "minimal edit delta"]},
-    {"puzzle_id": 47, "title": "2025年度解谜能力测试", "url": "https://ccbc16.cipherpuzzles.com/puzzle/5/47", "patterns": ["mechanism callback", "playfair", "binary", "grid transform"]},
-    {"puzzle_id": 49, "title": "千字谜", "url": "https://ccbc16.cipherpuzzles.com/puzzle/5/49", "patterns": ["keyed sort", "codepoint", "telegraph code"]}
+    {
+      "puzzle_id": 1,
+      "title": "一笔画",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/1",
+      "patterns": [
+        "trajectory reconstruction",
+        "stroke-order checkpoints",
+        "canonical-text callback"
+      ]
+    },
+    {
+      "puzzle_id": 2,
+      "title": "四方谜",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/2",
+      "patterns": [
+        "prior-event callback",
+        "calendar recomputation",
+        "interactive creation gate"
+      ]
+    },
+    {
+      "puzzle_id": 3,
+      "title": "小题大做",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/3",
+      "patterns": [
+        "canonical capitalization",
+        "surface binary",
+        "bit extraction"
+      ]
+    },
+    {
+      "puzzle_id": 4,
+      "title": "五音俱全",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/4",
+      "patterns": [
+        "cultural mapping",
+        "directional fill",
+        "reverse extraction"
+      ]
+    },
+    {
+      "puzzle_id": 5,
+      "title": "通用机器人",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/5",
+      "patterns": [
+        "object taxonomy",
+        "plug-type indexing",
+        "letter arithmetic"
+      ]
+    },
+    {
+      "puzzle_id": 6,
+      "title": "举🚩不定",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/6",
+      "patterns": [
+        "multiple CSP solutions",
+        "solution delta",
+        "ambiguity-as-signal",
+        "semaphore"
+      ]
+    },
+    {
+      "puzzle_id": 7,
+      "title": "数字",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/7",
+      "patterns": [
+        "canonical corpus identification",
+        "normalization contract",
+        "character frequency"
+      ]
+    },
+    {
+      "puzzle_id": 8,
+      "title": "恶魔斯基",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/8",
+      "patterns": [
+        "emoji answer carrier",
+        "visual dot-dash tokens",
+        "morse"
+      ]
+    },
+    {
+      "puzzle_id": 9,
+      "title": "相辅相成",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/9",
+      "patterns": [
+        "idiom association",
+        "interlocking fill",
+        "corner extraction"
+      ]
+    },
+    {
+      "puzzle_id": 10,
+      "title": "当立",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/10",
+      "patterns": [
+        "dropquote",
+        "square-length reshape",
+        "signal-flag glyph"
+      ]
+    },
+    {
+      "puzzle_id": 11,
+      "title": "霓虹七色",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/11",
+      "patterns": [
+        "flavor association",
+        "brand color corpus",
+        "pinyin extraction"
+      ]
+    },
+    {
+      "puzzle_id": 13,
+      "title": "浮想联翩",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/13",
+      "patterns": [
+        "association graph",
+        "intentional missing edges",
+        "fixed-corpus ordering",
+        "geometric path"
+      ]
+    },
+    {
+      "puzzle_id": 14,
+      "title": "●■★▲",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/14",
+      "patterns": [
+        "standalone nested meta-style",
+        "subpuzzle DAG",
+        "layered answer-as-carrier",
+        "icon consumption"
+      ]
+    },
+    {
+      "puzzle_id": 15,
+      "title": "三星Galaxy",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/15",
+      "patterns": [
+        "star-battle CSP",
+        "symmetric regions",
+        "Hangul component recognition"
+      ]
+    },
+    {
+      "puzzle_id": 16,
+      "title": "你想Roll出怎样的比赛",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/16",
+      "patterns": [
+        "interactive state graph",
+        "absorbing Markov chain",
+        "exact probability"
+      ]
+    },
+    {
+      "puzzle_id": 17,
+      "title": "Link It All",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/17",
+      "patterns": [
+        "knowledge corpus",
+        "directed component adjacency",
+        "spatial CSP",
+        "script transliteration"
+      ]
+    },
+    {
+      "puzzle_id": 18,
+      "title": "就是为了这点醋",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/18",
+      "patterns": [
+        "embedded meta matching",
+        "heterogeneous feeders",
+        "component-incidence binary"
+      ]
+    },
+    {
+      "puzzle_id": 19,
+      "title": "周而复始",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/19",
+      "patterns": [
+        "physical state graph",
+        "cyclic word chain",
+        "pairwise unique-symbol invariant"
+      ]
+    },
+    {
+      "puzzle_id": 20,
+      "title": "复习资料",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/20",
+      "patterns": [
+        "generated sequence",
+        "decoder induction",
+        "far-index extrapolation",
+        "holdout validation"
+      ]
+    },
+    {
+      "puzzle_id": 21,
+      "title": "笑点解析",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/21",
+      "patterns": [
+        "cultural-source identification",
+        "indexed answers",
+        "quotation completion"
+      ]
+    },
+    {
+      "puzzle_id": 22,
+      "title": "打卡",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/22",
+      "patterns": [
+        "algorithm identification",
+        "language grouping",
+        "EBCDIC punch-card overlay"
+      ]
+    },
+    {
+      "puzzle_id": 23,
+      "title": "高楼大厦",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/23",
+      "patterns": [
+        "latin-square CSP",
+        "isometric overlap disambiguation",
+        "occluded unit-floor count"
+      ]
+    },
+    {
+      "puzzle_id": 24,
+      "title": "一位参赛者……",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/24",
+      "patterns": [
+        "image counting",
+        "creator corpus lookup",
+        "medical-root matrix",
+        "offset definition"
+      ]
+    },
+    {
+      "puzzle_id": 26,
+      "title": "图寻",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/26",
+      "patterns": [
+        "canonical image search",
+        "image registration",
+        "pinyin indexing",
+        "historical reading direction"
+      ]
+    },
+    {
+      "puzzle_id": 27,
+      "title": "烫烫烫",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/27",
+      "patterns": [
+        "parallel independent codec repair",
+        "partial reconstruction",
+        "cross-subpuzzle constraint"
+      ]
+    },
+    {
+      "puzzle_id": 28,
+      "title": "五彩斑斓的无字天书",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/28",
+      "patterns": [
+        "idiom fill",
+        "color-relation CSP",
+        "constraint propagation"
+      ]
+    },
+    {
+      "puzzle_id": 29,
+      "title": "只说明书",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/29",
+      "patterns": [
+        "inverse puzzle reconstruction",
+        "heterogeneous subpuzzle DAG",
+        "stateful loop",
+        "time-dependent invariant break"
+      ]
+    },
+    {
+      "puzzle_id": 30,
+      "title": "氏毛米页",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/30",
+      "patterns": [
+        "heterogeneous CSP",
+        "missing-clue inference",
+        "multiple completions invariant grid",
+        "Scrabble packing",
+        "visual glyph"
+      ]
+    },
+    {
+      "puzzle_id": 31,
+      "title": "先有鸡还是先有蛋？",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/31",
+      "patterns": [
+        "self-referential constraints",
+        "shared answer grid",
+        "joint equation recovery"
+      ]
+    },
+    {
+      "puzzle_id": 32,
+      "title": "只剩提取",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/32",
+      "patterns": [
+        "infer operation from residue",
+        "three independent rule families",
+        "recursive micro-meta",
+        "cipher fingerprint"
+      ]
+    },
+    {
+      "puzzle_id": 34,
+      "title": "五色方圆",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/34",
+      "patterns": [
+        "guided fragment assembly",
+        "semantic sport recognition",
+        "enumeration fill",
+        "index extraction"
+      ]
+    },
+    {
+      "puzzle_id": 35,
+      "title": "代入演算",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/35",
+      "patterns": [
+        "lambda calculus",
+        "Church numeral reduction",
+        "numeric grouping",
+        "A1Z26"
+      ]
+    },
+    {
+      "puzzle_id": 36,
+      "title": "淡黄又蓬松",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/36",
+      "patterns": [
+        "audio transcription",
+        "multi-rhyme completion",
+        "hidden rhyme extraction"
+      ]
+    },
+    {
+      "puzzle_id": 37,
+      "title": "柏拉图式相爱",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/37",
+      "patterns": [
+        "numeric edge-constraint assembly",
+        "polyhedron topology",
+        "opposite faces",
+        "2-adic ordering"
+      ]
+    },
+    {
+      "puzzle_id": 38,
+      "title": "？？？式相爱",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/38",
+      "patterns": [
+        "star-polyhedron topology",
+        "joint numeric properties",
+        "sorted differences"
+      ]
+    },
+    {
+      "puzzle_id": 39,
+      "title": "汉字方阵·后半",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/39",
+      "patterns": [
+        "dual-fill crossword",
+        "pinyin-final-plus-tone equality",
+        "diagonal phonetic matching"
+      ]
+    },
+    {
+      "puzzle_id": 40,
+      "title": "原来你也是厨神",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/40",
+      "patterns": [
+        "franchise recipe mapping",
+        "character-name indexing",
+        "structured database callback"
+      ]
+    },
+    {
+      "puzzle_id": 41,
+      "title": "福尔摩斯探案集",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/41",
+      "patterns": [
+        "rebus grounding",
+        "canonical corpus",
+        "minimal edit delta",
+        "paired fragment extraction",
+        "ordering ambiguity"
+      ]
+    },
+    {
+      "puzzle_id": 42,
+      "title": "元元元……元谜题",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/42",
+      "patterns": [
+        "recursive internal meta chain",
+        "layer dependency DAG",
+        "mechanism switching",
+        "closure invariant"
+      ]
+    },
+    {
+      "puzzle_id": 43,
+      "title": "Galileo's Escapement Room",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/43",
+      "patterns": [
+        "interactive escape-room state graph",
+        "item prerequisites",
+        "geometry partition",
+        "symbol decoding"
+      ]
+    },
+    {
+      "puzzle_id": 45,
+      "title": "叶子戏",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/5/45",
+      "patterns": [
+        "full-deck rebus inventory",
+        "rank-suit semantics",
+        "analogy transfer",
+        "coverage ledger"
+      ]
+    },
+    {
+      "puzzle_id": 46,
+      "title": "三字谜",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/5/46",
+      "patterns": [
+        "heterogeneous riddle state machine",
+        "self-reference",
+        "loop and termination control"
+      ]
+    },
+    {
+      "puzzle_id": 47,
+      "title": "2025年度解谜能力测试",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/5/47",
+      "patterns": [
+        "heterogeneous micro-puzzle suite",
+        "cross-question dependency DAG",
+        "mechanism callback",
+        "position extraction",
+        "choice-score control"
+      ]
+    },
+    {
+      "puzzle_id": 48,
+      "title": "你说话带括号",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/5/48",
+      "patterns": [
+        "Unicode token distinction",
+        "nested operator parsing",
+        "semantic operator algebra"
+      ]
+    },
+    {
+      "puzzle_id": 49,
+      "title": "千字谜",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/5/49",
+      "patterns": [
+        "canonical corpus segmentation",
+        "heterogeneous column transforms",
+        "hint-cell rule induction",
+        "ordered special-cell extraction"
+      ]
+    },
+    {
+      "puzzle_id": 51,
+      "title": "指南树",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/6/51",
+      "patterns": [
+        "bridges CSP",
+        "fold-map construction",
+        "prior-meta semantic callback",
+        "physical verification"
+      ]
+    },
+    {
+      "puzzle_id": 52,
+      "title": "印刷树",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/6/52",
+      "patterns": [
+        "bounded compound-word mapping",
+        "coordinate pairs",
+        "Polybius extraction"
+      ]
+    },
+    {
+      "puzzle_id": 53,
+      "title": "火药树",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/6/53",
+      "patterns": [
+        "bidirectional word search",
+        "semantic color labeling",
+        "matrix intersection",
+        "unused-letter instruction"
+      ]
+    },
+    {
+      "puzzle_id": 54,
+      "title": "造纸树",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/6/54",
+      "patterns": [
+        "constrained translation",
+        "palindrome alignment",
+        "unpaired-character extraction",
+        "prior-operator callback"
+      ]
+    }
   ]
 }

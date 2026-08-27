@@ -160,14 +160,31 @@ def run_cycle_scheduler(
                 )
                 attempt["summary"] = manifest["summary"]
                 if manifest["summary"]["correct"] == manifest["summary"]["total"]:
-                    hard = repository / "benchmarks" / "cycles" / "hard" / "trigger.json"
-                    if not hard.exists():
-                        hard.parent.mkdir(parents=True, exist_ok=True)
-                        hard.write_text(json.dumps({
-                            "triggered_by": cycle_id,
-                            "git_commit": manifest["git_commit"],
-                            "status": "pending-once-only-hard-run",
-                        }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                    from .hard_runner import run_hard_once
+                    try:
+                        hard = run_hard_once(
+                            repository,
+                            manifest_path=repository / "research/ccbc16/nonmeta-manifest.json",
+                            provider_name=provider_name,
+                            model=model,
+                            max_calls=max_calls,
+                            timeout_seconds=timeout_seconds,
+                            max_workers=5,
+                        )
+                        attempt["hard_suite"] = {
+                            "status": hard["status"],
+                            "summary": hard.get("summary"),
+                        }
+                    except RuntimeError as exc:
+                        if "already been attempted" not in str(exc):
+                            raise
+                        attempt["hard_suite"] = {"status": "ALREADY_ATTEMPTED"}
+                    except Exception as exc:
+                        # The once-only marker is already persisted by the hard runner.
+                        attempt["hard_suite"] = {
+                            "status": "FAILED",
+                            "error_type": type(exc).__name__,
+                        }
             except Exception as exc:
                 attempt["error_type"] = type(exc).__name__
             attempt["finished_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")

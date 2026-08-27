@@ -105,6 +105,16 @@ def _parser() -> argparse.ArgumentParser:
     cycle_run.add_argument("--max-calls", type=int, default=6)
     cycle_run.add_argument("--timeout", type=float, default=3600)
     cycle_run.add_argument("--cycle-id")
+    hard_once = cycle_commands.add_parser("hard-once")
+    hard_once.add_argument("--repository", type=Path, default=Path("."))
+    hard_once.add_argument(
+        "--manifest", type=Path, default=Path("research/ccbc16/nonmeta-manifest.json")
+    )
+    hard_once.add_argument("--provider", choices=("offline", "deepseek"), default="deepseek")
+    hard_once.add_argument("--model", default=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro"))
+    hard_once.add_argument("--max-calls", type=int, default=6)
+    hard_once.add_argument("--timeout", type=float, default=3600)
+    hard_once.add_argument("--max-workers", type=int, default=5)
     for name in ("status", "stop"):
         command = cycle_commands.add_parser(name)
         command.add_argument("--repository", type=Path, default=Path("."))
@@ -132,6 +142,21 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "cycle":
             from .cycle_runner import run_case_worker, run_cycle
+            if args.cycle_command == "hard-once":
+                from .hard_runner import run_hard_once
+                if args.provider == "deepseek" and not os.getenv("DEEPSEEK_API_KEY"):
+                    print("DEEPSEEK_API_KEY is required for hard-once.", file=sys.stderr)
+                    return 2
+                _print_json(run_hard_once(
+                    args.repository,
+                    manifest_path=args.manifest,
+                    provider_name=args.provider,
+                    model=args.model,
+                    max_calls=args.max_calls,
+                    timeout_seconds=args.timeout,
+                    max_workers=args.max_workers,
+                ))
+                return 0
             if args.cycle_command in {"status", "stop", "schedule"}:
                 from datetime import datetime
                 from .cycle_scheduler import (

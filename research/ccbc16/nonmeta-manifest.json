@@ -1,0 +1,310 @@
+{
+  "schema_version": 1,
+  "event": "CCBC16",
+  "classification_basis": "Official answer_type plus contest dependency topology; page rendering type is not a meta classifier.",
+  "excluded_meta_ids": [
+    12,
+    25,
+    33,
+    44,
+    50,
+    55
+  ],
+  "copyright_boundary": "Manifest metadata only. Puzzle surfaces and answers are fetched into ignored transient storage for the once-only run.",
+  "puzzles": [
+    {
+      "puzzle_id": 1,
+      "title": "CCBC16 #1",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/1",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/1.json"
+    },
+    {
+      "puzzle_id": 2,
+      "title": "CCBC16 #2",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/2",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/2.json"
+    },
+    {
+      "puzzle_id": 3,
+      "title": "CCBC16 #3",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/3",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/3.json"
+    },
+    {
+      "puzzle_id": 4,
+      "title": "CCBC16 #4",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/4",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/4.json"
+    },
+    {
+      "puzzle_id": 5,
+      "title": "CCBC16 #5",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/5",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/5.json"
+    },
+    {
+      "puzzle_id": 6,
+      "title": "CCBC16 #6",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/6",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/6.json"
+    },
+    {
+      "puzzle_id": 7,
+      "title": "CCBC16 #7",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/7",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/7.json"
+    },
+    {
+      "puzzle_id": 8,
+      "title": "CCBC16 #8",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/8",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/8.json"
+    },
+    {
+      "puzzle_id": 9,
+      "title": "CCBC16 #9",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/9",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/9.json"
+    },
+    {
+      "puzzle_id": 10,
+      "title": "CCBC16 #10",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/10",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/10.json"
+    },
+    {
+      "puzzle_id": 11,
+      "title": "CCBC16 #11",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/11",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/11.json"
+    },
+    {
+      "puzzle_id": 13,
+      "title": "CCBC16 #13",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/13",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/13.json"
+    },
+    {
+      "puzzle_id": 14,
+      "title": "CCBC16 #14",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/14",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/14.json"
+    },
+    {
+      "puzzle_id": 15,
+      "title": "CCBC16 #15",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/15",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/15.json"
+    },
+    {
+      "puzzle_id": 16,
+      "title": "CCBC16 #16",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/16",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/16.json"
+    },
+    {
+      "puzzle_id": 17,
+      "title": "CCBC16 #17",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/17",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/17.json"
+    },
+    {
+      "puzzle_id": 18,
+      "title": "CCBC16 #18",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/18",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/18.json"
+    },
+    {
+      "puzzle_id": 19,
+      "title": "CCBC16 #19",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/19",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/19.json"
+    },
+    {
+      "puzzle_id": 20,
+      "title": "CCBC16 #20",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/20",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/20.json"
+    },
+    {
+      "puzzle_id": 21,
+      "title": "CCBC16 #21",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/21",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/21.json"
+    },
+    {
+      "puzzle_id": 22,
+      "title": "CCBC16 #22",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/22",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/22.json"
+    },
+    {
+      "puzzle_id": 23,
+      "title": "CCBC16 #23",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/23",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/23.json"
+    },
+    {
+      "puzzle_id": 24,
+      "title": "CCBC16 #24",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/2/24",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/24.json"
+    },
+    {
+      "puzzle_id": 26,
+      "title": "CCBC16 #26",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/26",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/26.json"
+    },
+    {
+      "puzzle_id": 27,
+      "title": "CCBC16 #27",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/27",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/27.json"
+    },
+    {
+      "puzzle_id": 28,
+      "title": "CCBC16 #28",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/28",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/28.json"
+    },
+    {
+      "puzzle_id": 29,
+      "title": "CCBC16 #29",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/29",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/29.json"
+    },
+    {
+      "puzzle_id": 30,
+      "title": "CCBC16 #30",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/30",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/30.json"
+    },
+    {
+      "puzzle_id": 31,
+      "title": "CCBC16 #31",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/31",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/31.json"
+    },
+    {
+      "puzzle_id": 32,
+      "title": "CCBC16 #32",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/3/32",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/32.json"
+    },
+    {
+      "puzzle_id": 34,
+      "title": "CCBC16 #34",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/34",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/34.json"
+    },
+    {
+      "puzzle_id": 35,
+      "title": "CCBC16 #35",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/35",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/35.json"
+    },
+    {
+      "puzzle_id": 36,
+      "title": "CCBC16 #36",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/36",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/36.json"
+    },
+    {
+      "puzzle_id": 37,
+      "title": "CCBC16 #37",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/37",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/37.json"
+    },
+    {
+      "puzzle_id": 38,
+      "title": "CCBC16 #38",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/38",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/38.json"
+    },
+    {
+      "puzzle_id": 39,
+      "title": "CCBC16 #39",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/39",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/39.json"
+    },
+    {
+      "puzzle_id": 40,
+      "title": "CCBC16 #40",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/40",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/40.json"
+    },
+    {
+      "puzzle_id": 41,
+      "title": "CCBC16 #41",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/41",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/41.json"
+    },
+    {
+      "puzzle_id": 42,
+      "title": "CCBC16 #42",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/42",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/42.json"
+    },
+    {
+      "puzzle_id": 43,
+      "title": "CCBC16 #43",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/43",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/43.json"
+    },
+    {
+      "puzzle_id": 45,
+      "title": "CCBC16 #45",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/5/45",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/45.json"
+    },
+    {
+      "puzzle_id": 46,
+      "title": "CCBC16 #46",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/5/46",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/46.json"
+    },
+    {
+      "puzzle_id": 47,
+      "title": "CCBC16 #47",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/5/47",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/47.json"
+    },
+    {
+      "puzzle_id": 48,
+      "title": "CCBC16 #48",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/5/48",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/48.json"
+    },
+    {
+      "puzzle_id": 49,
+      "title": "CCBC16 #49",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/5/49",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/49.json"
+    },
+    {
+      "puzzle_id": 51,
+      "title": "CCBC16 #51",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/6/51",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/51.json"
+    },
+    {
+      "puzzle_id": 52,
+      "title": "CCBC16 #52",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/6/52",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/52.json"
+    },
+    {
+      "puzzle_id": 53,
+      "title": "CCBC16 #53",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/6/53",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/53.json"
+    },
+    {
+      "puzzle_id": 54,
+      "title": "CCBC16 #54",
+      "url": "https://ccbc16.cipherpuzzles.com/puzzle/6/54",
+      "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/54.json"
+    }
+  ]
+}
