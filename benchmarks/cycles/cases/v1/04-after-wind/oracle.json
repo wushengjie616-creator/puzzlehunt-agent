@@ -1,0 +1,4 @@
+{
+  "answer": "ASTRAL",
+  "derivation": ["read six initial direction characters", "trace E S E S E S from @", "collect visited letters"]
+}

@@ -45,22 +45,30 @@ _STAGE_INSTRUCTIONS = {
     "OBSERVE_CLASSIFY": (
         'Output {"observations":[{"id":"...","text":"...","source":"title|flavor_text|content|artifact"}],'
         '"flavor_associations":[{"trigger":"...","association":"...","evidence":"..."}]}. '
-        "Record directly visible facts and anomalies. Do not propose or verify a final answer."
+        "Record directly visible facts, formatting, repetitions, anomalies, missing/conflicting information, "
+        "and every clue channel (title, flavor, order, labels, coordinates). Keep flavor associations as "
+        "testable hypotheses, not facts. Do not propose or verify a final answer."
     ),
     "HYPOTHESIZE_PLAN": (
         'Output {"hypotheses":[{"id":"...","mechanism":"...","confidence":0.0}],'
         '"plan":[{"id":"...","tool":"...","arguments":{},"purpose":"..."}]}. '
-        "Preserve at least two competing, distinguishable hypotheses and choose a low-cost discriminating experiment."
-        " Available deterministic tools: cipher_workbench, extract_nth, anagram_delta, read_grid_path, dependency_order."
+        "Preserve at least two competing, distinguishable hypotheses. Consider whether an intermediate answer "
+        "is still a carrier and whether an inconsistency or multiple solutions are intentional information. "
+        "Choose bounded experiments with explicit arguments. Available deterministic tools: cipher_workbench, "
+        "extract_nth, anagram_delta, read_grid_path, dependency_order, caesar_shift, a1z26_decode, "
+        "interleave_sequences, grid_trace, constrained_order."
     ),
     "EVALUATE_EVIDENCE": (
         'Output {"evidence_assessment":[{"hypothesis_id":"...","effect":"supports|weakens|rejects"}],'
         '"answer_candidates":[{"answer":"...","confidence":"low|medium|high","evidence_ids":["..."]}]}. '
-        "Evaluate new tool or human evidence; explicitly reject failed attempts and do not invent tool results."
+        "Evaluate new tool or human evidence; explicitly reject failed attempts and do not invent tool results. "
+        "Audit clue coverage, unused elements, uniqueness/ambiguity, cross-solution invariants, and whether the "
+        "extraction is reproducible before promoting an answer candidate."
     ),
     "VERIFY_ANSWER": (
         'Output {"answer":"string or null","confidence":"low|medium|high",'
-        '"checks":{"format":true,"evidence":true,"flavor_callback":true}}. '
+        '"checks":{"format":true,"evidence":true,"flavor_callback":true,"clue_coverage":true,'
+        '"all_elements_consumed":true,"independent_derivation":true}}. '
         "Verify a supported candidate against format, clue coverage, title/flavor callback, and meta constraints. "
         "Use null when evidence is insufficient."
     ),
@@ -245,7 +253,10 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
                 "tool": tool,
                 **result,
             })
-            if tool in {"extract_nth", "anagram_delta", "read_grid_path"}:
+            if tool in {
+                "extract_nth", "anagram_delta", "read_grid_path", "a1z26_decode",
+                "interleave_sequences", "grid_trace",
+            }:
                 extractions.append({
                     "tool": tool,
                     "arguments": arguments,
@@ -293,6 +304,16 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         raise ValueError("confidence must be low, medium, or high")
     if not isinstance(checks, dict) or not all(isinstance(value, bool) for value in checks.values()):
         raise ValueError("checks must be an object of booleans")
+    required_checks = {
+        "format",
+        "evidence",
+        "flavor_callback",
+        "clue_coverage",
+        "all_elements_consumed",
+        "independent_derivation",
+    }
+    if not required_checks.issubset(checks):
+        raise ValueError("required verification checks are missing")
     solved = bool(answer) and confidence in {"medium", "high"} and bool(checks) and all(checks.values())
     return {
         "budget": budget,

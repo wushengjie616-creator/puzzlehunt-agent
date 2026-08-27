@@ -134,6 +134,8 @@ complex tool registry 还包括：
 
 CCBC16 只作为离线方法学习来源，不会把官方题面或题解交给 DeepSeek。项目流程是：
 
+当前蒸馏结果见 [TRACE-LIFT 方法论](research/ccbc16/methodology.md)；来源 ledger 只保存官方 URL 与抽象机制标签，不保存批量原文。
+
 ```text
 阅读官方题目/题解
   → 提炼抽象 MechanismGraph
@@ -155,6 +157,25 @@ CCBC16 只作为离线方法学习来源，不会把官方题面或题解交给 
 ```powershell
 & $pa benchmark run --suite blind --provider deepseek --max-calls 6
 ```
+
+## 24 小时周期评测
+
+五道原创题位于 `benchmarks/cycles/cases/v1/`。每批五题使用同一个冻结 commit 并发运行；每题独立进程、3600 秒硬超时，oracle 只在 worker 结束后由父进程读取：
+
+```powershell
+& $pa benchmark validate --root benchmarks/cycles/cases --suite v1
+& $pa cycle run --provider offline --cycle-id local-smoke
+```
+
+启动 24 小时 DeepSeek scheduler（前台 CLI）或查看/停止：
+
+```powershell
+& $pa cycle schedule --start-at "2026-08-28T03:00:29+08:00" --provider deepseek
+& $pa cycle status
+& $pa cycle stop
+```
+
+scheduler 在 T+3h 到 T+24h 共建立 8 个锚点。每批报告写入 `benchmarks/cycles/runs/<cycle-id>/`，包含冻结 commit、逐题耗时/结果和每节点激活、耗时、写入字段与可评估作用。未答对时作用保持 `UNASSESSABLE`，不会把相关性冒充因果贡献。
 
 ## Git 自动监视与安全发布
 
@@ -182,7 +203,7 @@ python -m unittest discover -s tests -v
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-测试完全离线；complex suite 使用 scripted provider 观察阶段顺序、调用预算、checkpoint、interrupt/resume、分叉、工具调度和 oracle 隔离，不会自动进行付费 API 调用。
+测试完全离线；complex suite 使用 scripted provider 观察阶段顺序、调用预算、checkpoint、interrupt/resume、分叉、工具调度、周期超时和 oracle 隔离，不会自动进行付费 API 调用。只有显式启动 `cycle schedule --provider deepseek` 才会进行周期付费请求。
 
 ## 设计记录
 

@@ -48,7 +48,14 @@ class ScriptedStageProvider:
             "VERIFY_ANSWER": {
                 "answer": "HELLO",
                 "confidence": "high",
-                "checks": {"format": True, "evidence": True, "flavor_callback": True},
+                "checks": {
+                    "format": True,
+                    "evidence": True,
+                    "flavor_callback": True,
+                    "clue_coverage": True,
+                    "all_elements_consumed": True,
+                    "independent_derivation": True,
+                },
             },
         }
         return json.dumps(responses[marker])
@@ -105,6 +112,12 @@ class ComplexGraphTests(unittest.TestCase):
         for stage, messages in zip(provider.stages, provider.messages):
             for field in required_fields[stage]:
                 self.assertIn(field, messages[0]["content"])
+        hypothesis_prompt = provider.messages[1][0]["content"]
+        self.assertIn("interleave_sequences", hypothesis_prompt)
+        self.assertIn("constrained_order", hypothesis_prompt)
+        verify_prompt = provider.messages[-1][0]["content"]
+        self.assertIn("all_elements_consumed", verify_prompt)
+        self.assertIn("independent_derivation", verify_prompt)
 
     def test_call_budget_stops_graph_without_overrun(self):
         provider = ScriptedStageProvider()
@@ -136,6 +149,23 @@ class ComplexGraphTests(unittest.TestCase):
         self.assertEqual(extractions[0]["output"], "AR")
         self.assertEqual(extractions[0]["arguments"]["indices"], [1, 2])
         self.assertEqual(extractions[0]["evidence_id"], evidence[0]["id"])
+
+    def test_verify_rejects_missing_coverage_checks(self):
+        class IncompleteVerifyProvider(ScriptedStageProvider):
+            def complete(self, messages):
+                marker = messages[0]["content"].split("PUZZLE_STAGE: ", 1)[1].splitlines()[0]
+                if marker == "VERIFY_ANSWER":
+                    return json.dumps({
+                        "answer": "HELLO",
+                        "confidence": "high",
+                        "checks": {"format": True, "evidence": True},
+                    })
+                return super().complete(messages)
+
+        with self.assertRaisesRegex(ValueError, "required verification checks"):
+            build_puzzle_graph(IncompleteVerifyProvider()).invoke(
+                new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=6)
+            )
 
 
 if __name__ == "__main__":

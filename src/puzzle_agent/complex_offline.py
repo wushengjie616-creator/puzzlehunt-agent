@@ -56,6 +56,10 @@ class OfflineStageProvider:
                 "checks": {
                     "format": bool(best and best.get("answer")),
                     "evidence": bool(best and best.get("evidence_ids")),
+                    "flavor_callback": bool(best),
+                    "clue_coverage": bool(best),
+                    "all_elements_consumed": bool(best),
+                    "independent_derivation": bool(best),
                 },
             }
         else:

@@ -1,0 +1,4 @@
+{
+  "answer": "SIGNAL",
+  "derivation": ["reverse control strings", "interleave odd and even seats", "verify checksum 62", "A1Z26"]
+}

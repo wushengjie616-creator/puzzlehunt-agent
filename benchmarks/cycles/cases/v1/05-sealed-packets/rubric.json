@@ -1,0 +1,3 @@
+{
+  "milestones": ["construct dependency DAG", "recover all six intermediate words", "distinguish execution order from extraction order", "perform bounded indexed extraction"]
+}

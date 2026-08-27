@@ -62,6 +62,15 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["status"], "not-running")
 
+    def test_cycle_scheduler_status_is_available_before_start(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_cli(
+                "cycle", "status", "--repository", directory,
+                cwd=ROOT,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["status"], "not-running")
+
     def test_benchmark_validate_reports_isolated_dev_suite(self):
         result = self.run_cli(
             "benchmark", "validate",

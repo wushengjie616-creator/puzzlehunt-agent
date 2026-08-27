@@ -60,7 +60,7 @@ def _parser() -> argparse.ArgumentParser:
     benchmark_commands = benchmark.add_subparsers(dest="benchmark_command", required=True)
     validate = benchmark_commands.add_parser("validate")
     validate.add_argument("--root", type=Path, default=Path("benchmarks/derived"))
-    validate.add_argument("--suite", choices=("dev", "blind"), default="dev")
+    validate.add_argument("--suite", default="dev")
     benchmark_run = benchmark_commands.add_parser("run")
     benchmark_run.add_argument("--root", type=Path, default=Path("benchmarks/derived"))
     benchmark_run.add_argument("--suite", choices=("dev", "blind"), default="dev")
@@ -86,6 +86,39 @@ def _parser() -> argparse.ArgumentParser:
     watch.add_argument("--validation-timeout", type=int, default=1800)
     watch.add_argument("--max-cycles", type=int)
     watch.add_argument("--no-push", action="store_true")
+
+    cycle = commands.add_parser("cycle", help="Run timed recurring puzzle evaluations")
+    cycle_commands = cycle.add_subparsers(dest="cycle_command", required=True)
+    worker = cycle_commands.add_parser("worker")
+    worker.add_argument("--case-dir", required=True, type=Path)
+    worker.add_argument("--output-dir", required=True, type=Path)
+    worker.add_argument("--provider", choices=("offline", "deepseek"), required=True)
+    worker.add_argument("--model", default=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro"))
+    worker.add_argument("--max-calls", type=int, default=6)
+    cycle_run = cycle_commands.add_parser("run")
+    cycle_run.add_argument("--repository", type=Path, default=Path("."))
+    cycle_run.add_argument("--cases-root", type=Path, default=Path("benchmarks/cycles/cases"))
+    cycle_run.add_argument("--runs-root", type=Path, default=Path("benchmarks/cycles/runs"))
+    cycle_run.add_argument("--suite", default="v1")
+    cycle_run.add_argument("--provider", choices=("offline", "deepseek"), default="deepseek")
+    cycle_run.add_argument("--model", default=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro"))
+    cycle_run.add_argument("--max-calls", type=int, default=6)
+    cycle_run.add_argument("--timeout", type=float, default=3600)
+    cycle_run.add_argument("--cycle-id")
+    for name in ("status", "stop"):
+        command = cycle_commands.add_parser(name)
+        command.add_argument("--repository", type=Path, default=Path("."))
+    schedule = cycle_commands.add_parser("schedule")
+    schedule.add_argument("--repository", type=Path, default=Path("."))
+    schedule.add_argument("--cases-root", type=Path, default=Path("benchmarks/cycles/cases"))
+    schedule.add_argument("--runs-root", type=Path, default=Path("benchmarks/cycles/runs"))
+    schedule.add_argument("--start-at", required=True)
+    schedule.add_argument("--provider", choices=("offline", "deepseek"), default="deepseek")
+    schedule.add_argument("--model", default=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro"))
+    schedule.add_argument("--max-calls", type=int, default=6)
+    schedule.add_argument("--timeout", type=float, default=3600)
+    schedule.add_argument("--interval-hours", type=float, default=3)
+    schedule.add_argument("--duration-hours", type=float, default=24)
     return parser
 
 
@@ -97,6 +130,69 @@ def main(argv: list[str] | None = None) -> int:
     load_env_local()
     args = _parser().parse_args(argv)
     try:
+        if args.command == "cycle":
+            from .cycle_runner import run_case_worker, run_cycle
+            if args.cycle_command in {"status", "stop", "schedule"}:
+                from datetime import datetime
+                from .cycle_scheduler import (
+                    request_scheduler_stop,
+                    run_cycle_scheduler,
+                    scheduler_status,
+                )
+                if args.cycle_command == "status":
+                    _print_json(scheduler_status(args.repository))
+                    return 0
+                if args.cycle_command == "stop":
+                    _print_json(request_scheduler_stop(args.repository))
+                    return 0
+                start = datetime.fromisoformat(args.start_at)
+                _print_json(run_cycle_scheduler(
+                    args.repository,
+                    start=start,
+                    cases_root=args.cases_root,
+                    runs_root=args.runs_root,
+                    provider_name=args.provider,
+                    model=args.model,
+                    max_calls=args.max_calls,
+                    timeout_seconds=args.timeout,
+                    interval_hours=args.interval_hours,
+                    duration_hours=args.duration_hours,
+                ))
+                return 0
+            if args.cycle_command == "worker":
+                if args.provider == "offline":
+                    from .complex_offline import OfflineStageProvider
+                    provider = OfflineStageProvider()
+                else:
+                    api_key = os.getenv("DEEPSEEK_API_KEY")
+                    if not api_key:
+                        print("DEEPSEEK_API_KEY is required for cycle worker.", file=sys.stderr)
+                        return 2
+                    provider = DeepSeekProvider(DeepSeekConfig(
+                        api_key=api_key,
+                        base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+                        model=args.model,
+                    ))
+                _print_json(run_case_worker(
+                    args.case_dir,
+                    args.output_dir,
+                    provider=provider,
+                    max_calls=args.max_calls,
+                ))
+                return 0
+            _print_json(run_cycle(
+                args.repository,
+                cases_root=args.cases_root,
+                runs_root=args.runs_root,
+                suite=args.suite,
+                provider_name=args.provider,
+                model=args.model,
+                max_calls=args.max_calls,
+                timeout_seconds=args.timeout,
+                cycle_id=args.cycle_id,
+            ))
+            return 0
+
         if args.command == "automation":
             from .automation import (
                 publish_once,

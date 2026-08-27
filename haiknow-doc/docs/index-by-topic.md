@@ -10,3 +10,4 @@
 - [T0002 · 多阶段 Agent 实施记录](../tasks/T0002-complex-puzzlehunt-agent.md)
 - [P0003 · 24 小时 CCBC16 学习、框架演进与周期评测](../plans/P0003-24h-ccbc-learning-and-evaluation.md)
 - [T0003 · 24 小时执行记录](../tasks/T0003-24h-ccbc-learning-and-evaluation.md)
+- [TRACE-LIFT · CCBC16 蒸馏方法论](../../research/ccbc16/methodology.md)

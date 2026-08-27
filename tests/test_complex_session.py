@@ -42,7 +42,14 @@ class ScriptedProvider:
             "VERIFY_ANSWER": {
                 "answer": "HELLO",
                 "confidence": "high",
-                "checks": {"format": True, "evidence": True},
+                "checks": {
+                    "format": True,
+                    "evidence": True,
+                    "flavor_callback": True,
+                    "clue_coverage": True,
+                    "all_elements_consumed": True,
+                    "independent_derivation": True,
+                },
             },
         }[stage])
 

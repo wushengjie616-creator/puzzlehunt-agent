@@ -1,0 +1,3 @@
+{
+  "milestones": ["extract directions from line starts", "locate grid origin", "trace without leaving the grid", "use all six directions"]
+}

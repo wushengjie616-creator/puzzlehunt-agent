@@ -109,12 +109,20 @@ INTAKE
 | `tool_registry.py` | 框架中立确定性 puzzle 工具 |
 | `benchmark.py` | runtime input loader、case validator、隔离 evaluator |
 | `automation.py` | allowlist staging、secret gate、稳定快照验证、Git commit/push 与 watcher heartbeat |
+| `cycle_runner.py` | 五题并发 worker、进程树 timeout、step trace、oracle 后置评分和节点报告 |
+| `cycle_scheduler.py` | T+3h…T+24h 可恢复调度、冻结/发布门与 hard gate trigger |
 | `providers/deepseek.py` | DeepSeek 官方 Chat Completions 适配器 |
 | `cli.py` | simple、session、benchmark 与 automation CLI |
 
 ### Git 自动发布边界
 
 watcher 每轮先对 allowlisted 工作树内容做 fingerprint，运行完整测试后再次计算；测试失败或验证期间内容变化均不提交。随后只暂存白名单路径，对 staged blob 做 secret scan，并在 evaluation lock 存在时延期。`.env.local` 和 `.puzzle-agent/` 必须保持 ignored；未知根文件由 owner 明确分类后才可发布。
+
+### 周期评测与节点作用
+
+父进程只把 `input.json` 交给 worker；worker 逐节点调用 `SessionManager.step()`，记录公开 state 的字段变化、evidence ID 和 wall time。五个 worker 并发且各自受 monotonic deadline 约束。父进程等待 worker 退出后才读取 oracle，写 `correct/rubric_score`；因此 oracle 不进入 prompt、checkpoint 或 worker trace。
+
+节点报告只依据可观察数据。正确证据链中的写入节点可标 `HELPFUL/ESSENTIAL`；错误答案时保持 `UNASSESSABLE`，避免从失败运行反推虚假的节点因果作用。
 
 ## 8. 依赖策略
 

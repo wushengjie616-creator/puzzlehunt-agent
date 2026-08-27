@@ -1,0 +1,3 @@
+{
+  "milestones": ["identify per-row Caesar shifts", "recover five words", "extract by row index", "verify all rows are consumed"]
+}
