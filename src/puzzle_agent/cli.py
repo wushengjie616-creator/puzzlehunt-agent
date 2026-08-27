@@ -197,6 +197,10 @@ def main(argv: list[str] | None = None) -> int:
                         api_key=api_key,
                         base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
                         model=args.model,
+                        # Four staged calls must still fit inside the parent worker's
+                        # one-hour deadline; a 60s transport default is too eager for
+                        # high-effort thinking responses.
+                        timeout=600.0,
                     ))
                 _print_json(run_case_worker(
                     args.case_dir,

@@ -38,6 +38,7 @@ class HardRunnerContractTests(unittest.TestCase):
         self.assertNotIn("solution", serialized_input.casefold())
         self.assertIn("风味文本", converted["input"]["flavor_text"])
         self.assertIn("A", converted["input"]["content"])
+        self.assertEqual(converted["input"]["required_artifacts"], ["source-image"])
         self.assertEqual(converted["oracle"]["answer"], "SECRET")
 
     def test_once_only_run_redacts_report_and_removes_transient_source(self):

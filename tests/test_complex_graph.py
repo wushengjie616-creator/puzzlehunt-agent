@@ -82,6 +82,44 @@ class RegistryPlanningProvider(ScriptedStageProvider):
         return super().complete(messages)
 
 
+class ReplanningProvider(ScriptedStageProvider):
+    def __init__(self):
+        super().__init__()
+        self.hypothesis_calls = 0
+        self.evaluation_calls = 0
+
+    def complete(self, messages):
+        marker = messages[0]["content"].split("PUZZLE_STAGE: ", 1)[1].splitlines()[0]
+        if marker == "HYPOTHESIZE_PLAN":
+            self.hypothesis_calls += 1
+            if self.hypothesis_calls == 2:
+                self.stages.append(marker)
+                self.messages.append(messages)
+                return json.dumps({
+                    "hypotheses": [
+                        {"id": "h3", "mechanism": "indexed extraction"},
+                        {"id": "h4", "mechanism": "reverse extraction"},
+                    ],
+                    "plan": [{
+                        "id": "p2",
+                        "tool": "extract_nth",
+                        "arguments": {"lines": ["HELLO"], "indices": [1]},
+                        "purpose": "test a new discriminating operation",
+                    }],
+                })
+        if marker == "EVALUATE_EVIDENCE":
+            self.evaluation_calls += 1
+            if self.evaluation_calls == 1:
+                self.stages.append(marker)
+                self.messages.append(messages)
+                return json.dumps({
+                    "decision": "replan",
+                    "evidence_assessment": [{"hypothesis_id": "h1", "effect": "rejects"}],
+                    "answer_candidates": [],
+                })
+        return super().complete(messages)
+
+
 @unittest.skipUnless(HAS_LANGGRAPH, "complex extra is not installed")
 class ComplexGraphTests(unittest.TestCase):
     def test_graph_uses_ordered_independent_reasoning_calls(self):
@@ -132,6 +170,25 @@ class ComplexGraphTests(unittest.TestCase):
         self.assertEqual(result["status"], "EXHAUSTED")
         self.assertEqual(result["budget"]["calls_used"], 2)
         self.assertIsNone(result["final_answer"])
+
+    def test_evidence_can_trigger_one_budgeted_replan_before_verification(self):
+        provider = ReplanningProvider()
+        result = build_puzzle_graph(provider).invoke(
+            new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=6)
+        )
+        self.assertEqual(provider.stages, [
+            "OBSERVE_CLASSIFY",
+            "HYPOTHESIZE_PLAN",
+            "EVALUATE_EVIDENCE",
+            "HYPOTHESIZE_PLAN",
+            "EVALUATE_EVIDENCE",
+            "VERIFY_ANSWER",
+        ])
+        self.assertEqual(result["status"], "SOLVED")
+        self.assertEqual(result["budget"]["calls_used"], 6)
+        self.assertTrue(any(item.get("tool") == "extract_nth" for item in result["attempts"]))
+        evidence_ids = [item["id"] for item in result["evidence"] if "id" in item]
+        self.assertEqual(len(evidence_ids), len(set(evidence_ids)))
 
     def test_plan_dispatches_registered_deterministic_tool(self):
         provider = RegistryPlanningProvider()

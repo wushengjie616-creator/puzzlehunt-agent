@@ -202,3 +202,17 @@ CCBC16 多次把“不唯一”本身用作机制。如果 solver 只返回第�
 ## 第 15 站：周期评测如何避免边做边改
 
 同一批五题先冻结 Git commit，再并发启动独立 worker；evaluation lock 期间 watcher 延后提交。每个 worker 逐节点 step 以获得真实耗时和 state delta，父进程最后才加载 oracle。框架改进只允许发生在批次之间，并必须指向某个失败、冗余节点或未消费线索的实证。
+
+## 第 16 站：全量审计改变了哪些判断
+
+全 55 ID 审计没有按网页 `type` 猜 Meta，而按官方 `answer_type` 和是否消费赛事其他题答案分类。结果排除 6 道赛事 Meta，保留了题内递归 Meta、micro-meta 和终章 feeder；这些题恰好能训练层级检查，却不污染“非-meta”定义。
+
+49 题说明复杂 puzzle 更像“载体切换图”：文本可能变网格，答案可能变 emoji，两个解的差异可能变旗语，循环可能被时间状态打破。于是框架没有扩成一个更长的万能 prompt，而是加强了 artifact、dependency DAG、ambiguity、state version、unused inventory 和 terminal verification 的结构化字段。
+
+## 第 17 站：为什么 hard set 要一次性且短暂存在
+
+原创测试反复运行用于迭代，官方 hard set 用于测泛化，二者必须隔离。hard runner 在网络请求前落下一次性 marker；官方题面、答案、checkpoint 和模型输出只进入 ignored cache，评分后清理。Git 只保存题号、正确性、耗时、调用数与错误类别。这样防止框架针对 hard set 反复调参，也避免把整站内容变成项目副本。
+
+## 第 18 站：多次推理必须由证据触发
+
+固定四阶段对简单题足够，但第一次工具实验失败时直接 verify 会浪费失败证据。现在 `evaluate_evidence` 可以选择一次 `replan`；第二轮规划看到前一轮 attempts/evidence，必须提出不同的有界实验。路由器只有在还能预留“规划、评估、终局验证”三次调用时才接受该决定。它是证据驱动的有限回路，不是无界 ReAct。

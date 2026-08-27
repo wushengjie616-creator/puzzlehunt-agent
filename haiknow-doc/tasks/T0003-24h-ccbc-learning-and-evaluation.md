@@ -49,7 +49,11 @@ related_commits: []
 - 全量只读审计：#12/#25/#33/#44/#50 为区域 Meta，#55 为最终 Meta；其余 49 题进入 `source-ledger.json` 与 `nonmeta-manifest.json`。特别固定 `type` 不是 Meta 分类器、题内 meta-style 不等于赛事 Meta。
 - hard runner RED/GREEN：先观察缺少模块；随后 3/3 契约测试通过，覆盖 49 ID 集合、题面/oracle 分离、报告脱敏、缓存清理及重复运行拒绝。官方 #1 JSON 做真实无答案输出探针，转换成功。
 - scheduler 热重启审计发现 stop sentinel 会跨进程残留；新实例取得 exclusive lock 后现在会清除上一进程的 stop request，避免恢复后立即自停。原 `start_at` 与批次状态保持不变。
-- DeepSeek scheduler 已启动：runtime PID `35252`，锚点为 2026-08-28 06:00:29 至 2026-08-29 03:00:29（Asia/Hong_Kong）；Git watcher runtime PID `62816`。
+- 49 题官方 JSON 全量转换探针：49/49 成功、0 schema failure；21 题因图片/互动依赖进入 `required_artifacts` gate，28 题可直接文本推理。hard runner 不把 URL placeholder 当作已提供 artifact。
+- 官方文档复核确认 Chat Completions 当前模型 ID 为 `deepseek-v4-pro`/`deepseek-v4-flash`，现配置的 `deepseek-v4-pro` 有效。周期 worker 的单次 HTTP timeout 调为 600 秒；四阶段最坏 2400 秒仍受父进程 3600 秒硬期限约束。
+- 使用 `.env.local` 认证调用官方只读 `/models` 健康检查：认证成功、目标 `deepseek-v4-pro` 在账号可用模型集合中；未输出 key，也未发起计费 completion。
+- 证据驱动 replan RED/GREEN：先证明 evaluate 后只能 verify；加入 `decision=verify|replan`、三调用预算保留与 conditional edge 后，最长阶段序列为 observe→plan→evaluate→replan→evaluate→verify（6 calls）。并修复跨轮 tool/assessment evidence ID 重复，focused 5/5 GREEN。
+- DeepSeek scheduler 已热重启并加载 hard gate：runtime PID `48476`，原锚点保持为 2026-08-28 06:00:29 至 2026-08-29 03:00:29（Asia/Hong_Kong）；Git watcher runtime PID `62816`。
 
 ## 后续 todo
 

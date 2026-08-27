@@ -89,16 +89,24 @@ def convert_official_payload(payload: dict[str, Any], source_url: str) -> dict[s
     content = "\n\n".join(part for part in content_parts if part).strip()
     if not content:
         content = "[NO TEXTUAL SURFACE; source requires an interactive or visual artifact]"
+    required_artifacts: list[str] = []
+    if isinstance(image, str) and image.strip():
+        required_artifacts.append("source-image")
+    if isinstance(payload.get("script"), str) and payload["script"].strip():
+        required_artifacts.append("source-interaction")
+    runtime_input: dict[str, Any] = {
+        "title": _html_to_text(payload.get("title")),
+        "flavor_text": _html_to_text(payload.get("desc")),
+        "content": content,
+        "notes": (
+            "CCBC16 official surface converted to text for a one-shot private evaluation. "
+            f"Source data: {source_url}. Image/interactive placeholders are evidence, not invented data."
+        ),
+    }
+    if required_artifacts:
+        runtime_input["required_artifacts"] = required_artifacts
     return {
-        "input": {
-            "title": _html_to_text(payload.get("title")),
-            "flavor_text": _html_to_text(payload.get("desc")),
-            "content": content,
-            "notes": (
-                "CCBC16 official surface converted to text for a one-shot private evaluation. "
-                f"Source data: {source_url}. Image/interactive placeholders are evidence, not invented data."
-            ),
-        },
+        "input": runtime_input,
         "oracle": {"answer": answer},
     }
 

@@ -91,6 +91,7 @@ convention / coordinate_system / normalization
 - `hypothesize_plan`：比较主体机制、答案仍是载体、冲突是机制三类解释；计划必须可证伪。
 - `tool_dispatch`：只执行显式参数的 bounded 工具；保留 fingerprint、失败状态和 extraction provenance。
 - `evaluate_evidence`：固定检查 coverage、consumption、uniqueness、invariant、reversibility。
+- `evaluate_evidence` 可在证据否定原计划且存在不同的有界实验时选择 `replan`；运行时必须预留一次最终验证调用，不能把预算全耗在搜索上。
 - `verify_answer`：要求 format、evidence、flavor callback、clue coverage、all elements consumed、independent derivation 全部为真。
 
 ## 6. 当前工具 backlog

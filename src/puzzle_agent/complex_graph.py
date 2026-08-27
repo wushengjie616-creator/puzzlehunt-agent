@@ -39,6 +39,7 @@ class PuzzleGraphState(TypedDict, total=False):
     last_node: str | None
     next_node: str | None
     final_answer: str | None
+    evaluation_decision: str
 
 
 _TOOL_CATALOG = ", ".join(("cipher_workbench", *ToolRegistry().names))
@@ -61,11 +62,13 @@ _STAGE_INSTRUCTIONS = {
         f"{_TOOL_CATALOG}."
     ),
     "EVALUATE_EVIDENCE": (
-        'Output {"evidence_assessment":[{"hypothesis_id":"...","effect":"supports|weakens|rejects"}],'
+        'Output {"decision":"verify|replan","evidence_assessment":['
+        '{"hypothesis_id":"...","effect":"supports|weakens|rejects"}],'
         '"answer_candidates":[{"answer":"...","confidence":"low|medium|high","evidence_ids":["..."]}]}. '
         "Evaluate new tool or human evidence; explicitly reject failed attempts and do not invent tool results. "
         "Audit clue coverage, unused elements, uniqueness/ambiguity, cross-solution invariants, and whether the "
-        "extraction is reproducible before promoting an answer candidate."
+        "extraction is reproducible before promoting an answer candidate. Choose replan only when current "
+        "evidence falsifies the plan and a materially different bounded experiment is available."
     ),
     "VERIFY_ANSWER": (
         'Output {"answer":"string or null","confidence":"low|medium|high",'
@@ -214,7 +217,9 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
     previous_fingerprints = {item.get("fingerprint") for item in attempts}
     registry = ToolRegistry()
     plans = state.get("plan", []) or [{"tool": "cipher_workbench", "arguments": {}}]
+    attempt_base = len(attempts)
     for plan_index, plan in enumerate(plans, start=1):
+        plan_serial = attempt_base + plan_index
         tool = plan.get("tool")
         arguments = plan.get("arguments", {})
         fingerprint = json.dumps([tool, arguments], ensure_ascii=False, sort_keys=True)
@@ -227,7 +232,7 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
             candidates = CipherWorkbench(max_candidates=10).analyze(puzzle)
             for candidate_index, candidate in enumerate(candidates, start=1):
                 evidence.append({
-                    "id": f"tool-{plan_index}-{candidate_index}",
+                    "id": f"tool-{plan_serial}-{candidate_index}",
                     "kind": "cipher_candidate",
                     **asdict(candidate),
                 })
@@ -248,7 +253,7 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
                 "error": str(exc),
             })
         else:
-            evidence_id = f"tool-{plan_index}"
+            evidence_id = f"tool-{plan_serial}"
             evidence.append({
                 "id": evidence_id,
                 "kind": "deterministic_tool_result",
@@ -284,14 +289,29 @@ def _evaluate(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphSt
         return _exhausted("evaluate_evidence", budget)
     assessments = _array(data, "evidence_assessment")
     evidence = list(state.get("evidence", []))
-    evidence.extend({"id": f"assessment-{index}", **item} for index, item in enumerate(assessments, 1))
+    prior_assessments = sum(
+        str(item.get("id", "")).startswith("assessment-") for item in evidence
+    )
+    evidence.extend(
+        {"id": f"assessment-{prior_assessments + index}", **item}
+        for index, item in enumerate(assessments, 1)
+    )
+    decision = data.get("decision", "verify")
+    if decision not in {"verify", "replan"}:
+        raise ValueError("EVALUATE_EVIDENCE decision must be verify or replan")
+    # Replanning consumes one hypothesis call and one further evaluation call;
+    # always reserve the final call for independent verification.
+    remaining = budget["max_calls"] - budget["calls_used"]
+    if decision == "replan" and remaining < 3:
+        decision = "verify"
     return {
         "evidence": evidence,
         "answer_candidates": _array(data, "answer_candidates"),
         "budget": budget,
-        "stage": "VERIFY_ANSWER",
+        "evaluation_decision": decision,
+        "stage": "HYPOTHESIZE_PLAN" if decision == "replan" else "VERIFY_ANSWER",
         "last_node": "evaluate_evidence",
-        "next_node": "verify_answer",
+        "next_node": "hypothesize_plan" if decision == "replan" else "verify_answer",
     }
 
 
@@ -348,6 +368,12 @@ def _route_artifacts(state: PuzzleGraphState) -> str:
     return "blocked" if state.get("status") == "BLOCKED_INPUT" else "continue"
 
 
+def _route_evaluation(state: PuzzleGraphState) -> str:
+    if state.get("status") == "EXHAUSTED":
+        return "end"
+    return "replan" if state.get("evaluation_decision") == "replan" else "verify"
+
+
 def build_puzzle_graph(provider: StageProvider, *, checkpointer=None, step_mode: bool = False):
     builder = StateGraph(PuzzleGraphState)
     builder.add_node("intake", _intake)
@@ -374,9 +400,11 @@ def build_puzzle_graph(provider: StageProvider, *, checkpointer=None, step_mode:
         "hypothesize_plan", _continue_or_end, {"continue": "tool_dispatch", "end": END}
     )
     builder.add_edge("tool_dispatch", "evaluate_evidence")
-    builder.add_conditional_edges(
-        "evaluate_evidence", _continue_or_end, {"continue": "verify_answer", "end": END}
-    )
+    builder.add_conditional_edges("evaluate_evidence", _route_evaluation, {
+        "replan": "hypothesize_plan",
+        "verify": "verify_answer",
+        "end": END,
+    })
     builder.add_edge("verify_answer", END)
 
     return builder.compile(

@@ -131,6 +131,8 @@ watcher 每轮先对 allowlisted 工作树内容做 fingerprint，运行完整�
 
 节点报告只依据可观察数据。正确证据链中的写入节点可标 `HELPFUL/ESSENTIAL`；错误答案时保持 `UNASSESSABLE`，避免从失败运行反推虚假的节点因果作用。
 
+证据评估默认进入终局验证；若它显式给出 `decision=replan` 且剩余预算至少能容纳“新规划 + 新评估 + 最终验证”三次调用，则回到 `hypothesize_plan`。第二轮能读取上一轮 attempts/evidence，工具和 assessment ID 跨轮次保持唯一。`max_calls=6` 时最长调用路径正好为六次，不形成无限 ReAct loop。
+
 ## 8. 依赖策略
 
 `pyproject.toml` 的 base `dependencies=[]`。complex 只存在于 optional extra：
@@ -157,7 +159,7 @@ official puzzle/solution（仅开发者研究）
 
 validator 递归拒绝 input 中的 `answer/solution/oracle` 字段，并检查答案字面泄漏、官方来源和原创声明。benchmark 输出只报告正确与否，不输出期望答案。
 
-若原创五题在某个正式周期达到 5/5，scheduler 调用一次 `hard_runner`。官方 JSON 只进入 `.puzzle-agent/hard-cache/`，转换器剥离 `answer/solution` 后才生成 worker input；父进程评分结束仅持久化题号、状态、耗时、调用数和错误分类，随后删除临时题面、oracle、checkpoint 与模型答案。`once-result.json` 在网络请求前即写入，因此失败也算一次 attempt，不会静默重试。
+若原创五题在某个正式周期达到 5/5，scheduler 调用一次 `hard_runner`。官方 JSON 只进入 `.puzzle-agent/hard-cache/`，转换器剥离 `answer/solution` 后才生成 worker input；含图片或互动脚本的题会声明 `required_artifacts`，URL placeholder 不算 artifact。父进程评分结束仅持久化题号、状态、耗时、调用数和错误分类，随后删除临时题面、oracle、checkpoint 与模型答案。`once-result.json` 在网络请求前即写入，因此失败也算一次 attempt，不会静默重试。
 
 ## 10. 当前边界
 
