@@ -115,6 +115,8 @@ class ComplexGraphTests(unittest.TestCase):
         hypothesis_prompt = provider.messages[1][0]["content"]
         self.assertIn("interleave_sequences", hypothesis_prompt)
         self.assertIn("constrained_order", hypothesis_prompt)
+        self.assertIn("playfair_codec", hypothesis_prompt)
+        self.assertIn("repair_mojibake", hypothesis_prompt)
         verify_prompt = provider.messages[-1][0]["content"]
         self.assertIn("all_elements_consumed", verify_prompt)
         self.assertIn("independent_derivation", verify_prompt)

@@ -127,6 +127,10 @@ complex tool registry 还包括：
 - `anagram_delta`：多重集合字母差
 - `read_grid_path`：带边界和四邻接验证的网格路径
 - `dependency_order`：meta/子题 DAG 拓扑排序和循环检测
+- `caesar_shift`、`a1z26_decode`、`interleave_sequences`：显式参数的基础恢复与提取
+- `grid_trace`、`grid_transform`、`constrained_order`：方向路径、版式变换和有限排序约束
+- `decode_bit_patterns`、`repair_mojibake`、`common_symbol_intersection`：表面二态、严格可逆编码修复和不变量
+- `phone_keypad_decode`、`braille_decode`、`playfair_codec`：九键、六点盲文和 5×5 双字母密码
 
 工具结果只是 evidence；候选分数不等于答案证明。未知工具和错误参数会记录为失败 attempt，不会冒充成功结果。
 

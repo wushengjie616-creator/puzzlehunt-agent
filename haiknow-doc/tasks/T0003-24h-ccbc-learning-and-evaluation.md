@@ -29,6 +29,8 @@ related_commits: []
 ## 关键 commit
 
 - `53702e4`：项目 Git 基线、P0003/T0003 与私有 GitHub origin。
+- `dd32efe`：guarded publisher、watcher CLI 与 secret/evaluation/stability gates。
+- `be6c8c9`：TRACE-LIFT、五道原创题、周期 runner/scheduler 和首批工具/节点契约。
 
 ## 测试 / 验证
 
@@ -39,6 +41,9 @@ related_commits: []
 - TRACE-LIFT 首轮汇总 22 个官方来源条目；只保存 URL 与抽象机制标签。五题输入与 oracle/rubric/provenance 分离并通过 leak validator。
 - 工具/节点 RED/GREEN：新增 Caesar、A1Z26、interleave、grid trace、constraint order known vectors 与无效/歧义测试；verify 缺 coverage/consumption/independent checks 会被拒绝。
 - 当前 complex fresh GREEN：53/53；base fresh GREEN：53 项成功、14 项按 complex capability gate 跳过；原创 v1 suite 5/5 通过 schema/oracle leak validation。
+- 研究校正：subagent 把经典 Playfair `BMODZB...` 向量错误归给 `MONARCHY` key；实际独立向量使用 `PLAYFAIR EXAMPLE`。测试先失败并暴露错误，未修改算法迎合错误 oracle。
+- 第二梯队工具 GREEN：bit pattern、strict mojibake、common-symbol、grid transform、multitap、Braille、Playfair 共 7 组 known vector 与失败边界通过；graph tool catalog 改为从 registry 动态生成，防新增工具与 prompt 漂移。
+- DeepSeek scheduler 已启动：runtime PID `35252`，锚点为 2026-08-28 06:00:29 至 2026-08-29 03:00:29（Asia/Hong_Kong）；Git watcher runtime PID `62816`。
 
 ## 后续 todo
 

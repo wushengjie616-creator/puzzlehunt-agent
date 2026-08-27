@@ -4,12 +4,19 @@ from puzzle_agent.tool_registry import (
     ToolRegistry,
     anagram_delta,
     a1z26_decode,
+    braille_decode,
     caesar_shift,
+    common_symbol_intersection,
     constrained_order,
+    decode_bit_patterns,
     dependency_order,
     extract_nth,
     grid_trace,
+    grid_transform,
     interleave_sequences,
+    phone_keypad_decode,
+    playfair_codec,
+    repair_mojibake,
     read_grid_path,
 )
 
@@ -87,6 +94,42 @@ class DeterministicPuzzleToolTests(unittest.TestCase):
             ["A", "B", "C"], [{"type": "before", "left": "A", "right": "B"}]
         )
         self.assertEqual(ambiguous["status"], "AMBIGUOUS")
+
+    def test_second_wave_common_cipher_tools_known_vectors(self):
+        bits = decode_bit_patterns(["10100", "00011"])
+        self.assertEqual(bits["output"], "TC")
+        repaired = repair_mojibake(
+            "ä½ å¥½", current_codec="latin-1", original_codec="utf-8"
+        )
+        self.assertEqual(repaired["output"], "你好")
+        common = common_symbol_intersection(["COPYRIGHT", "NVIDIA"], exactly_one=True)
+        self.assertEqual(common["output"], "I")
+        transformed = grid_transform(["ABC", "DEF"], operation="transpose")
+        self.assertEqual(transformed["output"], ["AD", "BE", "CF"])
+        self.assertEqual(phone_keypad_decode(["44", "33", "555", "555", "666"]), "HELLO")
+        self.assertEqual(braille_decode([[1], [1, 2]]), "AB")
+        encoded = playfair_codec(
+            "HIDETHEGOLDINTHETREESTUMP",
+            keyword="PLAYFAIR EXAMPLE",
+            operation="encode",
+        )
+        self.assertEqual(encoded["output"], "BMODZBXDNABEKUDMUIXMMOUVIF")
+
+    def test_second_wave_tools_reject_lossy_or_ambiguous_inputs(self):
+        with self.assertRaisesRegex(ValueError, "equal width"):
+            decode_bit_patterns(["101", "10"])
+        with self.assertRaisesRegex(ValueError, "allowlist"):
+            repair_mojibake("text", current_codec="utf-7", original_codec="utf-8")
+        with self.assertRaisesRegex(ValueError, "exactly one"):
+            common_symbol_intersection(["AB", "AB"], exactly_one=True)
+        with self.assertRaisesRegex(ValueError, "rectangular"):
+            grid_transform(["AB", "C"], operation="transpose")
+        with self.assertRaisesRegex(ValueError, "multitap"):
+            phone_keypad_decode(["77777"])
+        with self.assertRaisesRegex(ValueError, "dots"):
+            braille_decode([[7]])
+        with self.assertRaisesRegex(ValueError, "operation"):
+            playfair_codec("AB", keyword="KEY", operation="guess")
 
 
 if __name__ == "__main__":

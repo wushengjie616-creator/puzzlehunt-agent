@@ -41,6 +41,9 @@ class PuzzleGraphState(TypedDict, total=False):
     final_answer: str | None
 
 
+_TOOL_CATALOG = ", ".join(("cipher_workbench", *ToolRegistry().names))
+
+
 _STAGE_INSTRUCTIONS = {
     "OBSERVE_CLASSIFY": (
         'Output {"observations":[{"id":"...","text":"...","source":"title|flavor_text|content|artifact"}],'
@@ -54,9 +57,8 @@ _STAGE_INSTRUCTIONS = {
         '"plan":[{"id":"...","tool":"...","arguments":{},"purpose":"..."}]}. '
         "Preserve at least two competing, distinguishable hypotheses. Consider whether an intermediate answer "
         "is still a carrier and whether an inconsistency or multiple solutions are intentional information. "
-        "Choose bounded experiments with explicit arguments. Available deterministic tools: cipher_workbench, "
-        "extract_nth, anagram_delta, read_grid_path, dependency_order, caesar_shift, a1z26_decode, "
-        "interleave_sequences, grid_trace, constrained_order."
+        "Choose bounded experiments with explicit arguments. Available deterministic tools: "
+        f"{_TOOL_CATALOG}."
     ),
     "EVALUATE_EVIDENCE": (
         'Output {"evidence_assessment":[{"hypothesis_id":"...","effect":"supports|weakens|rejects"}],'
@@ -255,7 +257,9 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
             })
             if tool in {
                 "extract_nth", "anagram_delta", "read_grid_path", "a1z26_decode",
-                "interleave_sequences", "grid_trace",
+                "interleave_sequences", "grid_trace", "decode_bit_patterns",
+                "repair_mojibake", "common_symbol_intersection", "grid_transform",
+                "phone_keypad_decode", "braille_decode", "playfair_codec",
             }:
                 extractions.append({
                     "tool": tool,
