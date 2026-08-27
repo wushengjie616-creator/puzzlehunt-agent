@@ -140,7 +140,7 @@ complex tool registry 还包括：
 
 CCBC16 只作为离线方法学习来源，不会把官方题面或题解交给 DeepSeek。项目流程是：
 
-当前蒸馏结果见 [TRACE-LIFT 方法论](research/ccbc16/methodology.md)；来源 ledger 只保存官方 URL 与抽象机制标签，不保存批量原文。
+当前蒸馏结果见 [TRACE-LIFT 方法论](research/ccbc16/methodology.md) 和 [49 道非-meta机制卡](research/ccbc16/mechanism-cards.md)；来源 ledger 只保存官方 URL 与抽象机制标签，不保存批量原文。
 
 ```text
 阅读官方题目/题解

@@ -55,6 +55,7 @@ related_commits: []
 - 证据驱动 replan RED/GREEN：先证明 evaluate 后只能 verify；加入 `decision=verify|replan`、三调用预算保留与 conditional edge 后，最长阶段序列为 observe→plan→evaluate→replan→evaluate→verify（6 calls）。并修复跨轮 tool/assessment evidence ID 重复，focused 5/5 GREEN。
 - 节点总报告 RED/GREEN：先证明每题虽有报告但缺少 cycle aggregate；随后新增覆盖全部 8 节点的 `node-summary.json` 与 analysis Markdown 表，含跨题激活、耗时、作用标签和 issue，offline cycle 行为测试转绿。
 - 第三梯队工具 RED/GREEN：新增 custom-token Morse、多解逐位 invariant/delta、回文错位和 Unicode codepoint inspection；2 组 known-vector/失败边界测试转绿，分别对应 CCBC16 的视觉点划、多解即信号、回文剩余字和异码位括号机制。
+- 将三路全量审计合并为 `mechanism-cards.md`：覆盖 49 道非 Meta 的可观察信号、可复验中间产物和 Tool/Agent/Human 落点，不含答案或批量题面。
 - DeepSeek scheduler 已完成最终热重启并加载 hard gate/节点聚合：runtime PID `67312`，原锚点保持为 2026-08-28 06:00:29 至 2026-08-29 03:00:29（Asia/Hong_Kong）；Git watcher runtime PID `62816`。
 
 ## 后续 todo

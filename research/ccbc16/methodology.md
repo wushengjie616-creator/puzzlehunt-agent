@@ -1,6 +1,6 @@
 # TRACE-LIFT：PuzzleHunt 可审计解题方法论
 
-本方法论由 CCBC16 全部 49 道非 Meta 题及公开解析的机制共性蒸馏而来。赛事拓扑中的 Meta 为 #12、#25、#33、#44、#50、#55；页面渲染字段 `type` 不能代替官方 `answer_type` 与题目依赖关系。研究阶段不把官方完整题面、题解与答案写入仓库。来源事实见 [source-ledger.json](source-ledger.json)；以下框架与术语是本项目的二次抽象。
+本方法论由 CCBC16 全部 49 道非 Meta 题及公开解析的机制共性蒸馏而来。赛事拓扑中的 Meta 为 #12、#25、#33、#44、#50、#55；页面渲染字段 `type` 不能代替官方 `answer_type` 与题目依赖关系。研究阶段不把官方完整题面、题解与答案写入仓库。来源事实见 [source-ledger.json](source-ledger.json)，逐题可复验落点见 [mechanism-cards.md](mechanism-cards.md)；以下框架与术语是本项目的二次抽象。
 
 ## 1. 九步主循环
 
