@@ -53,6 +53,15 @@ class CliTests(unittest.TestCase):
         outputs = {item["output"].lower() for item in json.loads(result.stdout)}
         self.assertIn("hello", outputs)
 
+    def test_automation_status_is_available_without_a_running_watcher(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_cli(
+                "automation", "status", "--repository", directory,
+                cwd=ROOT,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["status"], "not-running")
+
     def test_benchmark_validate_reports_isolated_dev_suite(self):
         result = self.run_cli(
             "benchmark", "validate",

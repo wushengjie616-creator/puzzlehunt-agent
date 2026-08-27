@@ -19,7 +19,7 @@ related_commits: []
 
 - [x] 核实 HAiKnow、时间窗口、Git/GitHub 与现有测试基线。
 - [x] 启动三个只读 CCBC16 研究 subagent，主代理保留唯一写入权。
-- [ ] 初始化 Git、创建私有远端并建立安全自动发布器。
+- [x] 初始化 Git、创建私有远端并建立安全自动发布器。
 - [ ] 实现周期评测 runner、timeout、节点分析与 scheduler。
 - [ ] 制作并验证 5 道原创测试题。
 - [ ] 汇总 CCBC16 方法论并按证据扩充工具/框架。
@@ -27,12 +27,13 @@ related_commits: []
 
 ## 关键 commit
 
-- 待记录。
+- `53702e4`：项目 Git 基线、P0003/T0003 与私有 GitHub origin。
 
 ## 测试 / 验证
 
 - 启动前 complex suite：36/36 GREEN（P0002 收尾证据）。
-- 待按 TDD 逐项记录 RED/GREEN、cadence 与 live run。
+- 自动发布器 RED：缺少 `puzzle_agent.automation`；watch cycle / CLI status / heartbeat 入口缺失，均观察到对应 import 或 CLI failure。
+- 自动发布器 GREEN：6 个 module 行为测试 + 1 个 CLI status 测试通过；覆盖临时 bare remote push、secret abort、evaluation defer、validation failure、验证期变化和 lock/state 生命周期。
 
 ## 后续 todo
 

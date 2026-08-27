@@ -30,7 +30,7 @@ python -m venv .venv
 CLI 自动读取当前工作目录的 `.env.local`。该文件已被 `.gitignore` 排除：
 
 ```dotenv
-DEEPSEEK_API_KEY=你的_API_Key
+DEEPSEEK_API_KEY=replace-with-your-api-key
 DEEPSEEK_MODEL=deepseek-v4-pro
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
@@ -156,6 +156,18 @@ CCBC16 只作为离线方法学习来源，不会把官方题面或题解交给 
 & $pa benchmark run --suite blind --provider deepseek --max-calls 6
 ```
 
+## Git 自动监视与安全发布
+
+自动发布器只会暂存项目白名单路径；`.env.local`、`.puzzle-agent/` 和未知根文件不会进入 commit。每次发布前会运行完整测试、检查验证期间工作树是否变化、扫描 staged blob 的 token 形态，并在评测锁存在时延后：
+
+```powershell
+& $pa automation watch --repository . --interval 300
+& $pa automation status --repository .
+& $pa automation stop --repository .
+```
+
+`watch` 是前台 CLI；需要持续后台运行时由系统进程管理器以隐藏窗口启动。单次安全发布可运行 `automation publish`。审计状态和 PID/lock 位于被忽略的 `.puzzle-agent/automation/`。
+
 ## 测试
 
 基础安装矩阵：
@@ -178,3 +190,5 @@ python -m unittest discover -s tests -v
 - [Agent 设计学习日志](haiknow-doc/docs/02-agent-design-journey.md)
 - [P0002 · 复杂 Agent 正式计划](haiknow-doc/plans/P0002-complex-puzzlehunt-agent.md)
 - [T0002 · 实施与验证记录](haiknow-doc/tasks/T0002-complex-puzzlehunt-agent.md)
+- [P0003 · 24 小时学习与周期评测](haiknow-doc/plans/P0003-24h-ccbc-learning-and-evaluation.md)
+- [T0003 · 24 小时执行记录](haiknow-doc/tasks/T0003-24h-ccbc-learning-and-evaluation.md)

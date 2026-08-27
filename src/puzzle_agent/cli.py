@@ -70,6 +70,22 @@ def _parser() -> argparse.ArgumentParser:
     benchmark_run.add_argument(
         "--sessions-root", type=Path, default=Path(".puzzle-agent/benchmark-sessions")
     )
+
+    automation = commands.add_parser("automation", help="Run guarded Git automation")
+    automation_commands = automation.add_subparsers(dest="automation_command", required=True)
+    for name in ("status", "stop"):
+        command = automation_commands.add_parser(name)
+        command.add_argument("--repository", type=Path, default=Path("."))
+    publish = automation_commands.add_parser("publish")
+    publish.add_argument("--repository", type=Path, default=Path("."))
+    publish.add_argument("--message", default="automation: verified manual snapshot")
+    publish.add_argument("--no-push", action="store_true")
+    watch = automation_commands.add_parser("watch")
+    watch.add_argument("--repository", type=Path, default=Path("."))
+    watch.add_argument("--interval", type=int, default=300)
+    watch.add_argument("--validation-timeout", type=int, default=1800)
+    watch.add_argument("--max-cycles", type=int)
+    watch.add_argument("--no-push", action="store_true")
     return parser
 
 
@@ -81,6 +97,42 @@ def main(argv: list[str] | None = None) -> int:
     load_env_local()
     args = _parser().parse_args(argv)
     try:
+        if args.command == "automation":
+            from .automation import (
+                publish_once,
+                request_watch_stop,
+                watch_repository,
+                watch_status,
+            )
+            if args.automation_command == "status":
+                _print_json(watch_status(args.repository))
+                return 0
+            if args.automation_command == "stop":
+                _print_json(request_watch_stop(args.repository))
+                return 0
+            if args.automation_command == "publish":
+                _print_json(publish_once(
+                    args.repository,
+                    message=args.message,
+                    push=not args.no_push,
+                ))
+                return 0
+            repository = args.repository.resolve()
+            project_python = repository / ".venv" / "Scripts" / "python.exe"
+            python = project_python if project_python.is_file() else Path(sys.executable)
+            result = watch_repository(
+                repository,
+                test_command=[
+                    str(python), "-m", "unittest", "discover", "-s", "tests", "-v",
+                ],
+                push=not args.no_push,
+                interval_seconds=args.interval,
+                validation_timeout_seconds=args.validation_timeout,
+                max_cycles=args.max_cycles,
+            )
+            _print_json(result)
+            return 0
+
         if args.command == "ciphers":
             if args.limit < 1:
                 raise ValueError("--limit must be at least 1")
