@@ -1,0 +1,6 @@
+{
+  "title": "Workshop Relay",
+  "flavor_text": "No station can begin until its incoming crates arrive.",
+  "content": "Station A yields 13, Station B yields 15. Feed A then B into Station C to obtain letters M and O. Independent stations yield S and A; the final station combines an index 9 with a cipher result 3. Follow the dependency order and concatenate the six outputs.",
+  "notes": "Synthetic heterogeneous subtask DAG with explicit dependencies."
+}

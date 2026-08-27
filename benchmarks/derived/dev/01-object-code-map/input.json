@@ -1,0 +1,6 @@
+{
+  "title": "Docking Badges",
+  "flavor_text": "Every connector belongs in a numbered bay.",
+  "content": "Five fictional connectors appear left to right: ring badge 15, fork badge 18, twin-dot badge 2, notch badge 9, wave badge 20. Convert bay numbers to letters.",
+  "notes": "Text-only synthetic object-to-code mapping puzzle."
+}

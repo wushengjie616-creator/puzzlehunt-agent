@@ -1,0 +1,6 @@
+{
+  "title": "Courtyard Tiles",
+  "flavor_text": "Every clue owns one row, but the marked diagonal owns the message.",
+  "content": "Arrange four supplied row tokens so all constraints hold: GA begins the plant row, RD touches both GA and EN, DE cannot be first, and EN closes the chain. After satisfying adjacency, read the marked sequence GA-RD-DE-EN and remove the repeated boundary letters according to the tile rule.",
+  "notes": "Synthetic final constraint combination with a post-solve extraction key."
+}

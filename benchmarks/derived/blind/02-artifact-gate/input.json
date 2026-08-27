@@ -1,0 +1,7 @@
+{
+  "title": "Unlit Control Panel",
+  "flavor_text": "The transcript is complete except for the five lamps themselves.",
+  "content": "The text specifies lamp-reading order 2, 5, 1, 4, 3, but provides no lamp labels. Do not infer the labels from prose. Request the missing panel transcription, then read the supplied labels in the stated order.",
+  "required_artifacts": ["panel"],
+  "notes": "Synthetic artifact-gated puzzle designed to test BLOCKED_INPUT and resume."
+}

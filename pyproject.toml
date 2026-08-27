@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "puzzle-solving-agent"
+version = "0.1.0"
+description = "CLI puzzle-solving agent with optional stateful LangGraph orchestration"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+complex = [
+  "langgraph>=1.2.11,<2",
+  "langgraph-checkpoint-sqlite>=3.1.1,<4",
+]
+
+[project.scripts]
+puzzle-agent = "puzzle_agent.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

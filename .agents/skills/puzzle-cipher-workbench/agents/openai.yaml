@@ -1,0 +1,4 @@
+interface:
+  display_name: "Puzzle Cipher Workbench"
+  short_description: "Analyze common puzzle ciphers with deterministic local tools"
+  default_prompt: "Use $puzzle-cipher-workbench to inspect this puzzle text for common encodings and ciphers."

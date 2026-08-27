@@ -1,0 +1,6 @@
+{
+  "title": "The Familiar Surveyor",
+  "flavor_text": "Use each lesson once, then use the order in which you learned it.",
+  "content": "Seven mini-results are C, O, M, P, A, S, S. Their mechanisms repeat the prior lesson order: Caesar, odd positions, Morse, Pigpen-text, A1Z26, semaphore-text, substitution. Detect the callbacks, avoid rerunning solved transforms, then extract by lesson order.",
+  "notes": "Synthetic mechanism-library callback puzzle."
+}

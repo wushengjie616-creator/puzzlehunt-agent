@@ -1,0 +1,6 @@
+{
+  "title": "Six Unwelcome Guests",
+  "flavor_text": "Most introductions are mutual; six are oddly one-sided.",
+  "content": "A party graph contains ordinary paired topics plus six anomalous nodes in path order. Their visible tags are B, R, I, D, G, E. Explain why anomaly detection must precede path extraction.",
+  "notes": "The graph is fully transcribed; no external quotation is required."
+}

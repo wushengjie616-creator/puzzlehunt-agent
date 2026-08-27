@@ -1,0 +1,6 @@
+{
+  "title": "Return Address",
+  "flavor_text": "Each parcel contains the label for the next parcel; stop when a label points home.",
+  "content": "Start with label 5. Rule A maps 5 to E. Rule B takes E and maps its alphabet index to C. Rule C takes C and maps it to H. Rule D takes H and maps it to O, which points back to the home marker. Record outputs in traversal order and stop at the base marker.",
+  "notes": "Synthetic recursive meta with an explicit base case."
+}

@@ -1,0 +1,6 @@
+{
+  "title": "The Blank Repair Card",
+  "flavor_text": "The machine ran correctly, but the technician forgot to record one setting.",
+  "content": "A six-slot timepiece repair card shows outputs C, L, ?, C, K. The manual says the third operation copies the only letter needed to make the device name complete. Infer the omitted setting rather than inventing a new transform.",
+  "notes": "Synthetic reverse inference from a constrained missing field."
+}

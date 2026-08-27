@@ -1,0 +1,13 @@
+{
+  "purpose": "Offline design notes only; this file is never loaded by the runtime prompt builder.",
+  "learned_at": "2026-08-28",
+  "mechanisms": [
+    {"source_puzzle": 5, "pattern": "identify object class, map to code, then transform"},
+    {"source_puzzle": 13, "pattern": "association graph, anomalous nodes, path extraction"},
+    {"source_puzzle": 29, "pattern": "heterogeneous subtask DAG and missing-information inference"},
+    {"source_puzzle": 32, "pattern": "infer missing puzzle operations from extraction structure"},
+    {"source_puzzle": 42, "pattern": "recursive meta inputs with an explicit base case"},
+    {"source_puzzle": 47, "pattern": "reuse previously established mechanisms and attempt memory"},
+    {"source_puzzle": 55, "pattern": "combine meta answers using constraints, then apply a final extraction key"}
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "title": "Port Ledger",
+  "flavor_text": "Three crews report separately; the lighthouse reads their reports in a different order.",
+  "content": "Group red yields H and A, group blue yields R and B, group gold yields O and R. Preserve each local order, then use crew order red-blue-gold for the first ledger and lighthouse order 1-3-2 as a competing hypothesis. Validate which ordering forms the requested six-letter place noun.",
+  "notes": "Synthetic grouped extraction with an explicit competing-order check."
+}
