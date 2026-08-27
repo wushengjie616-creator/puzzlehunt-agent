@@ -16,13 +16,21 @@ class FakeResponse:
         return json.dumps({"choices": [{"message": {"content": "{\"answer\":null}"}}]}).encode()
 
 
+class EmptyContentResponse(FakeResponse):
+    def read(self):
+        return json.dumps({
+            "choices": [{"finish_reason": "length", "message": {"content": ""}}]
+        }).encode()
+
+
 class RecordingOpener:
-    def __init__(self):
+    def __init__(self, response=None):
         self.calls = []
+        self.response = response or FakeResponse()
 
     def open(self, request, timeout):
         self.calls.append((request, timeout))
-        return FakeResponse()
+        return self.response
 
 
 class FailingOpener:
@@ -53,6 +61,23 @@ class DeepSeekContractTests(unittest.TestCase):
         with self.assertRaises(RuntimeError) as raised:
             provider.complete([{"role": "user", "content": "hello"}])
         self.assertNotIn("super-secret-value", str(raised.exception))
+
+    def test_cycle_can_disable_thinking_and_empty_content_is_actionable(self):
+        opener = RecordingOpener()
+        provider = DeepSeekProvider(DeepSeekConfig(
+            api_key="secret", thinking="disabled", reasoning_effort="low"
+        ), opener=opener)
+        provider.complete([{"role": "user", "content": "hello"}])
+        payload = json.loads(opener.calls[0][0].data)
+        self.assertEqual(payload["thinking"], {"type": "disabled"})
+        self.assertEqual(payload["reasoning_effort"], "low")
+
+        empty = DeepSeekProvider(
+            DeepSeekConfig(api_key="secret"),
+            opener=RecordingOpener(EmptyContentResponse()),
+        )
+        with self.assertRaisesRegex(RuntimeError, "empty content.*length"):
+            empty.complete([{"role": "user", "content": "hello"}])
 
 
 if __name__ == "__main__":

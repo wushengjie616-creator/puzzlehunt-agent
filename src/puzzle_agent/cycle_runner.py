@@ -84,6 +84,7 @@ def execute_case_process(
             "started_at_epoch": started_wall,
             "exit_code": process.returncode,
             "stderr_sha256": _digest(stderr),
+            "error_summary": _stderr_summary(stderr),
         }
     if not output_path.is_file():
         return {
@@ -110,6 +111,17 @@ def execute_case_process(
 
 def _digest(value: bytes) -> str:
     return sha256(value).hexdigest()
+
+
+def _stderr_summary(value: bytes) -> str | None:
+    lines = [line.strip() for line in value.decode("utf-8", errors="replace").splitlines() if line.strip()]
+    if not lines:
+        return None
+    summary = lines[-1][:500]
+    summary = re.sub(r"(?i)Bearer\s+\S+", "Bearer [REDACTED]", summary)
+    summary = re.sub(r"(?i)(api[_-]?key\s*[=:]\s*)\S+", r"\1[REDACTED]", summary)
+    summary = re.sub(r"\bsk-[A-Za-z0-9_-]{12,}\b", "[REDACTED_TOKEN]", summary)
+    return summary
 
 
 def analyze_node_effects(traces: list[dict[str, Any]], *, correct: bool) -> list[dict[str, Any]]:
@@ -219,12 +231,47 @@ def run_case_worker(
     )
     state = manager.status(session_id)
     trace: list[dict[str, Any]] = []
+    calls_attempted = 0
+    error_type: str | None = None
+    error_summary: str | None = None
+    model_nodes = {
+        "observe_classify", "hypothesize_plan", "evaluate_evidence", "verify_answer"
+    }
     terminal = {"SOLVED", "UNSOLVED", "EXHAUSTED", "BLOCKED_INPUT"}
     for _ in range(max_steps):
         before = state
+        attempted_node = before.get("next_node")
         started = time.monotonic()
-        state = manager.step(session_id, provider)
+        try:
+            state = manager.step(session_id, provider)
+        except Exception as exc:
+            elapsed_ms = round((time.monotonic() - started) * 1000)
+            provider_attempted = attempted_node in model_nodes
+            calls_attempted += int(provider_attempted)
+            error_type = type(exc).__name__
+            error_summary = _stderr_summary(str(exc).encode("utf-8", errors="replace"))
+            trace.append({
+                "node": attempted_node,
+                "stage": before.get("stage"),
+                "wall_time_ms": elapsed_ms,
+                "written_fields": [],
+                "new_evidence_ids": [],
+                "calls_used": before.get("budget", {}).get("calls_used", 0),
+                "provider_call_attempted": provider_attempted,
+                "outcome": "failed",
+                "error_type": error_type,
+            })
+            state = {
+                **before,
+                "status": "ERROR",
+                "last_node": attempted_node,
+                "next_node": None,
+                "final_answer": None,
+            }
+            break
         elapsed_ms = round((time.monotonic() - started) * 1000)
+        provider_attempted = state.get("last_node") in model_nodes
+        calls_attempted += int(provider_attempted)
         written_fields = sorted(
             key for key in set(before) | set(state) if before.get(key) != state.get(key)
         )
@@ -235,6 +282,8 @@ def run_case_worker(
             "written_fields": written_fields,
             "new_evidence_ids": sorted(_evidence_ids(state) - _evidence_ids(before)),
             "calls_used": state.get("budget", {}).get("calls_used", 0),
+            "provider_call_attempted": provider_attempted,
+            "outcome": "completed",
         })
         if state.get("status") in terminal or state.get("next_node") is None:
             break
@@ -249,9 +298,13 @@ def run_case_worker(
         "status": state.get("status"),
         "final_answer": state.get("final_answer"),
         "calls_used": state.get("budget", {}).get("calls_used", 0),
+        "calls_attempted": calls_attempted,
         "trace": trace,
         "state_path": "state.json",
     }
+    if error_type:
+        result["error_type"] = error_type
+        result["error_summary"] = error_summary
     _json_write(output_dir / "worker-result.json", result)
     return result
 
@@ -372,13 +425,15 @@ def run_cycle(
                 )
                 trace = worker.get("trace", [])
                 normalized_answer = worker.get("final_answer")
-                calls_used = worker.get("calls_used", 0)
+                calls_used = worker.get("calls_attempted", worker.get("calls_used", 0))
+                calls_succeeded = worker.get("calls_used", 0)
             else:
                 correct = False
                 status = process_result["status"]
                 trace = []
                 normalized_answer = None
                 calls_used = 0
+                calls_succeeded = 0
             node_report = analyze_node_effects(trace, correct=correct)
             node_reports.append(node_report)
             case_output = run_dir / "cases" / case.name
@@ -400,12 +455,17 @@ def run_cycle(
                 ),
                 "status": status,
                 "failure_class": process_result.get("failure_class"),
+                "error_summary": process_result.get("error_summary"),
                 "timeout": process_result["timeout"],
                 "duration_ms": process_result["duration_ms"],
                 "normalized_answer": normalized_answer,
                 "correct": correct,
                 "rubric_score": 1.0 if correct else 0.0,
                 "llm_calls": calls_used,
+                "llm_calls_succeeded": calls_succeeded,
+                "error_summary": (
+                    worker.get("error_summary") if worker else process_result.get("error_summary")
+                ),
                 "node_report_path": f"cases/{case.name}/node-analysis.json",
                 "trace_path": f"cases/{case.name}/worker-result.json",
             })

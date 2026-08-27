@@ -10,6 +10,14 @@ class DeepSeekConfig:
     model: str = "deepseek-v4-pro"
     timeout: float = 60.0
     max_tokens: int = 4096
+    thinking: str = "enabled"
+    reasoning_effort: str = "high"
+
+    def __post_init__(self):
+        if self.thinking not in {"enabled", "disabled"}:
+            raise ValueError("thinking must be enabled or disabled")
+        if self.reasoning_effort not in {"low", "high", "max"}:
+            raise ValueError("reasoning_effort must be low, high, or max")
 
 
 class DeepSeekProvider:
@@ -22,8 +30,8 @@ class DeepSeekProvider:
             "model": self.config.model,
             "messages": messages,
             "stream": False,
-            "thinking": {"type": "enabled"},
-            "reasoning_effort": "high",
+            "thinking": {"type": self.config.thinking},
+            "reasoning_effort": self.config.reasoning_effort,
             "max_tokens": self.config.max_tokens,
             "response_format": {"type": "json_object"},
         }
@@ -39,7 +47,14 @@ class DeepSeekProvider:
         try:
             with self.opener.open(api_request, timeout=self.config.timeout) as response:
                 body = json.loads(response.read().decode("utf-8"))
-            return body["choices"][0]["message"]["content"]
+            choice = body["choices"][0]
+            content = choice["message"]["content"]
+            if not isinstance(content, str) or not content.strip():
+                reason = str(choice.get("finish_reason") or "unknown")
+                raise RuntimeError(
+                    f"DeepSeek API returned empty content (finish_reason={reason})"
+                )
+            return content
         except error.HTTPError as exc:
             raise RuntimeError(f"DeepSeek API returned HTTP {exc.code}") from exc
         except error.URLError as exc:

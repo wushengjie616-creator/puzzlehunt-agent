@@ -56,6 +56,17 @@ class CycleCaseContractTests(unittest.TestCase):
         self.assertTrue(result["timeout"])
         self.assertLess(time.monotonic() - started, 3)
 
+    def test_worker_error_keeps_a_redacted_actionable_summary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = execute_case_process(
+                "broken",
+                [sys.executable, "-c", "import sys; sys.stderr.write('error: invalid json\\n'); sys.exit(2)"],
+                Path(directory) / "worker-result.json",
+                timeout_seconds=5,
+            )
+        self.assertEqual(result["failure_class"], "WORKER_ERROR")
+        self.assertEqual(result["error_summary"], "error: invalid json")
+
     def test_node_analysis_includes_untriggered_nodes_without_calling_them_useless(self):
         report = analyze_node_effects([
             {
@@ -87,6 +98,25 @@ class CycleCaseContractTests(unittest.TestCase):
         self.assertNotIn("oracle", persisted.casefold())
         self.assertNotIn("expected_answer", persisted.casefold())
         self.assertNotIn(expected, persisted)
+
+    @unittest.skipUnless(HAS_COMPLEX, "complex extra is not installed")
+    def test_worker_persists_trace_and_attempted_call_when_provider_fails(self):
+        class RaisingProvider:
+            def complete(self, _messages):
+                raise RuntimeError("provider returned empty content")
+
+        case = discover_cases(CYCLE_CASES, "v1")[0]
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            result = run_case_worker(
+                case, output, provider=RaisingProvider(), max_calls=6
+            )
+            persisted = json.loads((output / "worker-result.json").read_text(encoding="utf-8"))
+        self.assertEqual(result["status"], "ERROR")
+        self.assertEqual(result["calls_attempted"], 1)
+        self.assertEqual(result["calls_used"], 0)
+        self.assertEqual(result["trace"][-1]["node"], "observe_classify")
+        self.assertEqual(persisted["error_type"], "RuntimeError")
 
     @unittest.skipUnless(HAS_COMPLEX, "complex extra is not installed")
     def test_offline_cycle_runs_five_isolated_workers_and_writes_reports(self):

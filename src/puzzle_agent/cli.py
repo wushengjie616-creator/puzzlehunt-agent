@@ -201,6 +201,8 @@ def main(argv: list[str] | None = None) -> int:
                         # one-hour deadline; a 60s transport default is too eager for
                         # high-effort thinking responses.
                         timeout=600.0,
+                        thinking="disabled",
+                        reasoning_effort="high",
                     ))
                 _print_json(run_case_worker(
                     args.case_dir,

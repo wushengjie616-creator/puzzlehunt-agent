@@ -56,6 +56,9 @@ related_commits: []
 - 节点总报告 RED/GREEN：先证明每题虽有报告但缺少 cycle aggregate；随后新增覆盖全部 8 节点的 `node-summary.json` 与 analysis Markdown 表，含跨题激活、耗时、作用标签和 issue，offline cycle 行为测试转绿。
 - 第三梯队工具 RED/GREEN：新增 custom-token Morse、多解逐位 invariant/delta、回文错位和 Unicode codepoint inspection；2 组 known-vector/失败边界测试转绿，分别对应 CCBC16 的视觉点划、多解即信号、回文剩余字和异码位括号机制。
 - 将三路全量审计合并为 `mechanism-cards.md`：覆盖 49 道非 Meta 的可观察信号、可复验中间产物和 Tool/Agent/Human 落点，不含答案或批量题面。
+- 正式 cycle 1（06:00:29）：冻结 `e440c33`，0/5，五题均 `WORKER_ERROR`，52.453–80.890 秒，无 timeout/错答，hard gate 未触发。session events 证明 intake/artifact 5/5 完成，observe 5 次尝试/1 次完成，hypothesis 1 次尝试/0 完成，其余节点未到达。
+- Cycle 1 根因：同一复杂 OBSERVE prompt 在原生 thinking 模式下返回空 `message.content`；小 JSON control 正常，关闭 thinking 后同 prompt 返回合法 JSON（必需字段齐全、10 observations）。因此不是 key/model/network/schema 支持失败。
+- Cycle 1 后 RED/GREEN：DeepSeek config 支持显式 thinking/effort、空 content 给出 finish reason；周期 worker 关闭原生 thinking 但保留六阶段有限推理。worker 异常现会持久化失败节点、trace、successful/attempted calls；parent 保存脱敏错误摘要。详见该批 `failure-analysis.md`。
 - DeepSeek scheduler 已完成最终热重启并加载 hard gate/节点聚合：runtime PID `67312`，原锚点保持为 2026-08-28 06:00:29 至 2026-08-29 03:00:29（Asia/Hong_Kong）；Git watcher runtime PID `62816`。
 
 ## 后续 todo
