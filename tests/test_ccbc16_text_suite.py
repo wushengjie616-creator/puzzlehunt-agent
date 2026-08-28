@@ -127,6 +127,37 @@ class CCBC16TextSuiteTests(unittest.TestCase):
                     surface_overrides={9: {"content": "guessed from solution"}},
                 )
 
+    def test_builder_uses_answer_excluding_official_script_adapter(self):
+        entry = {
+            "puzzle_id": 48,
+            "url": "https://ccbc16.cipherpuzzles.com/puzzle/5/48",
+            "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/48.json",
+        }
+        payload = {
+            "answer_type": 0, "title": "Brackets", "script": "official.vue",
+            "answer": "FINAL",
+        }
+        script = '''const PUZZLES = [[
+          { clue: "〈文本〉", ans: "DO-NOT-LEAK", id: 1, g: 0 }
+        ]];'''
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = root / "manifest.json"
+            manifest.write_text(json.dumps({"puzzles": [entry]}), encoding="utf-8")
+            result = build_text_suite(
+                manifest_path=manifest,
+                output_root=root / "suite",
+                fetch_json=lambda _url: payload,
+                fetch_text=lambda _url: script,
+            )
+            case = root / "suite" / "text" / "ccbc16-048"
+            runtime = (case / "input.json").read_text(encoding="utf-8")
+            provenance = json.loads((case / "provenance.json").read_text(encoding="utf-8"))
+        self.assertEqual(result["included_ids"], [48])
+        self.assertIn("〈文本〉", runtime)
+        self.assertNotIn("DO-NOT-LEAK", runtime)
+        self.assertEqual(provenance["script_surface"]["adapter"], "official-public-clues-v1")
+
 
 if __name__ == "__main__":
     unittest.main()

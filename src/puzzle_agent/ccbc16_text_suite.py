@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
 from pathlib import Path
 import re
 from typing import Any, Callable
 
 from .benchmark import validate_case
 from .hard_runner import convert_official_payload, load_nonmeta_manifest
+from .ccbc16_script_surfaces import SCRIPT_SURFACE_URLS, extract_script_surface
 
 
 JsonFetcher = Callable[[str], dict[str, Any]]
+TextFetcher = Callable[[str], str]
 _EMPHASIZED = re.compile(r"\*\*([^*\r\n]{1,100})\*\*|`([^`\r\n]{1,100})`")
 _IMAGE_SRC = re.compile(r"<img\b[^>]*\bsrc=[\"']([^\"']+)[\"']", re.IGNORECASE)
 _SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -102,6 +105,7 @@ def build_text_suite(
     fetch_json: JsonFetcher,
     checkpoint_overrides: dict[int, list[dict[str, str]]] | None = None,
     surface_overrides: dict[int, dict[str, Any]] | None = None,
+    fetch_text: TextFetcher | None = None,
 ) -> dict[str, Any]:
     """Fetch official payloads and retain only self-contained textual surfaces."""
 
@@ -123,6 +127,31 @@ def build_text_suite(
         if str(runtime_input.get("content", "")).startswith("[NO TEXTUAL SURFACE"):
             reasons.append("empty-text-surface")
         surface_transcription = None
+        script_surface = None
+        if puzzle_id in SCRIPT_SURFACE_URLS and fetch_text is not None:
+            script_url = SCRIPT_SURFACE_URLS[puzzle_id]
+            script_source = fetch_text(script_url)
+            if not isinstance(script_source, str):
+                raise ValueError(f"script fetcher returned non-text for puzzle {puzzle_id}")
+            extracted = extract_script_surface(puzzle_id, script_source)
+            original = str(runtime_input.get("content") or "")
+            if original.startswith("[NO TEXTUAL SURFACE"):
+                original = ""
+            runtime_input["content"] = "\n\n".join(filter(None, [original, extracted]))
+            reasons = [
+                reason for reason in reasons
+                if reason not in {"source-interaction", "empty-text-surface"}
+            ]
+            if reasons:
+                runtime_input["required_artifacts"] = reasons
+            else:
+                runtime_input.pop("required_artifacts", None)
+            script_surface = {
+                "url": script_url,
+                "sha256": sha256(script_source.encode("utf-8")).hexdigest(),
+                "adapter": "official-public-clues-v1",
+                "answer_fields_excluded": True,
+            }
         if puzzle_id in surface_overrides:
             surface_transcription = _verified_surface_transcription(
                 puzzle_id, payload, surface_overrides[puzzle_id]
@@ -185,6 +214,8 @@ def build_text_suite(
         }
         if surface_transcription is not None:
             provenance["surface_transcription"] = surface_transcription
+        if script_surface is not None:
+            provenance["script_surface"] = script_surface
         _write_json(case / "provenance.json", provenance)
         errors = validate_case(case)
         if errors:
