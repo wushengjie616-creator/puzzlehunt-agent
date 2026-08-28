@@ -58,8 +58,9 @@ _STAGE_INSTRUCTIONS = {
         '"plan":[{"id":"...","tool":"...","arguments":{},"purpose":"..."}]}. '
         "Preserve at least two competing, distinguishable hypotheses. Consider whether an intermediate answer "
         "is still a carrier and whether an inconsistency or multiple solutions are intentional information. "
-        "Choose bounded experiments with explicit arguments. Use the exact parameter names in these "
-        "signatures; do not invent aliases. Available deterministic tools: "
+        "Choose the smallest discriminating plan, normally 1-4 calls, and cover the final extraction, "
+        "not only the first transform. Every call needs a prediction; do not shotgun unrelated tools. "
+        "Use exact parameter names and satisfy the input contracts; do not invent aliases. Tools: "
         f"{_TOOL_CATALOG}."
     ),
     "EVALUATE_EVIDENCE": (

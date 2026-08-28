@@ -64,6 +64,9 @@ related_commits: []
 - Cycle 2 后 RED/GREEN：registry 从 live callable 自动生成精确签名；cycle summary 新增 `unsolved`；终局机器门拒绝“计划了工具但全部失败”的 solved 状态。focused graph/cycle tests 已先红后绿。
 - 自动化偏差：watcher 在 focused GREEN 后、文档和最终 full suite 完成前发布了功能快照 `53e4c61`；该快照本身通过 watcher full suite，但造成 code/doc 分属相邻 commits。最终文档与附加验证门在 `23df49f`，未改写已推送历史。
 - DeepSeek scheduler 在 cycle 2 改进后恢复：runtime PID `23336`；已完成的 06:00/09:00 批次保留且不会重跑，下一锚点 12:00:29，最终锚点仍为 2026-08-29 03:00:29（Asia/Hong_Kong）；Git watcher runtime PID `62816`。
+- 正式 cycle 3（12:00:29）：2 correct / 1 wrong / 2 unsolved / 0 error / 0 timeout，23.453–54.078 秒；30 次工具 attempt 中 20 成功，`unexpected keyword` 降至 0；所有预期节点 5/5 激活，一题走 replan。hard gate 未触发。
+- Cycle 3 失败证据：参数名已解决，但 10 次调用违反容器/枚举/前置条件；case 01 五次 Caesar 成功却漏最终 extraction，case 04 replan 采用 shotgun 且 grid 形状无效。详见该批 `failure-analysis.md`。
+- Cycle 3 后 RED/GREEN：ToolSpec 同注册点加入紧凑 precondition contract；planning 明确通常 1–4 个带预测的调用、禁止无关 shotgun，并要求覆盖 final extraction。focused graph/tool 15/15 GREEN。
 
 ## 后续 todo
 

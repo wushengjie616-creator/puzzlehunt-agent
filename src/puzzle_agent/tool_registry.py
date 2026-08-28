@@ -484,32 +484,33 @@ class ToolSpec:
     name: str
     function: Callable[..., Any]
     deterministic: bool = True
+    contract: str = ""
 
 
 class ToolRegistry:
     def __init__(self):
         self._specs = {
             spec.name: spec for spec in (
-                ToolSpec("extract_nth", extract_nth),
-                ToolSpec("anagram_delta", anagram_delta),
-                ToolSpec("read_grid_path", read_grid_path),
-                ToolSpec("dependency_order", dependency_order),
-                ToolSpec("caesar_shift", caesar_shift),
-                ToolSpec("a1z26_decode", a1z26_decode),
-                ToolSpec("interleave_sequences", interleave_sequences),
-                ToolSpec("grid_trace", grid_trace),
-                ToolSpec("constrained_order", constrained_order),
-                ToolSpec("decode_bit_patterns", decode_bit_patterns),
-                ToolSpec("repair_mojibake", repair_mojibake),
-                ToolSpec("common_symbol_intersection", common_symbol_intersection),
-                ToolSpec("grid_transform", grid_transform),
-                ToolSpec("phone_keypad_decode", phone_keypad_decode),
-                ToolSpec("braille_decode", braille_decode),
-                ToolSpec("playfair_codec", playfair_codec),
-                ToolSpec("decode_token_morse", decode_token_morse),
-                ToolSpec("solution_position_analysis", solution_position_analysis),
-                ToolSpec("palindrome_mismatch", palindrome_mismatch),
-                ToolSpec("unicode_inspect", unicode_inspect),
+                ToolSpec("extract_nth", extract_nth, contract="lines and 1-based indices are equal-length lists"),
+                ToolSpec("anagram_delta", anagram_delta, contract="removed must be a character-multiset subset of source"),
+                ToolSpec("read_grid_path", read_grid_path, contract="grid is list[str]; path is adjacent 0-based [row,col] list"),
+                ToolSpec("dependency_order", dependency_order, contract="dependencies is node->list[prerequisite]; include leaf nodes with []"),
+                ToolSpec("caesar_shift", caesar_shift, contract="shift is explicit integer -25..25; negative decodes a forward shift"),
+                ToolSpec("a1z26_decode", a1z26_decode, contract="values is non-empty list[int] in 1..26"),
+                ToolSpec("interleave_sequences", interleave_sequences, contract="sequences is list of at least two equal-length strings"),
+                ToolSpec("grid_trace", grid_trace, contract="grid is list[str], start is 0-based [row,col], directions uses N|E|S|W"),
+                ToolSpec("constrained_order", constrained_order, contract="constraints objects use type before|immediately_before with left/right or start|end with item"),
+                ToolSpec("decode_bit_patterns", decode_bit_patterns, contract="patterns is equal-width bit-string list; bit_order is msb|lsb"),
+                ToolSpec("repair_mojibake", repair_mojibake, contract="current_codec/original_codec name the strict reversible encode/decode path"),
+                ToolSpec("common_symbol_intersection", common_symbol_intersection, contract="values has >=2 strings; normalization is none|NFC|NFKC"),
+                ToolSpec("grid_transform", grid_transform, contract="operation is transpose|rotate90|rotate180|rotate270|flip_h|flip_v"),
+                ToolSpec("phone_keypad_decode", phone_keypad_decode, contract="groups is repeated-digit multitap strings such as ['44','33']"),
+                ToolSpec("braille_decode", braille_decode, contract="cells is list of unique dot-number lists using 1..6"),
+                ToolSpec("playfair_codec", playfair_codec, contract="operation is encode|decode; keyword explicit; I/J share a cell"),
+                ToolSpec("decode_token_morse", decode_token_morse, contract="groups is list[list[token]]; dot_token and dash_token are distinct explicit strings"),
+                ToolSpec("solution_position_analysis", solution_position_analysis, contract="solutions is 2..100 equal-length strings, not one candidate"),
+                ToolSpec("palindrome_mismatch", palindrome_mismatch, contract="text is compared at mirrored character positions"),
+                ToolSpec("unicode_inspect", unicode_inspect, contract="text returns codepoint/name/category records; it does not decode semantics"),
             )
         }
 
@@ -529,7 +530,9 @@ class ToolRegistry:
                     inspect.Parameter.VAR_KEYWORD,
                 }
             ]
-            result.append(f"{name}({', '.join(parameters)})")
+            signature = f"{name}({', '.join(parameters)})"
+            contract = self._specs[name].contract
+            result.append(f"{signature}: {contract}" if contract else signature)
         return tuple(result)
 
     def execute(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:

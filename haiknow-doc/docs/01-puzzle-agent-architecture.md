@@ -105,7 +105,7 @@ INTAKE
 
 每次调用用 tool+arguments fingerprint 去重。未知工具或参数错误形成 failed attempt，不进入成功 evidence。
 
-规划 prompt 的工具签名由 `inspect.signature()` 对 ToolRegistry 当前 callable 生成，例如 `a1z26_decode(values)`、`grid_trace(grid, start, directions)`。它不是另一份手写 schema，因此注册函数改名会直接反映到 prompt 和契约测试。只列工具名已被正式 cycle 2 证伪：14/14 调用因模型发明参数别名失败。
+规划 prompt 的工具签名由 `inspect.signature()` 对 ToolRegistry 当前 callable 生成，例如 `a1z26_decode(values)`、`grid_trace(grid, start, directions)`。ToolSpec 在同一注册点补充紧凑前置条件，例如 0-based 坐标、`N|E|S|W`、等长字符串和 constraint object shape。只列工具名已被 cycle 2 证伪；只有签名又在 cycle 3 暴露类型/前置条件错误，因此两者都属于执行契约。
 
 ## 7. 模块责任
 

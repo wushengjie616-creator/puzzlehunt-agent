@@ -153,9 +153,13 @@ class ComplexGraphTests(unittest.TestCase):
         hypothesis_prompt = provider.messages[1][0]["content"]
         self.assertIn("interleave_sequences(sequences)", hypothesis_prompt)
         self.assertIn("grid_trace(grid, start, directions)", hypothesis_prompt)
+        self.assertIn("directions uses N|E|S|W", hypothesis_prompt)
         self.assertIn("a1z26_decode(values)", hypothesis_prompt)
         self.assertIn("extract_nth(lines, indices)", hypothesis_prompt)
         self.assertIn("constrained_order(items, constraints)", hypothesis_prompt)
+        self.assertIn("immediately_before", hypothesis_prompt)
+        self.assertIn("include leaf nodes", hypothesis_prompt)
+        self.assertIn("cover the final extraction", hypothesis_prompt)
         self.assertIn("playfair_codec", hypothesis_prompt)
         self.assertIn("repair_mojibake", hypothesis_prompt)
         verify_prompt = provider.messages[-1][0]["content"]
