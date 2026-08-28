@@ -9,7 +9,7 @@ class DeepSeekConfig:
     base_url: str = "https://api.deepseek.com"
     model: str = "deepseek-v4-pro"
     timeout: float = 60.0
-    max_tokens: int = 4096
+    max_tokens: int = 16384
     thinking: str = "enabled"
     reasoning_effort: str = "high"
 

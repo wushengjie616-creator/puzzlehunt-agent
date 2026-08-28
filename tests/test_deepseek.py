@@ -64,6 +64,7 @@ class DeepSeekContractTests(unittest.TestCase):
         self.assertFalse(payload["stream"])
         self.assertEqual(payload["thinking"], {"type": "enabled"})
         self.assertEqual(payload["reasoning_effort"], "high")
+        self.assertEqual(payload["max_tokens"], 16384)
         self.assertEqual(timeout, 60.0)
 
     def test_api_errors_do_not_echo_the_key(self):

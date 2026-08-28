@@ -155,7 +155,7 @@ watcher 每轮先对 allowlisted 工作树内容做 fingerprint，运行完整�
 
 `MATERIALIZE_SUBPROBLEMS` 位于 ontology discovery 与工具规划之间。它把题面结构写成 `structure_model`，把可独立求解单元写成 `subproblems`，并把尚未成为证据的语义候选写进 `subproblem_results`。这些 provisional result 不会绕过 evidence gate；它们的作用是让后续计划面向具体 clue unit，而不是对整页内容盲试转换。
 
-每个 LLM 节点都有显式字符预算，并把单个字符串限制为 240 字符。预算按节点产物规模分配；例如 `ASSOCIATE_THEME` 为 3500 字符，而需要枚举题面单元的 `MATERIALIZE_SUBPROBLEMS` 为 9000 字符。若 DeepSeek 返回 `finish_reason=length`，provider 会报告截断错误，不会尝试猜补残缺 JSON 或把部分输出写进证据。
+每个 LLM 节点都有显式字符预算，并把单个字符串限制为 240 字符。预算按节点产物规模分配；例如 `ASSOCIATE_THEME` 为 3500 字符，而需要枚举题面单元的 `MATERIALIZE_SUBPROBLEMS` 为 9000 字符。DeepSeek 请求允许最多 16384 output tokens，以免 4096 的旧上限截断结构化阶段结果；这是生成上限而非固定消耗。若 DeepSeek 返回 `finish_reason=length`，provider 会报告截断错误，不会尝试猜补残缺 JSON 或把部分输出写进证据。
 
 终局还有一个机器门：若当前计划要求确定性工具，但所有相关 attempt 都失败，则即使模型返回全真 checks，也只能进入 `NEEDS_REVIEW`。这防止 cycle 2 中“工具全失败却把猜测标为 evidence-backed”的错误。
 
