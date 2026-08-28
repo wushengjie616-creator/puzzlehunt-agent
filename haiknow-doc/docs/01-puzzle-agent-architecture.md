@@ -111,6 +111,8 @@ INTAKE
 
 阶段 memory 不是对话历史，而是结构化状态：`observations` 与 `flavor_associations` 保存题面事实和可检验联想，`attempts/evidence/extractions` 保存机械实验账本，`intermediate_answers` 标记仍是 carrier 的中间词，`open_questions` 与 `unused_elements` 保存尚未闭合的推理债务。这些字段显式进入后续节点输入；只要后两项非空，机器终局门就不能接受 `SOLVED`。
 
+周期报告不读取模型私有思维链。每个节点 trace 额外记录可观察效果：观察/联想数量、假设与计划数量、工具成功/失败和 extraction 增量、评价的 verify/replan 决策、阶段 memory 债务，以及终局是否接受答案。错误题的因果 usefulness 仍标 `UNASSESSABLE`，但报告会显示实际行为及 `FAILED_TOOL_CALLS`、`EMPTY_PLAN`、`PROVIDER_ERROR` 等问题，不再只给空泛激活率。
+
 ## 7. 模块责任
 
 | 模块 | 责任 |

@@ -132,6 +132,9 @@ def analyze_node_effects(traces: list[dict[str, Any]], *, correct: bool) -> list
         matching = [item for item in traces if item.get("node") == node]
         written = sorted({field for item in matching for field in item.get("written_fields", [])})
         evidence = sorted({item_id for item in matching for item_id in item.get("new_evidence_ids", [])})
+        observed_effects = sorted({
+            effect for item in matching for effect in item.get("observed_effects", [])
+        })
         activated = bool(matching)
         if not activated or not correct:
             usefulness = "UNASSESSABLE"
@@ -141,6 +144,13 @@ def analyze_node_effects(traces: list[dict[str, Any]], *, correct: bool) -> list
             usefulness = "HELPFUL"
         else:
             usefulness = "NEUTRAL"
+        issues: list[str] = []
+        if any(effect.startswith("TOOL_FAILED:") for effect in observed_effects):
+            issues.append("FAILED_TOOL_CALLS")
+        if "PLAN_ITEMS:0" in observed_effects:
+            issues.append("EMPTY_PLAN")
+        if "PROVIDER_ERROR" in observed_effects:
+            issues.append("PROVIDER_ERROR")
         result.append({
             "node": node,
             "expected_activation": node != "human_interrupt",
@@ -149,8 +159,9 @@ def analyze_node_effects(traces: list[dict[str, Any]], *, correct: bool) -> list
             "wall_time_ms": sum(int(item.get("wall_time_ms", 0)) for item in matching),
             "written_fields": written,
             "new_evidence_ids": evidence,
+            "observed_effects": observed_effects,
             "usefulness": usefulness,
-            "issues": [],
+            "issues": issues,
         })
     return result
 
@@ -168,11 +179,15 @@ def aggregate_node_effects(reports: list[list[dict[str, Any]]]) -> list[dict[str
         activation_count = sum(int(item.get("activation_count", 0)) for item in entries)
         written = sorted({field for item in entries for field in item.get("written_fields", [])})
         evidence = sorted({value for item in entries for value in item.get("new_evidence_ids", [])})
+        observed_effect_counts: dict[str, int] = {}
+        for item in entries:
+            for effect in item.get("observed_effects", []):
+                observed_effect_counts[effect] = observed_effect_counts.get(effect, 0) + 1
         usefulness_counts: dict[str, int] = {}
         for item in entries:
             label = str(item.get("usefulness", "UNASSESSABLE"))
             usefulness_counts[label] = usefulness_counts.get(label, 0) + 1
-        issues: list[str] = []
+        issues = sorted({issue for item in entries for issue in item.get("issues", [])})
         expected = node != "human_interrupt"
         if expected and activated_cases < total_cases:
             issues.append(f"NOT_ACTIVATED_IN_{total_cases - activated_cases}_CASES")
@@ -187,6 +202,7 @@ def aggregate_node_effects(reports: list[list[dict[str, Any]]]) -> list[dict[str
             "wall_time_ms": sum(int(item.get("wall_time_ms", 0)) for item in entries),
             "written_fields": written,
             "new_evidence_count": len(evidence),
+            "observed_effect_counts": observed_effect_counts,
             "usefulness_counts": usefulness_counts,
             "issues": issues,
         })
@@ -204,6 +220,45 @@ def _evidence_ids(state: dict[str, Any]) -> set[str]:
         for item in state.get("evidence", [])
         if isinstance(item, dict) and "id" in item
     }
+
+
+def _observable_effects(
+    node: str | None, before: dict[str, Any], after: dict[str, Any]
+) -> list[str]:
+    """Describe state deltas without exposing or guessing private reasoning."""
+
+    effects: list[str] = []
+    if node == "artifact_inventory":
+        effects.append(f"MISSING_ARTIFACTS:{len(after.get('missing_artifacts', []))}")
+    elif node == "human_interrupt":
+        delta = len(after.get("artifacts", {})) - len(before.get("artifacts", {}))
+        effects.append(f"ARTIFACTS_ADDED:{max(delta, 0)}")
+    elif node == "observe_classify":
+        effects.append(f"OBSERVATIONS_RECORDED:{len(after.get('observations', []))}")
+        effects.append(f"FLAVOR_ASSOCIATIONS:{len(after.get('flavor_associations', []))}")
+    elif node == "hypothesize_plan":
+        effects.append(f"HYPOTHESES_PRESERVED:{len(after.get('hypotheses', []))}")
+        effects.append(f"PLAN_ITEMS:{len(after.get('plan', []))}")
+    elif node == "tool_dispatch":
+        prior_attempts = len(before.get("attempts", []))
+        attempts = after.get("attempts", [])[prior_attempts:]
+        completed = sum(
+            item.get("outcome") in {"completed", "candidates_found"} for item in attempts
+        )
+        failed = sum(item.get("outcome") == "failed" for item in attempts)
+        effects.extend([f"TOOL_COMPLETED:{completed}", f"TOOL_FAILED:{failed}"])
+        extraction_delta = len(after.get("extractions", [])) - len(before.get("extractions", []))
+        effects.append(f"EXTRACTIONS_ADDED:{max(extraction_delta, 0)}")
+    elif node == "evaluate_evidence":
+        effects.append(f"DECISION:{str(after.get('evaluation_decision', '')).upper()}")
+        effects.append(f"ANSWER_CANDIDATES:{len(after.get('answer_candidates', []))}")
+        effects.append(f"INTERMEDIATE_ANSWERS:{len(after.get('intermediate_answers', []))}")
+        debt = len(after.get("open_questions", [])) + len(after.get("unused_elements", []))
+        effects.append(f"MEMORY_DEBT:{debt}")
+    elif node == "verify_answer":
+        effects.append(f"TERMINAL_STATUS:{str(after.get('status', '')).upper()}")
+        effects.append(f"FINAL_ANSWER_ACCEPTED:{int(bool(after.get('final_answer')))}")
+    return effects
 
 
 def run_case_worker(
@@ -260,6 +315,7 @@ def run_case_worker(
                 "provider_call_attempted": provider_attempted,
                 "outcome": "failed",
                 "error_type": error_type,
+                "observed_effects": ["PROVIDER_ERROR"],
             })
             state = {
                 **before,
@@ -284,6 +340,7 @@ def run_case_worker(
             "calls_used": state.get("budget", {}).get("calls_used", 0),
             "provider_call_attempted": provider_attempted,
             "outcome": "completed",
+            "observed_effects": _observable_effects(state.get("last_node"), before, state),
         })
         if state.get("status") in terminal or state.get("next_node") is None:
             break
@@ -530,21 +587,24 @@ def _write_cycle_analysis(path: Path, manifest: dict[str, Any]) -> None:
         "",
         "## Node aggregate",
         "",
-        "| Node | Activated cases | Activations | Time (ms) | Usefulness labels | Issues |",
-        "|---|---:|---:|---:|---|---|",
+        "| Node | Activated cases | Activations | Time (ms) | Observed effects | Usefulness labels | Issues |",
+        "|---|---:|---:|---:|---|---|---|",
     ])
     for item in manifest.get("node_summary", []):
         usefulness = ", ".join(
             f"{name}:{count}" for name, count in sorted(item["usefulness_counts"].items())
         ) or "none"
+        effects = ", ".join(
+            f"{name}×{count}" for name, count in sorted(item.get("observed_effect_counts", {}).items())
+        ) or "none"
         issues = ", ".join(item["issues"]) or "none"
         lines.append(
             f"| {item['node']} | {item['activated_cases']}/{item['cases_total']} | "
-            f"{item['activation_count']} | {item['wall_time_ms']} | {usefulness} | {issues} |"
+            f"{item['activation_count']} | {item['wall_time_ms']} | {effects} | {usefulness} | {issues} |"
         )
     lines.extend([
         "",
-        "逐节点的激活、耗时、写入字段与可评估作用见每题 `node-analysis.json`。",
+        "逐节点的激活、耗时、写入字段、可观察效果与可评估作用见每题 `node-analysis.json`。",
         "未答对时节点作用保持 `UNASSESSABLE`，避免把相关性误报为因果贡献。",
     ])
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")

@@ -74,12 +74,27 @@ class CycleCaseContractTests(unittest.TestCase):
                 "wall_time_ms": 12,
                 "written_fields": ["observations"],
                 "new_evidence_ids": ["o1"],
+                "observed_effects": ["OBSERVATIONS_RECORDED:4"],
             }
         ], correct=False)
         by_node = {item["node"]: item for item in report}
         self.assertEqual(by_node["observe_classify"]["usefulness"], "UNASSESSABLE")
+        self.assertEqual(by_node["observe_classify"]["observed_effects"], ["OBSERVATIONS_RECORDED:4"])
         self.assertFalse(by_node["human_interrupt"]["activated"])
         self.assertEqual(by_node["human_interrupt"]["usefulness"], "UNASSESSABLE")
+
+    def test_node_analysis_surfaces_failed_tool_effects_even_on_a_wrong_answer(self):
+        report = analyze_node_effects([{
+            "node": "tool_dispatch",
+            "wall_time_ms": 3,
+            "written_fields": ["attempts"],
+            "new_evidence_ids": ["tool-1"],
+            "observed_effects": ["TOOL_COMPLETED:1", "TOOL_FAILED:2", "EXTRACTIONS_ADDED:1"],
+        }], correct=False)
+        tool = {item["node"]: item for item in report}["tool_dispatch"]
+        self.assertEqual(tool["usefulness"], "UNASSESSABLE")
+        self.assertIn("TOOL_FAILED:2", tool["observed_effects"])
+        self.assertIn("FAILED_TOOL_CALLS", tool["issues"])
 
     @unittest.skipUnless(HAS_COMPLEX, "complex extra is not installed")
     def test_worker_steps_nodes_and_never_loads_oracle(self):
