@@ -62,7 +62,8 @@ related_commits: []
 - 正式 cycle 2（09:00:29）：冻结 `4c14005`，2 correct / 1 wrong / 1 NEEDS_REVIEW / 1 ERROR / 0 timeout，16.625–40.156 秒。四题到达 verify；case 04 实际走了一次 replan。hard gate 未触发。
 - Cycle 2 失败证据：四个规划案例共 14 次工具调用、0 成功，均因 prompt 只给工具名而模型发明参数别名；case 03 的不确定候选被正确拦下，case 04 却在工具全失败后错误通过 verify。详见该批 `failure-analysis.md`。
 - Cycle 2 后 RED/GREEN：registry 从 live callable 自动生成精确签名；cycle summary 新增 `unsolved`；终局机器门拒绝“计划了工具但全部失败”的 solved 状态。focused graph/cycle tests 已先红后绿。
-- DeepSeek scheduler 在 cycle 1 故障修复后恢复：runtime PID `50876`；已完成的 06:00 批次保留且不会重跑，下一锚点 09:00:29，最终锚点仍为 2026-08-29 03:00:29（Asia/Hong_Kong）；Git watcher runtime PID `62816`。
+- 自动化偏差：watcher 在 focused GREEN 后、文档和最终 full suite 完成前发布了功能快照 `53e4c61`；该快照本身通过 watcher full suite，但造成 code/doc 分属相邻 commits。最终文档与附加验证门在 `23df49f`，未改写已推送历史。
+- DeepSeek scheduler 在 cycle 2 改进后恢复：runtime PID `23336`；已完成的 06:00/09:00 批次保留且不会重跑，下一锚点 12:00:29，最终锚点仍为 2026-08-29 03:00:29（Asia/Hong_Kong）；Git watcher runtime PID `62816`。
 
 ## 后续 todo
 
