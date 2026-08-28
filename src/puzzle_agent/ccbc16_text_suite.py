@@ -176,11 +176,11 @@ def build_text_suite(
             excluded.append({"puzzle_id": puzzle_id, "reasons": reasons})
             continue
 
-        solution = payload.get("analysis") or payload.get("solution") or ""
-        checkpoints = extract_solution_checkpoints(
-            solution, converted["oracle"]["answer"]
-        )
-        seen_checkpoints = {_normalized(item["value"]) for item in checkpoints}
+        # Emphasis in prose is only a discovery aid: it frequently marks labels,
+        # examples, or the final answer. Only reviewed overrides become oracle
+        # checkpoints used for scoring.
+        checkpoints: list[dict[str, str]] = []
+        seen_checkpoints: set[str] = set()
         for item in checkpoint_overrides.get(puzzle_id, []):
             if (
                 not isinstance(item, dict)

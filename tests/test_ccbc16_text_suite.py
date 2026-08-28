@@ -57,7 +57,6 @@ class CCBC16TextSuiteTests(unittest.TestCase):
         self.assertNotIn("FINAL", runtime)
         self.assertEqual(oracle["answer"], "FINAL")
         self.assertEqual(oracle["intermediate_answers"], [
-            {"value": "ALPHA", "source": "official-solution-emphasis"},
             {"value": "OMEGA", "source": "human-reviewed-official-solution"},
         ])
 
