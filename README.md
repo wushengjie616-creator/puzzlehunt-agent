@@ -62,7 +62,7 @@ shell 环境变量优先于 `.env.local`。只允许上述三个 `DEEPSEEK_*` �
 ```powershell
 $pa = ".\.venv\Scripts\puzzle-agent.exe"
 
-& $pa session init --file puzzle.json --max-calls 9
+& $pa session init --file puzzle.json --max-calls 10
 & $pa session run <session-id> --offline
 & $pa session status <session-id>
 & $pa session history <session-id>
@@ -77,6 +77,7 @@ complex mode 的非阻塞流程至少包含四个独立推理节点：
 OBSERVE_CLASSIFY
   → ASSOCIATE_THEME
   → MATERIALIZE_SUBPROBLEMS
+  → VALIDATE_SUBPROBLEMS
   → HYPOTHESIZE_PLAN
   → deterministic tool dispatch
   → EVALUATE_EVIDENCE
@@ -168,7 +169,7 @@ CCBC16 只作为离线方法学习来源，不会把官方题面或题解交给 
 真实 DeepSeek benchmark 可能产生多次计费请求，只有手动指定时才运行：
 
 ```powershell
-& $pa benchmark run --suite blind --provider deepseek --max-calls 9
+& $pa benchmark run --suite blind --provider deepseek --max-calls 10
 ```
 
 ## 24 小时周期评测
@@ -188,7 +189,7 @@ CCBC16 只作为离线方法学习来源，不会把官方题面或题解交给 
 & $pa cycle stop
 ```
 
-scheduler 在 T+3h 到 T+24h 共建立 8 个锚点。每批报告写入 `benchmarks/cycles/runs/<cycle-id>/`，包含冻结 commit、逐题耗时/结果、逐题节点报告，以及跨五题的 `node-summary.json`/Markdown 聚合表。未答对时作用保持 `UNASSESSABLE`，不会把相关性冒充因果贡献。
+scheduler 在 T+3h 到 T+24h 共建立 8 个锚点。每批报告写入 `benchmarks/cycles/runs/<cycle-id>/`，包含冻结 commit、逐题耗时/结果、逐题节点报告，以及跨题目的 `node-summary.json`/Markdown 聚合表；公开小时报告也直接列出每个节点的激活、耗时、可观察效果、作用判断和问题。未答对时作用保持 `UNASSESSABLE`，不会把相关性冒充因果贡献。
 
 任一正式批次达到 5/5 后，scheduler 会且只会运行一次 CCBC16 的 49 道非-meta硬测试。原题与 oracle 只在被忽略的临时目录中存在；Git 仅保存脱敏耗时/正确性/错误分类。也可显式调用下列命令，但它会永久消耗“一次”机会并产生大量 API 调用：
 

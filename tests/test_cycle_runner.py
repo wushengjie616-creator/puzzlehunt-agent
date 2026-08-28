@@ -64,6 +64,12 @@ class CycleCaseContractTests(unittest.TestCase):
         self.assertIn("失败分析", report)
         self.assertIn("下一轮优化假设", report)
         self.assertIn("工具", report)
+        self.assertIn("逐节点作用审计", report)
+        self.assertIn("tool_dispatch", report)
+        self.assertIn("1/1", report)
+        self.assertIn("TOOL_FAILED:1", report)
+        self.assertIn("UNASSESSABLE:1", report)
+        self.assertIn("FAILED_TOOL_CALLS", report)
 
     def test_24_hour_schedule_has_eight_three_hour_boundaries(self):
         start = datetime(2026, 8, 28, 3, 0, tzinfo=timezone(timedelta(hours=8)))

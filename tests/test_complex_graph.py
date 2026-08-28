@@ -169,6 +169,25 @@ class RegistryPlanningProvider(ScriptedStageProvider):
         return super().complete(messages)
 
 
+class ValidationContractProvider(ScriptedStageProvider):
+    def __init__(self, validation_response, materialization_response=None):
+        super().__init__()
+        self.validation_response = validation_response
+        self.materialization_response = materialization_response
+
+    def complete(self, messages):
+        marker = messages[0]["content"].split("PUZZLE_STAGE: ", 1)[1].splitlines()[0]
+        if marker == "MATERIALIZE_SUBPROBLEMS" and self.materialization_response is not None:
+            self.stages.append(marker)
+            self.messages.append(messages)
+            return json.dumps(self.materialization_response)
+        if marker == "VALIDATE_SUBPROBLEMS":
+            self.stages.append(marker)
+            self.messages.append(messages)
+            return json.dumps(self.validation_response)
+        return super().complete(messages)
+
+
 class ReplanningProvider(ScriptedStageProvider):
     def __init__(self):
         super().__init__()
@@ -354,6 +373,146 @@ class ComplexGraphTests(unittest.TestCase):
         self.assertIn("all_elements_consumed", verify_prompt)
         self.assertIn("independent_derivation", verify_prompt)
         self.assertIn("open question", verify_prompt)
+
+    def test_subproblem_validation_rejects_drifted_accepted_value(self):
+        provider = ValidationContractProvider({
+            "validated_results": [{
+                "result_id": "sr1",
+                "subproblem_id": "sp1",
+                "value": "HELLO",
+                "validation_kind": "semantic_derivation",
+                "signal_ids": ["o1"],
+                "prediction": "The candidate decodes to readable text.",
+                "falsifier": "The decoded text is not readable.",
+                "justification": "This silently replaces the materialized value.",
+            }],
+            "contradicted_result_ids": [],
+            "needs_test_result_ids": [],
+            "unresolved_subproblem_ids": [],
+            "issues": [],
+        })
+
+        with self.assertRaisesRegex(
+            ValueError, "validated subproblem results must exactly reference supported candidates"
+        ):
+            build_puzzle_graph(provider).invoke(
+                new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=10)
+            )
+
+    def test_subproblem_validation_requires_one_unique_verdict_per_nonempty_candidate(self):
+        invalid_responses = {
+            "missing": {
+                "validated_results": [],
+                "contradicted_result_ids": [],
+                "needs_test_result_ids": [],
+                "unresolved_subproblem_ids": ["sp1"],
+                "issues": [],
+            },
+            "overlapping": {
+                "validated_results": [{
+                    "result_id": "sr1",
+                    "subproblem_id": "sp1",
+                    "value": "URYYB",
+                    "validation_kind": "faithful_transcription",
+                    "signal_ids": ["o1"],
+                    "prediction": "The carrier retains its five positions.",
+                    "falsifier": "The carrier differs from the visible text.",
+                    "justification": "The value copies the visible carrier.",
+                }],
+                "contradicted_result_ids": [],
+                "needs_test_result_ids": ["sr1"],
+                "unresolved_subproblem_ids": [],
+                "issues": [],
+            },
+            "duplicate_within_partition": {
+                "validated_results": [],
+                "contradicted_result_ids": ["sr1", "sr1"],
+                "needs_test_result_ids": [],
+                "unresolved_subproblem_ids": ["sp1"],
+                "issues": [],
+            },
+        }
+
+        for name, response in invalid_responses.items():
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "every non-empty subproblem result must receive exactly one verdict|"
+                    "subproblem result verdicts must be unique and disjoint",
+                ):
+                    build_puzzle_graph(ValidationContractProvider(response)).invoke(
+                        new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=10)
+                    )
+
+    def test_subproblem_validation_requires_exact_unresolved_subproblem_coverage(self):
+        base_validation = {
+            "validated_results": [{
+                "result_id": "sr1",
+                "subproblem_id": "sp1",
+                "value": "URYYB",
+                "validation_kind": "faithful_transcription",
+                "signal_ids": ["o1"],
+                "prediction": "The carrier retains its five positions.",
+                "falsifier": "The carrier differs from the visible text.",
+                "justification": "The value copies the visible carrier.",
+            }],
+            "contradicted_result_ids": [],
+            "needs_test_result_ids": [],
+            "unresolved_subproblem_ids": [],
+            "issues": [],
+        }
+        two_subproblems = {
+            "structure_model": {
+                "kind": "list",
+                "unit_count": 2,
+                "grouping_rule": "two independently checkable carriers",
+                "dependencies": [],
+            },
+            "subproblems": [{
+                "id": "sp1",
+                "input_excerpt": "uryyb",
+                "signal_ids": ["o1"],
+                "group": "main",
+                "depends_on": [],
+                "predicted_product": "readable carrier",
+                "status": "candidate",
+            }, {
+                "id": "sp2",
+                "input_excerpt": "?????",
+                "signal_ids": ["o1"],
+                "group": "main",
+                "depends_on": [],
+                "predicted_product": "second readable carrier",
+                "status": "open",
+            }],
+            "subproblem_results": [{
+                "id": "sr1",
+                "subproblem_id": "sp1",
+                "value": "URYYB",
+                "status": "candidate",
+                "signal_ids": ["o1"],
+                "confidence": 0.4,
+            }],
+        }
+        invalid_cases = {
+            "missing_unresolved_sp2": ValidationContractProvider(
+                base_validation, materialization_response=two_subproblems
+            ),
+            "accepted_sp1_also_marked_unresolved": ValidationContractProvider({
+                **base_validation,
+                "unresolved_subproblem_ids": ["sp1"],
+            }),
+        }
+
+        for name, provider in invalid_cases.items():
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "unresolved subproblem ids must cover every subproblem without a supported result",
+                ):
+                    build_puzzle_graph(provider).invoke(
+                        new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=10)
+                    )
 
     def test_call_budget_stops_graph_without_overrun(self):
         provider = ScriptedStageProvider()

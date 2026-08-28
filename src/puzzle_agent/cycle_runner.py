@@ -703,6 +703,33 @@ def format_human_cycle_report(
             f"{str(item['reasoning_pass']).lower()} ({item['reasoning_score']:.2f}) |"
         )
 
+    lines.extend([
+        "",
+        "## 逐节点作用审计",
+        "",
+        "| 节点 | 激活题目 | 激活次数 | 耗时(ms) | 可观察效果 | 作用判断 | 问题 |",
+        "|---|---:|---:|---:|---|---|---|",
+    ])
+    for item in manifest.get("node_summary", []):
+        effects = ", ".join(
+            f"{name}×{count}"
+            for name, count in sorted(item.get("observed_effect_counts", {}).items())
+        ) or "none"
+        usefulness = ", ".join(
+            f"{name}:{count}"
+            for name, count in sorted(item.get("usefulness_counts", {}).items())
+        ) or "none"
+        issues = ", ".join(item.get("issues", [])) or "none"
+        lines.append(
+            f"| {item['node']} | {item.get('activated_cases', 0)}/{item.get('cases_total', 0)} | "
+            f"{item.get('activation_count', 0)} | {item.get('wall_time_ms', 0)} | "
+            f"{effects} | {usefulness} | {issues} |"
+        )
+    lines.extend([
+        "",
+        "`UNASSESSABLE` 表示当前结果不足以证明该节点有因果贡献；它不是“节点无用”。",
+    ])
+
     tool_issues = sorted({
         issue
         for node in manifest.get("node_summary", [])

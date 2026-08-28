@@ -95,11 +95,6 @@ def _verified_surface_transcription(
     image = payload.get("image")
     if isinstance(image, str) and image.strip():
         expected_urls.add(image.strip())
-    tips = payload.get("tips")
-    if isinstance(tips, list):
-        for tip in tips:
-            if isinstance(tip, dict) and "碎片" in str(tip.get("title") or ""):
-                expected_urls.update(_IMAGE_SRC.findall(str(tip.get("content") or "")))
     if expected_urls and not expected_urls.issubset(set(urls)):
         raise ValueError(f"surface transcription omits an official artifact for puzzle {puzzle_id}")
     return dict(override)

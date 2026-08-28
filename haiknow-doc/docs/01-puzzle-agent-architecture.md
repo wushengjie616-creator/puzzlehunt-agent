@@ -33,20 +33,22 @@ INTAKE
   → OBSERVE_CLASSIFY              # LLM call 1：事实与 surface tension
   → ASSOCIATE_THEME               # LLM call 2：ontology beam、bridge、预测与反证
   → MATERIALIZE_SUBPROBLEMS       # LLM call 3：显式子题、分组、依赖与候选载体
-  → HYPOTHESIZE_PLAN              # LLM call 4：机制承诺与有界实验
+  → VALIDATE_SUBPROBLEMS          # LLM call 4：局部答案的语义/转录证据门
+  → HYPOTHESIZE_PLAN              # LLM call 5：机制承诺与有界实验
   → TOOL_DISPATCH                 # zero LLM calls
-  → EVALUATE_EVIDENCE             # LLM call 5
-  → VERIFY_INTERMEDIATES          # LLM call 6：中间载体证据门
-  → VERIFY_ANSWER                 # LLM call 7
+  → EVALUATE_EVIDENCE             # LLM call 6
+  → VERIFY_INTERMEDIATES          # LLM call 7：中间载体证据门
+  → VERIFY_ANSWER                 # LLM call 8
   → SOLVED | NEEDS_REVIEW | EXHAUSTED
 ```
 
-七个 LLM node 都调用同一个 `DeepSeekProvider.complete()`，每次是 stateless single-turn Chat Completions 请求。本地 state 被裁剪成当前节点所需 JSON 后注入下一次请求，不依赖 DeepSeek 服务端会话。正常路径七次调用；一次 evidence-driven replan 使用九次。
+八个 LLM node 都调用同一个 `DeepSeekProvider.complete()`，每次是 stateless single-turn Chat Completions 请求。本地 state 被裁剪成当前节点所需 JSON 后注入下一次请求，不依赖 DeepSeek 服务端会话。正常路径八次调用；一次 evidence-driven replan 使用十次。
 
 ### 强制阶段纪律
 
 - 观察轮只能写事实、异常和有触发词的风味联想，不提交答案。
 - 子问题物化轮先把列表、网格、阶段题和 meta 拆成可单独检查的工作单元；大题保留总数、分组和依赖，并选择代表性单元，不把 100+ 条线索压成一段摘要。
+- 子问题验证轮把每个非空局部答案精确分入 supported、contradicted 或 needs-test；只有值不漂移、引用真实 signal 且给出 prediction/falsifier 的 supported 结果才能进入 evidence，无支持结果的子题必须显式 unresolved。
 - 计划轮至少保留两个 competing hypotheses，并选择可判别实验。
 - 每个工具计划必须引用可见 signal，给出具体 prediction 与 falsifier；空计划保持为空，不再暗中回退到通用密码 shotgun。
 - 工具轮只运行白名单确定性工具，结果带 provenance 写入 evidence。
@@ -60,7 +62,7 @@ INTAKE
 框架中立 state 是 JSON 兼容映射，主要分区为：
 
 - immutable `puzzle`、`artifacts`、`required_artifacts`
-- `observations`、`flavor_associations`、`structure_model`、`subproblems` 与 `subproblem_results`
+- `observations`、`flavor_associations`、`structure_model`、`subproblems`、`subproblem_results`、`validated_subproblem_results` 与 `subproblem_validation`
 - `hypotheses`、`plan`、`attempts`、`evidence`
 - `intermediate_answers`、`validated_intermediate_answers`、`intermediate_validation`、`extractions`、`answer_candidates`
 - `open_questions`、`missing_artifacts`、`blockers`
@@ -149,11 +151,13 @@ watcher 每轮先对 allowlisted 工作树内容做 fingerprint，运行完整�
 
 节点报告只依据可观察数据。正确证据链中的写入节点可标 `HELPFUL/ESSENTIAL`；错误答案时保持 `UNASSESSABLE`，避免从失败运行反推虚假的节点因果作用。每轮还生成 `node-summary.json` 和 analysis 中的全节点聚合表，列出跨题激活数、总次数、耗时、写入字段、evidence 数、作用标签计数与未激活/无可观察效果问题。
 
-证据评估默认进入中间验证，再进入终局验证；若它显式给出 `decision=replan` 且剩余预算至少能容纳“新规划 + 新评估 + 中间验证 + 最终验证”，则回到 `hypothesize_plan`。第二轮能读取上一轮 attempts/evidence，工具和 assessment ID 跨轮次保持唯一。默认 `max_calls=9`；正常路径使用七次，单次 replan 路径使用九次，不形成无限 ReAct loop。
+证据评估默认进入中间验证，再进入终局验证；若它显式给出 `decision=replan` 且剩余预算至少能容纳“新规划 + 新评估 + 中间验证 + 最终验证”，则回到 `hypothesize_plan`。第二轮能读取上一轮 attempts/evidence，工具和 assessment ID 跨轮次保持唯一。默认 `max_calls=10`；正常路径使用八次，单次 replan 路径使用十次，不形成无限 ReAct loop。
 
 `ASSOCIATE_THEME` 是独立发现阶段：输入观察、surface tensions、题面与既有 memory，输出 3–5 个 ontology candidates、bridge、association role、holdout prediction 和 falsifier。它不能看到 ToolRegistry；只有 `HYPOTHESIZE_PLAN` 才接收工具签名与契约，防止工具名反向泄露机制。
 
 `MATERIALIZE_SUBPROBLEMS` 位于 ontology discovery 与工具规划之间。它把题面结构写成 `structure_model`，把可独立求解单元写成 `subproblems`，并把尚未成为证据的语义候选写进 `subproblem_results`。这些 provisional result 不会绕过 evidence gate；它们的作用是让后续计划面向具体 clue unit，而不是对整页内容盲试转换。
+
+`VALIDATE_SUBPROBLEMS` 是独立的局部答案证据门。16:00 批次在 89 个局部单元里产生了 33 个非空结果，但零个被正式提升为 evidence；其中 #3 已接近解出 8/9 个 clue answer，晚期验证只保留 2 个。新节点因此要求三分覆盖、值不可变、signal provenance 与可证伪依据，并只把 supported 结果写入 `validated_subproblem_result` evidence。
 
 每个 LLM 节点都有显式字符预算，并把单个字符串限制为 240 字符。预算按节点产物规模分配；例如 `ASSOCIATE_THEME` 为 3500 字符，而需要枚举题面单元的 `MATERIALIZE_SUBPROBLEMS` 为 9000 字符。DeepSeek 请求允许最多 16384 output tokens，以免 4096 的旧上限截断结构化阶段结果；这是生成上限而非固定消耗。若 DeepSeek 返回 `finish_reason=length`，provider 会报告截断错误，不会尝试猜补残缺 JSON 或把部分输出写进证据。
 
@@ -191,7 +195,7 @@ validator 递归拒绝 input 中的 `answer/solution/oracle` 字段，并检查�
 
 - DeepSeek API text-only；图片、音频、版式与交互必须先转写为 artifact。
 - 当前确定性 grid/CSP 能力是基础组件，不等于完整填字/数独/图像识别引擎。
-- 49 道 CCBC16 非 Meta 已完成表面分类：10 道直接文本、3 道 source-hashed 人工转写、13 道待转写、23 道无法仅用文本忠实表达；当前可运行官方文本套件为 13 道。转写 final feeders 时还必须带入人类在解锁该题时已经拥有的上游 Meta 答案、网格或操作符，不能只抄当前图片。
+- 49 道 CCBC16 非 Meta 已完成表面分类：10 道直接文本、10 道 source-hashed 人工转写、6 道待转写、23 道无法仅用文本忠实表达；当前目标可运行官方文本套件为 20 道。转写 final feeders 时还必须带入人类在解锁该题时已经拥有的上游 Meta 答案、网格或操作符，不能只抄当前图片。
 - knowledge research subgraph 尚未接外部搜索 provider；没有可靠事实时保持 unknown。
 - offline provider 只验证系统流，不代表真实复杂解题能力。
 - 真实 DeepSeek benchmark 明确 opt-in，默认测试绝不计费。

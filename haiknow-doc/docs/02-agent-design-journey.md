@@ -262,3 +262,19 @@ CCBC16 多次把“不唯一”本身用作机制。如果 solver 只返回第�
 人工转写 #52–#54 时发现，图片本身虽然可以无损变成文本，却仍不足以让独立 Agent 获得与现场玩家相同的信息。#52 明确消费印刷区 Meta 答案，#53 要把当前字母矩阵与已经解出的火药 Meta 颜色网格求交，#54 回调更早题目中 `〔〕` 的同音操作符。只转写当前图片会制造一种隐蔽的 missing-input benchmark，然后错误地把失败归因于推理能力。
 
 因此 suite 的“surface fidelity”升级为“unlock-state fidelity”：当前题面、静态 artifact、已知上游答案、已解出的上游结构和已学习操作符都要作为带 provenance 的运行时输入；当前题目的 solution 与 final answer 仍严格留在 evaluator 侧。#52–#54 由此成为首批 `human-reviewed-static-plus-upstream-state` case，均保存官方源 hash、零未表示通道和独立中间 checkpoint。
+
+## 第 29 站：JSON 合法不等于响应完整
+
+真实 DeepSeek 单题在 `ASSOCIATE_THEME` 连续遇到 output length 截断。仅收紧 prompt 字符预算不能保证服务端完整返回，因此 provider 现在同时检查 `finish_reason=length`，拒绝把截断 JSON 写进 state，并把 DeepSeek 输出上限提高到 16384。复跑后 9/9 次调用成功，完整经过一次 replan 并诚实停在 `NEEDS_REVIEW`。这说明模型 transport、阶段 schema 与解题正确性必须分别验收。
+
+## 第 30 站：局部解答必须经过证据提升
+
+16:00 的 13 题批次中，`MATERIALIZE_SUBPROBLEMS` 生成 89 个局部单元和 33 个非空局部结果，却没有一个进入正式 evidence。#3 的八个近乎正确 clue answer 因此在后续阶段大量丢失，计划退化到 Caesar/Atbash。新增 `VALIDATE_SUBPROBLEMS` 后，每个非空结果必须唯一落入 supported、contradicted 或 needs-test；supported 值不能被改写，必须引用 signal 并给出 prediction/falsifier。忠实转录与语义解答也分开标记，避免把“抄对题面”误报成“解出题目”。
+
+## 第 31 站：评分器的字符观也属于 Agent 契约
+
+人工转写 #15 暴露了旧归一化只保留拉丁字母、数字和 CJK 的问题：韩文答案 `안녕` 与标点串都会被归一化为空，产生假阳性，并使韩文 checkpoint 被静默丢弃。评分器改为 Unicode NFKC + casefold，并保留所有 `isalnum()` 字符。benchmark 不只是题目集合；它的等价关系本身也是需要测试的判断节点。
+
+## 第 32 站：节点数据必须进入人类报告
+
+`node-summary.json` 已记录节点激活和效果，但旧小时报告只输出总体失败文字，无法满足每轮逐节点复盘。公开报告现在直接列出激活题数、激活次数、耗时、可观察效果、作用标签和问题，并明确 `UNASSESSABLE` 不是“无用”。这样每小时的优化假设可以由节点证据驱动，而不是依赖人工翻找内部 JSON。

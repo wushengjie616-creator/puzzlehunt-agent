@@ -104,27 +104,35 @@ class CCBC16TextSuiteTests(unittest.TestCase):
         self.assertIn("A . B", runtime["content"])
         self.assertEqual(provenance["surface_transcription"]["source_sha256"], ["a" * 64])
 
-    def test_verified_transcription_can_cover_documents_and_fragment_sets(self):
+    def test_paid_hint_images_are_not_required_surface_artifacts(self):
         entry = {
             "puzzle_id": 37,
             "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/37",
             "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/37.json",
         }
-        fragment = "https://static.cipherpuzzles.com/fragment.webp"
+        public_fragment = "https://static.cipherpuzzles.com/public-fragment.webp"
+        paid_hint_thumbnail = "https://static.cipherpuzzles.com/hint-thumbnail.webp"
         payload = {
             "pid": 37,
             "answer_type": 0,
             "title": "Fragments",
-            "html": "<a href='https://static.cipherpuzzles.com/copy.pdf'>copy</a>",
-            "tips": [{"title": "你需要这些碎片吗", "content": f"<img src='{fragment}'>"}],
+            "html": "<p>Assemble the public fragments.</p>",
+            "tips": [{
+                "title": "你需要这些碎片吗",
+                "content": f"<img src='{paid_hint_thumbnail}'>",
+                "point_cost": 3000,
+            }],
             "answer": "SECRET",
         }
         override = {
             "content": "Fragment f1: center=12; clockwise edges=A|B|C|D|E",
-            "artifact_urls": [fragment],
+            "artifact_urls": [public_fragment],
             "source_sha256": ["b" * 64],
             "transcription_method": "human-reviewed",
-            "fidelity_notes": "All fragment-local labels and order are preserved; PDF is a duplicate copy.",
+            "fidelity_notes": (
+                "The reviewed public fragment is transcribed. Paid hint thumbnails "
+                "are not part of the initial puzzle surface."
+            ),
             "unrepresented_channels": [],
         }
         with tempfile.TemporaryDirectory() as directory:
@@ -141,6 +149,39 @@ class CCBC16TextSuiteTests(unittest.TestCase):
             runtime = json.loads(case_input.read_text(encoding="utf-8")) if case_input.is_file() else {}
         self.assertEqual(result["included_ids"], [37])
         self.assertNotIn("required_artifacts", runtime)
+
+    def test_initial_surface_image_must_be_declared_in_override(self):
+        entry = {
+            "puzzle_id": 9,
+            "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/9",
+            "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/9.json",
+        }
+        payload = {
+            "pid": 9,
+            "answer_type": 0,
+            "title": "Grid",
+            "html": "<img src='https://static.cipherpuzzles.com/initial-grid.webp'>",
+            "answer": "SECRET",
+        }
+        override = {
+            "content": "Rows: A B C",
+            "artifact_urls": ["https://static.cipherpuzzles.com/unrelated.webp"],
+            "source_sha256": ["c" * 64],
+            "transcription_method": "human-reviewed",
+            "fidelity_notes": "All rows are preserved.",
+            "unrepresented_channels": [],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = root / "manifest.json"
+            manifest.write_text(json.dumps({"puzzles": [entry]}), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "omits an official artifact"):
+                build_text_suite(
+                    manifest_path=manifest,
+                    output_root=root / "suite",
+                    fetch_json=lambda _url: payload,
+                    surface_overrides={9: override},
+                )
 
     def test_builder_rejects_an_unverifiable_surface_transcription(self):
         entry = {
