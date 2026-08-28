@@ -70,6 +70,7 @@ related_commits: []
 - Cycle 3 后工具覆盖审计：发现 simple CipherWorkbench 的 Atbash/Base/标准 Morse/已知-key Vigenère/已知-rails Rail Fence 没进入 complex Agent 行动空间；新增五个有界 strict wrapper。2 个聚焦测试先 RED 后 GREEN，禁止工具自行猜 key/栏数。
 - Cycle 3 后 memory 审计：预留的 intermediate/extraction/open-question 字段没有完整进入后续 prompt。新增 `unused_elements`，评价节点写回四类阶段账本，所有后续节点可见；open questions 或 unused clues 非空时机器门拒绝 solved。聚焦测试先证明 KeyError/遗漏 extraction，再转绿。
 - Cycle 3 后 node-report 审计：保留错误题 `UNASSESSABLE` 的因果边界，同时为 trace 增加 observations/plan/tool success-failure/extraction/replan/memory debt/terminal status 等可观察效果；聚焦测试先 RED 后 GREEN，错误题也能报告 `FAILED_TOOL_CALLS` 而不声称节点有用或无用。
+- 为使 scheduler 父进程加载新版 cycle report 代码，12:17 做可恢复重启：旧 PID `23336` 正常停止，新 runtime PID `28164`；前三轮从相同 `start_at` 状态恢复且不会重跑，下一锚点仍为 15:00:29，最终锚点不变。
 
 ## 后续 todo
 
