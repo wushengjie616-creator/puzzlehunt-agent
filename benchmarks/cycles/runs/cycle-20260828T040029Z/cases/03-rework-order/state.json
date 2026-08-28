@@ -1,0 +1,291 @@
+{
+  "puzzle": {
+    "title": "返工单",
+    "flavor_text": "抄写员强调：先看背面，再把奇数座与偶数座交替归队。所有数字最终都应按 A1Z26 阅读。",
+    "content": "返工单背面：\n\nC TEKCAP OT OG\n\nPacket C\nODD SEATS\n19 7 1\n\n附注（从右向左读）：\nD HTIW EVAELRETNI\n\nPacket D\nEVEN SEATS\n9 14 12\n\n校验：归队后的六个数字之和应为 62。",
+    "notes": null
+  },
+  "artifacts": {},
+  "required_artifacts": [],
+  "missing_artifacts": [],
+  "status": "SOLVED",
+  "stage": "SOLVED",
+  "revision": 1,
+  "observations": [
+    {
+      "id": "title",
+      "text": "返工单",
+      "source": "title"
+    },
+    {
+      "id": "flavor_text_1",
+      "text": "抄写员强调：先看背面，再把奇数座与偶数座交替归队。所有数字最终都应按 A1Z26 阅读。",
+      "source": "flavor_text"
+    },
+    {
+      "id": "content_1",
+      "text": "返工单背面：",
+      "source": "content"
+    },
+    {
+      "id": "content_2",
+      "text": "C TEKCAP OT OG",
+      "source": "content"
+    },
+    {
+      "id": "content_3",
+      "text": "Packet C",
+      "source": "content"
+    },
+    {
+      "id": "content_4",
+      "text": "ODD SEATS",
+      "source": "content"
+    },
+    {
+      "id": "content_5",
+      "text": "19 7 1",
+      "source": "content"
+    },
+    {
+      "id": "content_6",
+      "text": "附注（从右向左读）：",
+      "source": "content"
+    },
+    {
+      "id": "content_7",
+      "text": "D HTIW EVAELRETNI",
+      "source": "content"
+    },
+    {
+      "id": "content_8",
+      "text": "Packet D",
+      "source": "content"
+    },
+    {
+      "id": "content_9",
+      "text": "EVEN SEATS",
+      "source": "content"
+    },
+    {
+      "id": "content_10",
+      "text": "9 14 12",
+      "source": "content"
+    },
+    {
+      "id": "content_11",
+      "text": "校验：归队后的六个数字之和应为 62。",
+      "source": "content"
+    }
+  ],
+  "flavor_associations": [
+    {
+      "trigger": "抄写员强调：先看背面",
+      "association": "提示需要反转或倒序阅读某些内容，背面可能暗示镜像或反向文本。",
+      "evidence": "flavor_text 中明确说\"先看背面\"，且 content 中\"返工单背面：\"后跟着看似反转的文本。"
+    },
+    {
+      "trigger": "再把奇数座与偶数座交替归队",
+      "association": "需要将两组分别标记为奇数座和偶数座的数字按某种顺序交替合并，可能形成最终数字序列。",
+      "evidence": "content 中有 \"ODD SEATS\" 对应 19 7 1，\"EVEN SEATS\" 对应 9 14 12，两组数字可能交替排列。"
+    },
+    {
+      "trigger": "所有数字最终都应按 A1Z26 阅读",
+      "association": "最终得到的数字应转换为字母，A=1, B=2, ..., Z=26。",
+      "evidence": "flavor_text 明确说明 A1Z26 规则。"
+    },
+    {
+      "trigger": "C TEKCAP OT OG",
+      "association": "可能是反向文本？反向读为 \"GO TO PACKET C\"。",
+      "evidence": "\"C TEKCAP OT OG\" 反向逐字符读得到 \"GO TO PACKET C\"。TEKCAP 反转为 PACKET，OT 反转为 TO，OG 反转为 GO。"
+    },
+    {
+      "trigger": "D HTIW EVAELRETNI",
+      "association": "可能反向读为 \"INTERLEAVE WITH D\"，即\"与 D 交替排列\"。",
+      "evidence": "附注标注\"从右向左读\"，反向逐字符读 \"D HTIW EVAELRETNI\" 得 \"INTERLEAVE WITH D\"。"
+    },
+    {
+      "trigger": "ODD SEATS 19 7 1",
+      "association": "奇数座数字为 19, 7, 1，对应字母 S, G, A。",
+      "evidence": "A1Z26: 19=S, 7=G, 1=A。"
+    },
+    {
+      "trigger": "EVEN SEATS 9 14 12",
+      "association": "偶数座数字为 9, 14, 12，对应字母 I, N, L。",
+      "evidence": "A1Z26: 9=I, 14=N, 12=L。"
+    },
+    {
+      "trigger": "校验：归队后的六个数字之和应为 62",
+      "association": "归队后的六个数字可能不是简单的交替排序，总和应为 19+7+1+9+14+12=62，任何顺序总和不变，校验可能是为了确保数字正确。",
+      "evidence": "19+7+1=27，9+14+12=35，27+35=62，与校验一致。"
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "h1",
+      "mechanism": "Decode 'C TEKCAP OT OG' as 'GO TO PACKET C' (backwards text). Then from Packet C (ODD SEATS: 19,7,1) and Packet D (EVEN SEATS: 9,14,12), interleave odd and even seats as instructed by 'INTERLEAVE WITH D' (from D HTIW EVAELRETNI read right-to-left). Interleaving alternately starting with odd seats yields 19,9,7,14,1,12. Applying A1Z26 gives S,I,G,N,A,L, spelling SIGNAL.",
+      "confidence": 0.7
+    },
+    {
+      "id": "h2",
+      "mechanism": "Interleave the two groups in the opposite order (even seats first): 9,19,14,7,12,1. A1Z26 yields I,S,N,G,L,A, spelling ISNGLA, not meaningful, suggesting the correct order starts with odd seats. The checksum (sum=62) is consistent with either order and is only a validation of the digit set.",
+      "confidence": 0.2
+    },
+    {
+      "id": "h3",
+      "mechanism": "The phrase 'odd seats and even seats alternately return to the team' may indicate that the odd and even numbers should be sorted individually before interleaving, or that the word 'with D' means interleave with the second packet's numbers starting with the even seats. Another possibility is that the final answer is the interleaved string 'SIGNAL' which itself is a hint or answer.",
+      "confidence": 0.1
+    }
+  ],
+  "plan": [
+    {
+      "id": "p1",
+      "tool": "interleave_sequences",
+      "arguments": {
+        "sequences": [
+          [
+            19,
+            7,
+            1
+          ],
+          [
+            9,
+            14,
+            12
+          ]
+        ]
+      },
+      "purpose": "Interleave odd and even seat numbers alternately to produce the final six-digit sequence."
+    },
+    {
+      "id": "p2",
+      "tool": "a1z26_decode",
+      "arguments": {
+        "values": [
+          19,
+          9,
+          7,
+          14,
+          1,
+          12
+        ]
+      },
+      "purpose": "Convert the interleaved numbers to letters using A1Z26 to verify the word."
+    },
+    {
+      "id": "p3",
+      "tool": "a1z26_decode",
+      "arguments": {
+        "values": [
+          9,
+          19,
+          14,
+          7,
+          12,
+          1
+        ]
+      },
+      "purpose": "Check the alternative interleaving order to distinguish between the two main hypotheses."
+    }
+  ],
+  "attempts": [
+    {
+      "tool": "interleave_sequences",
+      "fingerprint": "[\"interleave_sequences\", {\"sequences\": [[19, 7, 1], [9, 14, 12]]}]",
+      "outcome": "failed",
+      "error": "sequences must contain at least two strings"
+    },
+    {
+      "tool": "a1z26_decode",
+      "fingerprint": "[\"a1z26_decode\", {\"values\": [19, 9, 7, 14, 1, 12]}]",
+      "outcome": "completed"
+    },
+    {
+      "tool": "a1z26_decode",
+      "fingerprint": "[\"a1z26_decode\", {\"values\": [9, 19, 14, 7, 12, 1]}]",
+      "outcome": "completed"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "tool-2",
+      "kind": "deterministic_tool_result",
+      "tool": "a1z26_decode",
+      "output": "SIGNAL"
+    },
+    {
+      "id": "tool-3",
+      "kind": "deterministic_tool_result",
+      "tool": "a1z26_decode",
+      "output": "ISNGLA"
+    },
+    {
+      "id": "assessment-1",
+      "hypothesis_id": "h1",
+      "effect": "supports"
+    },
+    {
+      "id": "assessment-2",
+      "hypothesis_id": "h2",
+      "effect": "rejects"
+    },
+    {
+      "id": "assessment-3",
+      "hypothesis_id": "h3",
+      "effect": "supports"
+    }
+  ],
+  "intermediate_answers": [],
+  "extractions": [
+    {
+      "tool": "a1z26_decode",
+      "arguments": {
+        "values": [
+          19,
+          9,
+          7,
+          14,
+          1,
+          12
+        ]
+      },
+      "output": "SIGNAL",
+      "evidence_id": "tool-2"
+    },
+    {
+      "tool": "a1z26_decode",
+      "arguments": {
+        "values": [
+          9,
+          19,
+          14,
+          7,
+          12,
+          1
+        ]
+      },
+      "output": "ISNGLA",
+      "evidence_id": "tool-3"
+    }
+  ],
+  "answer_candidates": [
+    {
+      "answer": "SIGNAL",
+      "confidence": "high",
+      "evidence_ids": [
+        "tool-2",
+        "tool-3"
+      ]
+    }
+  ],
+  "open_questions": [],
+  "blockers": [],
+  "budget": {
+    "max_calls": 6,
+    "calls_used": 4
+  },
+  "last_node": "verify_answer",
+  "next_node": null,
+  "final_answer": "SIGNAL",
+  "evaluation_decision": "verify"
+}

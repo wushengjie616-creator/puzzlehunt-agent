@@ -1,0 +1,396 @@
+{
+  "puzzle": {
+    "title": "六份封存件",
+    "flavor_text": "每份材料都注明了恢复方式。材料之间有依赖，但恢复完成后，请按包号从第 n 包的明文取第 n 个字母。",
+    "content": "依赖记录：\n- P3 依赖 P1\n- P4 依赖 P2\n- P5 依赖 P3 与 P4\n- P6 依赖 P5\n- P1、P2 无依赖\n\n| 包号 | 恢复方式 | 内容 |\n|---|---|---|\n| P1 | Atbash | KIRHN |\n| P2 | reverse | ETULF |\n| P3 | Caesar 回退 1 | CPBSE |\n| P4 | 当前文本由原词奇数位、偶数位依次拼接 | SOETN |\n| P5 | A1Z26 | 3-18-1-14-5 |\n| P6 | 两栏栅栏：先写奇数位，再写偶数位 | BIHRGT |",
+    "notes": null
+  },
+  "artifacts": {},
+  "required_artifacts": [],
+  "missing_artifacts": [],
+  "status": "SOLVED",
+  "stage": "SOLVED",
+  "revision": 1,
+  "observations": [
+    {
+      "id": "obs1",
+      "text": "Title is '六份封存件' (Six Sealed Files).",
+      "source": "title"
+    },
+    {
+      "id": "obs2",
+      "text": "Flavor text says each material indicates its recovery method. Materials have dependencies, but after recovery, take the nth letter from the plaintext of package n according to package number.",
+      "source": "flavor_text"
+    },
+    {
+      "id": "obs3",
+      "text": "Dependency list: P3 depends on P1; P4 depends on P2; P5 depends on P3 and P4; P6 depends on P5; P1 and P2 have no dependencies.",
+      "source": "content"
+    },
+    {
+      "id": "obs4",
+      "text": "Content table has columns: 包号 (package number), 恢复方式 (recovery method), 内容 (content).",
+      "source": "content"
+    },
+    {
+      "id": "obs5",
+      "text": "P1 recovery method: Atbash; content: KIRHN.",
+      "source": "content"
+    },
+    {
+      "id": "obs6",
+      "text": "P2 recovery method: reverse; content: ETULF.",
+      "source": "content"
+    },
+    {
+      "id": "obs7",
+      "text": "P3 recovery method: Caesar 回退 1 (Caesar shift back 1); content: CPBSE.",
+      "source": "content"
+    },
+    {
+      "id": "obs8",
+      "text": "P4 recovery method: 'current text is made by concatenating odd-position then even-position letters of original word'; content: SOETN.",
+      "source": "content"
+    },
+    {
+      "id": "obs9",
+      "text": "P5 recovery method: A1Z26; content: 3-18-1-14-5.",
+      "source": "content"
+    },
+    {
+      "id": "obs10",
+      "text": "P6 recovery method: two-column rail fence: write odd positions first, then even positions; content: BIHRGT.",
+      "source": "content"
+    },
+    {
+      "id": "obs11",
+      "text": "There are exactly 6 packages, numbered P1 through P6.",
+      "source": "content"
+    },
+    {
+      "id": "obs12",
+      "text": "Flavor text explicitly mentions '第 n 包的明文取第 n 个字母' (take the nth letter from plaintext of package n).",
+      "source": "flavor_text"
+    },
+    {
+      "id": "obs13",
+      "text": "P1 content 'KIRHN' has 5 letters; after Atbash, plaintext will have 5 letters, enough to take 1st letter.",
+      "source": "content"
+    },
+    {
+      "id": "obs14",
+      "text": "P2 content 'ETULF' has 5 letters; after reverse, plaintext will have 5 letters, enough to take 2nd letter.",
+      "source": "content"
+    },
+    {
+      "id": "obs15",
+      "text": "P3 content 'CPBSE' has 5 letters; needs Caesar shift back 1; enough for 3rd letter.",
+      "source": "content"
+    },
+    {
+      "id": "obs16",
+      "text": "P4 content 'SOETN' has 5 letters; method suggests original word had odd and even positions interleaved; will yield 5-letter word, enough for 4th letter.",
+      "source": "content"
+    },
+    {
+      "id": "obs17",
+      "text": "P5 content is A1Z26 '3-18-1-14-5', representing 5 letters; enough for 5th letter.",
+      "source": "content"
+    },
+    {
+      "id": "obs18",
+      "text": "P6 content 'BIHRGT' has 6 letters; rail fence decoding should yield 6-letter word, enough for 6th letter.",
+      "source": "content"
+    },
+    {
+      "id": "obs19",
+      "text": "Dependencies imply the order of recovery: P1 and P2 first, then P3 and P4, then P5, then P6.",
+      "source": "content"
+    },
+    {
+      "id": "obs20",
+      "text": "No explicit notes field beyond null.",
+      "source": "title|content"
+    },
+    {
+      "id": "obs21",
+      "text": "The table uses Chinese descriptions: Atbash (a known substitution cipher), reverse, Caesar shift back, odd/even concatenation, A1Z26, rail fence.",
+      "source": "content"
+    },
+    {
+      "id": "obs22",
+      "text": "The flavor text says '每份材料都注明了恢复方式' (each material notes its recovery method), and the table indeed lists a recovery method for each package.",
+      "source": "flavor_text"
+    }
+  ],
+  "flavor_associations": [
+    {
+      "trigger": "nth letter from plaintext of package n",
+      "association": "The letters extracted from each decoded package likely spell a final answer or clue.",
+      "evidence": "Flavor text: '请按包号从第 n 包的明文取第 n 个字母'"
+    },
+    {
+      "trigger": "dependencies",
+      "association": "The dependency graph is a linear chain: P1 -> P3 -> P5 -> P6 and P2 -> P4 -> P5 -> P6, implying a necessary order and possibly that decoded contents of dependencies are needed for subsequent decoding (though methods appear independent).",
+      "evidence": "Dependency list in content"
+    },
+    {
+      "trigger": "六份封存件",
+      "association": "The 'six sealed files' may represent a mini puzzle or extraction challenge, not a cryptic theme.",
+      "evidence": "Title and structure"
+    },
+    {
+      "trigger": "Atbash on KIRHN -> yields PRISM?",
+      "association": "Could be a word with meaning, but not certain; after Atbash, KIRHN becomes PRISM (K->P, I->R, R->I, H->S, N->M). PRISM is a common word, suggesting plaintext words might be meaningful.",
+      "evidence": "Known Atbash mapping"
+    },
+    {
+      "trigger": "Reverse ETULF -> FLUTE",
+      "association": "FLUTE is a meaningful word, further suggesting decoded words are recognizable.",
+      "evidence": "Simple reversal"
+    },
+    {
+      "trigger": "Caesar shift back 1 on CPBSE -> BOARD?",
+      "association": "Shift back 1: C->B, P->O, B->A, S->R, E->D = BOARD, another meaningful word.",
+      "evidence": "Caesar shift -1"
+    },
+    {
+      "trigger": "Odd/even concatenation reconstruction for SOETN",
+      "association": "If original had odd positions then even positions concatenated to produce SOETN, and the result is likely a 5-letter word. Possible original: STONE (S odd1, T odd2? Let's check: STONE odd positions: S, O, E; even: T, N -> SOETN exactly). So SOETN -> STONE.",
+      "evidence": "SOETN matches odd/even of STONE"
+    },
+    {
+      "trigger": "A1Z26 3-18-1-14-5 -> C R A N E",
+      "association": "CRANE is a meaningful word, fits 5 letters.",
+      "evidence": "Standard A1Z26 mapping"
+    },
+    {
+      "trigger": "Rail fence decode BIHRGT with two columns",
+      "association": "Two-column rail fence writes odd positions first, then even. The encoded BIHRGT would be split into odd-part and even-part. For 6 letters, if original is x1 x2 x3 x4 x5 x6, then odd positions are x1 x3 x5, even are x2 x4 x6. Concatenated: x1 x3 x5 x2 x4 x6 = BIHRGT. So odd positions: B I R, even: H G T. Original: x1=B, x2=H, x3=I, x4=G, x5=R, x6=T -> BHIGRT. That doesn't look like a word. But maybe the method description is ambiguous: '先写奇数位，再写偶数位' might mean encoding is: odd letters first, then even. That's what we did. Alternatively, if two-column rail fence (write in two rows, read columns? Standard rail fence with 2 rails: write alternating rows, then read row by row. That's odd positions then even. So encoding of 'BRIGHT'? Compute: BRIGHT letters B R I G H T. Odd positions: B I H, even: R G T -> B I H R G T = BIHRGT. Yes, BIHRGT decodes to BRIGHT.",
+      "evidence": "BIHRGT matches odd/even of BRIGHT"
+    },
+    {
+      "trigger": "Extracted letters",
+      "association": "From decoded words: P1 PRISM -> 1st letter P; P2 FLUTE -> 2nd letter L; P3 BOARD -> 3rd letter A; P4 STONE -> 4th letter N; P5 CRANE -> 5th letter E; P6 BRIGHT -> 6th letter T. That spells PL AN ET -> PLANET? Actually P L A N E T spells PLANET.",
+      "evidence": "Decoded words and extraction rule"
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "H1",
+      "mechanism": "Each package decodes to a 5-letter (or 6-letter) word, and the final answer is formed by extracting the nth letter from the decoded plaintext of package n, yielding PLANET.",
+      "confidence": 0.95
+    },
+    {
+      "id": "H2",
+      "mechanism": "The decoded words themselves may be further transformed or the extracted letters may need another step (e.g., anagram, cipher) to reveal the final answer, but the direct extraction gives a recognizable word PLANET.",
+      "confidence": 0.04
+    },
+    {
+      "id": "H3",
+      "mechanism": "There could be an error in one of the encodings or a different interpretation of a recovery method, leading to a different extracted letter, so the final answer is not PLANET.",
+      "confidence": 0.01
+    }
+  ],
+  "plan": [
+    {
+      "id": "P1_decode",
+      "tool": "caesar_shift",
+      "arguments": {
+        "text": "KIRHN",
+        "shift": 0
+      },
+      "purpose": "Not correct; use Atbash. For Atbash, we can use caesar_shift with shift 25? No, Atbash is not a monoalphabetic shift. We need to use unicode_inspect? Actually, we can decode Atbash manually or use a substitution? The available tools do not include Atbash, but we can infer from observation that Atbash(KIRHN) = PRISM. We will record this as an observation."
+    },
+    {
+      "id": "P2_decode",
+      "tool": "interleave_sequences",
+      "arguments": {
+        "sequences": [
+          [
+            "E",
+            "T",
+            "U",
+            "L",
+            "F"
+          ]
+        ]
+      },
+      "purpose": "Reverse the string ETULF to get FLUTE. The tool is not needed; we can just reverse manually."
+    },
+    {
+      "id": "P3_decode",
+      "tool": "caesar_shift",
+      "arguments": {
+        "text": "CPBSE",
+        "shift": 1
+      },
+      "purpose": "Caesar shift back 1 means shift each letter back by 1, equivalent to caesar_shift with shift=-1. The tool signature expects a shift argument; if negative is allowed, use -1, otherwise shift 25. We'll assume shift accepts positive and negative. Decode CPBSE to BOARD."
+    },
+    {
+      "id": "P4_decode",
+      "tool": "interleave_sequences",
+      "arguments": {
+        "sequences": [
+          [
+            "S",
+            "O",
+            "E",
+            "T",
+            "N"
+          ]
+        ]
+      },
+      "purpose": "Reconstruct original word from odd/even concatenation. The encoded SOETN is odd positions S,O,E then even T,N. To decode, split into first 3 and last 2, then interleave: original = S,T,O,N,E = STONE."
+    },
+    {
+      "id": "P5_decode",
+      "tool": "a1z26_decode",
+      "arguments": {
+        "values": [
+          3,
+          18,
+          1,
+          14,
+          5
+        ]
+      },
+      "purpose": "Decode A1Z26 numbers to letters: 3=C,18=R,1=A,14=N,5=E -> CRANE."
+    },
+    {
+      "id": "P6_decode",
+      "tool": "interleave_sequences",
+      "arguments": {
+        "sequences": [
+          [
+            "B",
+            "I",
+            "R",
+            "H",
+            "G",
+            "T"
+          ]
+        ]
+      },
+      "purpose": "Decode rail fence with 2 rails. Encoded BIHRGT is odd positions B,I,R then even H,G,T. Split into first 3 and last 3, interleave to get B,H,I,G,R,T = BRIGHT."
+    }
+  ],
+  "attempts": [
+    {
+      "tool": "caesar_shift",
+      "fingerprint": "[\"caesar_shift\", {\"shift\": 0, \"text\": \"KIRHN\"}]",
+      "outcome": "completed"
+    },
+    {
+      "tool": "interleave_sequences",
+      "fingerprint": "[\"interleave_sequences\", {\"sequences\": [[\"E\", \"T\", \"U\", \"L\", \"F\"]]}]",
+      "outcome": "failed",
+      "error": "sequences must contain at least two strings"
+    },
+    {
+      "tool": "caesar_shift",
+      "fingerprint": "[\"caesar_shift\", {\"shift\": 1, \"text\": \"CPBSE\"}]",
+      "outcome": "completed"
+    },
+    {
+      "tool": "interleave_sequences",
+      "fingerprint": "[\"interleave_sequences\", {\"sequences\": [[\"S\", \"O\", \"E\", \"T\", \"N\"]]}]",
+      "outcome": "failed",
+      "error": "sequences must contain at least two strings"
+    },
+    {
+      "tool": "a1z26_decode",
+      "fingerprint": "[\"a1z26_decode\", {\"values\": [3, 18, 1, 14, 5]}]",
+      "outcome": "completed"
+    },
+    {
+      "tool": "interleave_sequences",
+      "fingerprint": "[\"interleave_sequences\", {\"sequences\": [[\"B\", \"I\", \"R\", \"H\", \"G\", \"T\"]]}]",
+      "outcome": "failed",
+      "error": "sequences must contain at least two strings"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "tool-1",
+      "kind": "deterministic_tool_result",
+      "tool": "caesar_shift",
+      "output": "KIRHN"
+    },
+    {
+      "id": "tool-3",
+      "kind": "deterministic_tool_result",
+      "tool": "caesar_shift",
+      "output": "DQCTF"
+    },
+    {
+      "id": "tool-5",
+      "kind": "deterministic_tool_result",
+      "tool": "a1z26_decode",
+      "output": "CRANE"
+    },
+    {
+      "id": "assessment-1",
+      "hypothesis_id": "H1",
+      "effect": "supports"
+    },
+    {
+      "id": "assessment-2",
+      "hypothesis_id": "H2",
+      "effect": "rejects"
+    },
+    {
+      "id": "assessment-3",
+      "hypothesis_id": "H3",
+      "effect": "rejects"
+    }
+  ],
+  "intermediate_answers": [],
+  "extractions": [
+    {
+      "tool": "a1z26_decode",
+      "arguments": {
+        "values": [
+          3,
+          18,
+          1,
+          14,
+          5
+        ]
+      },
+      "output": "CRANE",
+      "evidence_id": "tool-5"
+    }
+  ],
+  "answer_candidates": [
+    {
+      "answer": "PLANET",
+      "confidence": "high",
+      "evidence_ids": [
+        "obs5",
+        "obs6",
+        "obs7",
+        "obs8",
+        "obs9",
+        "obs10",
+        "obs12",
+        "obs13",
+        "obs14",
+        "obs15",
+        "obs16",
+        "obs17",
+        "obs18"
+      ]
+    }
+  ],
+  "open_questions": [],
+  "blockers": [],
+  "budget": {
+    "max_calls": 6,
+    "calls_used": 4
+  },
+  "last_node": "verify_answer",
+  "next_node": null,
+  "final_answer": "PLANET",
+  "evaluation_decision": "verify"
+}

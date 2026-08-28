@@ -1,0 +1,8 @@
+{"at":"2026-08-28T04:01:02.843000+00:00","type":"session_created","details":{"max_calls":6}}
+{"at":"2026-08-28T04:01:02.910741+00:00","type":"session_step","details":{"status":"RUNNING","stage":"ARTIFACT_INVENTORY","calls_used":0}}
+{"at":"2026-08-28T04:01:02.944451+00:00","type":"session_step","details":{"status":"RUNNING","stage":"OBSERVE_CLASSIFY","calls_used":0}}
+{"at":"2026-08-28T04:01:29.326575+00:00","type":"session_step","details":{"status":"RUNNING","stage":"HYPOTHESIZE_PLAN","calls_used":1}}
+{"at":"2026-08-28T04:01:41.647168+00:00","type":"session_step","details":{"status":"RUNNING","stage":"TOOL_DISPATCH","calls_used":2}}
+{"at":"2026-08-28T04:01:41.667304+00:00","type":"session_step","details":{"status":"RUNNING","stage":"EVALUATE_EVIDENCE","calls_used":2}}
+{"at":"2026-08-28T04:01:45.161603+00:00","type":"session_step","details":{"status":"RUNNING","stage":"VERIFY_ANSWER","calls_used":3}}
+{"at":"2026-08-28T04:01:47.468484+00:00","type":"session_step","details":{"status":"SOLVED","stage":"SOLVED","calls_used":4}}

@@ -1,0 +1,245 @@
+{
+  "puzzle": {
+    "title": "雨后换乘",
+    "flavor_text": "每座站台混入了一件不属于另外三件同类事物的行李。先找出每站的异类及其标签，再根据换乘记录恢复唯一线路。",
+    "content": "| 站台 | 行李 | 异类背面的标签 |\n|---|---|---|\n| K | copper, iron, silver, willow | O |\n| Q | square, triangle, circle, Tuesday | P |\n| M | violin, cello, harp, pepper | C |\n| R | Paris, Lima, Cairo, helium | S |\n| B | robin, eagle, finch, salmon | M |\n| T | running, cycling, swimming, marble | S |\n| H | apple, pear, peach, beet | A |\n\n换乘记录：\n- R 在 H 之后、T 之前。\n- Q 紧跟 B。\n- K 紧跟 M。\n- H 紧跟 Q。\n- T 是终点。\n- B 紧跟 K。",
+    "notes": null
+  },
+  "artifacts": {},
+  "required_artifacts": [],
+  "missing_artifacts": [],
+  "status": "NEEDS_REVIEW",
+  "stage": "VERIFY_ANSWER",
+  "revision": 1,
+  "observations": [
+    {
+      "id": "obs-1",
+      "text": "Table has 7 rows: stations K, Q, M, R, B, T, H. Each row lists 4 items under '行李' and one label letter under '异类背面的标签'.",
+      "source": "content"
+    },
+    {
+      "id": "obs-2",
+      "text": "Flavor text: '每座站台混入了一件不属于另外三件同类事物的行李。先找出每站的异类及其标签，再根据换乘记录恢复唯一线路。' (Each platform has one item that doesn't belong to the same category as the other three. First find each station's odd item and its label, then restore the unique route according to the transfer records.)",
+      "source": "flavor_text"
+    },
+    {
+      "id": "obs-3",
+      "text": "Station K luggage: copper, iron, silver, willow; label: O",
+      "source": "content"
+    },
+    {
+      "id": "obs-4",
+      "text": "Station Q luggage: square, triangle, circle, Tuesday; label: P",
+      "source": "content"
+    },
+    {
+      "id": "obs-5",
+      "text": "Station M luggage: violin, cello, harp, pepper; label: C",
+      "source": "content"
+    },
+    {
+      "id": "obs-6",
+      "text": "Station R luggage: Paris, Lima, Cairo, helium; label: S",
+      "source": "content"
+    },
+    {
+      "id": "obs-7",
+      "text": "Station B luggage: robin, eagle, finch, salmon; label: M",
+      "source": "content"
+    },
+    {
+      "id": "obs-8",
+      "text": "Station T luggage: running, cycling, swimming, marble; label: S",
+      "source": "content"
+    },
+    {
+      "id": "obs-9",
+      "text": "Station H luggage: apple, pear, peach, beet; label: A",
+      "source": "content"
+    },
+    {
+      "id": "obs-10",
+      "text": "Transfer records: 'R 在 H 之后、T 之前。' (R is after H and before T), 'Q 紧跟 B。' (Q immediately follows B), 'K 紧跟 M。' (K immediately follows M), 'H 紧跟 Q。' (H immediately follows Q), 'T 是终点。' (T is the terminal/end), 'B 紧跟 K。' (B immediately follows K)",
+      "source": "content"
+    },
+    {
+      "id": "obs-11",
+      "text": "Station labels: K=O, Q=P, M=C, R=S, B=M, T=S, H=A. Note labels R and T are both S (duplicate).",
+      "source": "content"
+    },
+    {
+      "id": "obs-12",
+      "text": "Column header '异类背面的标签' means 'label on the back of the odd item'.",
+      "source": "content"
+    },
+    {
+      "id": "obs-13",
+      "text": "In each station, three items belong to one semantic category and one is a distractor: K (metals: copper, iron, silver; odd: willow (tree)), Q (shapes: square, triangle, circle; odd: Tuesday (day)), M (string instruments: violin, cello, harp; odd: pepper (vegetable/spice)), R (capital cities: Paris, Lima, Cairo; odd: helium (element)), B (birds: robin, eagle, finch; odd: salmon (fish)), T (sports/activities: running, cycling, swimming; odd: marble (object/game)), H (fruits: apple, pear, peach; odd: beet (vegetable)).",
+      "source": "content"
+    },
+    {
+      "id": "obs-14",
+      "text": "The odd item labels, by station: K(willow)=O, Q(Tuesday)=P, M(pepper)=C, R(helium)=S, B(salmon)=M, T(marble)=S, H(beet)=A. Sequence of labels by station order K,Q,M,R,B,T,H is O,P,C,S,M,S,A.",
+      "source": "content"
+    },
+    {
+      "id": "obs-15",
+      "text": "Transfer records provide partial order constraints: M->K (K immediately follows M), K->B (B immediately follows K), B->Q (Q immediately follows B), Q->H (H immediately follows Q), H->R (R after H), R->T (T after R), T is terminal. Combined immediate-follow chain: M,K,B,Q,H,R,T (assuming no other stations between, since all immediate except H->R and R->T are 'after' but T is terminal). Station order per constraints: M, K, B, Q, H, R, T.",
+      "source": "content"
+    },
+    {
+      "id": "obs-16",
+      "text": "In constraint-derived order M,K,B,Q,H,R,T, the corresponding labels are: M=C, K=O, B=M, Q=P, H=A, R=S, T=S -> 'COMPASS' (C O M P A S S).",
+      "source": "content"
+    }
+  ],
+  "flavor_associations": [
+    {
+      "trigger": "异类背面的标签",
+      "association": "The odd item in each row bears a hidden label; extracting labels in the route order may spell a word.",
+      "evidence": "Flavor text instructs to find odd items and their labels, then use transfer records to recover route; labels in derived order spell 'COMPASS'."
+    },
+    {
+      "trigger": "换乘记录",
+      "association": "The transfer records give ordering constraints that, when followed, yield a linear station sequence from start to terminal.",
+      "evidence": "Constraints: K after M, B after K, Q after B, H after Q, R after H and before T, T terminal; sequence M-K-B-Q-H-R-T satisfies all."
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "H1",
+      "mechanism": "The final answer is the word 'COMPASS', derived by extracting the odd-item label from each station in the route order M-K-B-Q-H-R-T and concatenating the labels.",
+      "confidence": 0.85
+    },
+    {
+      "id": "H2",
+      "mechanism": "The puzzle requires using the word 'COMPASS' as an intermediate clue to direct further action, such as orienteering or navigation, rather than as the final answer itself.",
+      "confidence": 0.1
+    },
+    {
+      "id": "H3",
+      "mechanism": "The duplicate label 'S' for stations R and T is intentional; the route order is not unique or the word is ambiguous, requiring further resolution.",
+      "confidence": 0.05
+    }
+  ],
+  "plan": [
+    {
+      "id": "P1",
+      "tool": "solution_position_analysis",
+      "arguments": {
+        "solutions": [
+          "COMPASS"
+        ]
+      },
+      "purpose": "Check whether 'COMPASS' is a plausible final answer by analyzing its pattern and position, before accepting it."
+    },
+    {
+      "id": "P2",
+      "tool": "common_symbol_intersection",
+      "arguments": {
+        "values": [
+          "O",
+          "P",
+          "C",
+          "S",
+          "M",
+          "S",
+          "A"
+        ],
+        "exactly_one": false,
+        "normalization": "case_insensitive"
+      },
+      "purpose": "Verify that the labels in route order indeed form 'COMPASS' and check for any alternative interpretations."
+    },
+    {
+      "id": "P3",
+      "tool": "dependency_order",
+      "arguments": {
+        "dependencies": {
+          "K": [
+            "M"
+          ],
+          "B": [
+            "K"
+          ],
+          "Q": [
+            "B"
+          ],
+          "H": [
+            "Q"
+          ],
+          "R": [
+            "H"
+          ],
+          "T": [
+            "R"
+          ]
+        }
+      },
+      "purpose": "Confirm that the transfer constraints yield the unique station sequence M-K-B-Q-H-R-T."
+    }
+  ],
+  "attempts": [
+    {
+      "tool": "solution_position_analysis",
+      "fingerprint": "[\"solution_position_analysis\", {\"solutions\": [\"COMPASS\"]}]",
+      "outcome": "failed",
+      "error": "solutions must contain 2..100 strings"
+    },
+    {
+      "tool": "common_symbol_intersection",
+      "fingerprint": "[\"common_symbol_intersection\", {\"exactly_one\": false, \"normalization\": \"case_insensitive\", \"values\": [\"O\", \"P\", \"C\", \"S\", \"M\", \"S\", \"A\"]}]",
+      "outcome": "failed",
+      "error": "normalization must be none, NFC, or NFKC"
+    },
+    {
+      "tool": "dependency_order",
+      "fingerprint": "[\"dependency_order\", {\"dependencies\": {\"B\": [\"K\"], \"H\": [\"Q\"], \"K\": [\"M\"], \"Q\": [\"B\"], \"R\": [\"H\"], \"T\": [\"R\"]}}]",
+      "outcome": "failed",
+      "error": "unknown dependencies: ['M']"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "assessment-1",
+      "hypothesis_id": "H1",
+      "effect": "supports"
+    },
+    {
+      "id": "assessment-2",
+      "hypothesis_id": "H2",
+      "effect": "weakens"
+    },
+    {
+      "id": "assessment-3",
+      "hypothesis_id": "H3",
+      "effect": "rejects"
+    }
+  ],
+  "intermediate_answers": [],
+  "extractions": [],
+  "answer_candidates": [
+    {
+      "answer": "COMPASS",
+      "confidence": "high",
+      "evidence_ids": [
+        "obs-13",
+        "obs-14",
+        "obs-15",
+        "obs-16"
+      ]
+    }
+  ],
+  "open_questions": [],
+  "blockers": [
+    "All planned deterministic experiments failed"
+  ],
+  "budget": {
+    "max_calls": 6,
+    "calls_used": 4
+  },
+  "last_node": "verify_answer",
+  "next_node": null,
+  "final_answer": null,
+  "evaluation_decision": "verify"
+}

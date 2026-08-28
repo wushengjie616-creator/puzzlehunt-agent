@@ -1,0 +1,289 @@
+{
+  "schema_version": 1,
+  "cycle_id": "cycle-20260828T040029Z",
+  "scheduled_at": "2026-08-28T12:00:29+08:00",
+  "started_at": "2026-08-28T04:01:01.089+00:00",
+  "finished_at": "2026-08-28T04:01:55.231+00:00",
+  "git_commit": "3d2d8c4aa84ba774288107520db97f1bae494b48",
+  "dirty_worktree_at_start": false,
+  "framework": {
+    "prompt_hash": "11767d857a56a9afa5c457f9afcc4a14a18c5af00dd23078d84c10c091c1b59a",
+    "tool_registry_hash": "4a046997971f980d9bd390839c281602c0d350a82f8f716326cc2d315f29fb47",
+    "dependency_hash": "f0341617d6233d4f14e8cd29e241e03cc2962691f1c6e6c7ef95343a6265e106"
+  },
+  "provider": {
+    "name": "deepseek",
+    "model": "deepseek-v4-pro",
+    "max_calls": 6
+  },
+  "suite": "v1",
+  "timeout_seconds": 3600.0,
+  "cases": [
+    {
+      "case_id": "01-misaligned-pages",
+      "started_at": "2026-08-28T04:01:01.154+00:00",
+      "deadline_at": "2026-08-28T05:01:01.154+00:00",
+      "final_answer_frozen_at": "2026-08-28T04:01:24.607+00:00",
+      "status": "WRONG",
+      "failure_class": null,
+      "error_summary": null,
+      "timeout": false,
+      "duration_ms": 23453,
+      "normalized_answer": "F",
+      "correct": false,
+      "rubric_score": 0.0,
+      "llm_calls": 4,
+      "llm_calls_succeeded": 4,
+      "node_report_path": "cases/01-misaligned-pages/node-analysis.json",
+      "trace_path": "cases/01-misaligned-pages/worker-result.json"
+    },
+    {
+      "case_id": "02-rain-transfer",
+      "started_at": "2026-08-28T04:01:01.154+00:00",
+      "deadline_at": "2026-08-28T05:01:01.154+00:00",
+      "final_answer_frozen_at": "2026-08-28T04:01:31.482+00:00",
+      "status": "NEEDS_REVIEW",
+      "failure_class": null,
+      "error_summary": null,
+      "timeout": false,
+      "duration_ms": 30328,
+      "normalized_answer": null,
+      "correct": false,
+      "rubric_score": 0.0,
+      "llm_calls": 4,
+      "llm_calls_succeeded": 4,
+      "node_report_path": "cases/02-rain-transfer/node-analysis.json",
+      "trace_path": "cases/02-rain-transfer/worker-result.json"
+    },
+    {
+      "case_id": "03-rework-order",
+      "started_at": "2026-08-28T04:01:01.157+00:00",
+      "deadline_at": "2026-08-28T05:01:01.157+00:00",
+      "final_answer_frozen_at": "2026-08-28T04:01:31.079+00:00",
+      "status": "SOLVED",
+      "failure_class": null,
+      "error_summary": null,
+      "timeout": false,
+      "duration_ms": 29922,
+      "normalized_answer": "SIGNAL",
+      "correct": true,
+      "rubric_score": 1.0,
+      "llm_calls": 4,
+      "llm_calls_succeeded": 4,
+      "node_report_path": "cases/03-rework-order/node-analysis.json",
+      "trace_path": "cases/03-rework-order/worker-result.json"
+    },
+    {
+      "case_id": "04-after-wind",
+      "started_at": "2026-08-28T04:01:01.157+00:00",
+      "deadline_at": "2026-08-28T05:01:01.157+00:00",
+      "final_answer_frozen_at": "2026-08-28T04:01:55.235+00:00",
+      "status": "NEEDS_REVIEW",
+      "failure_class": null,
+      "error_summary": null,
+      "timeout": false,
+      "duration_ms": 54078,
+      "normalized_answer": null,
+      "correct": false,
+      "rubric_score": 0.0,
+      "llm_calls": 6,
+      "llm_calls_succeeded": 6,
+      "node_report_path": "cases/04-after-wind/node-analysis.json",
+      "trace_path": "cases/04-after-wind/worker-result.json"
+    },
+    {
+      "case_id": "05-sealed-packets",
+      "started_at": "2026-08-28T04:01:01.157+00:00",
+      "deadline_at": "2026-08-28T05:01:01.157+00:00",
+      "final_answer_frozen_at": "2026-08-28T04:01:47.610+00:00",
+      "status": "SOLVED",
+      "failure_class": null,
+      "error_summary": null,
+      "timeout": false,
+      "duration_ms": 46453,
+      "normalized_answer": "PLANET",
+      "correct": true,
+      "rubric_score": 1.0,
+      "llm_calls": 4,
+      "llm_calls_succeeded": 4,
+      "node_report_path": "cases/05-sealed-packets/node-analysis.json",
+      "trace_path": "cases/05-sealed-packets/worker-result.json"
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "correct": 2,
+    "wrong": 1,
+    "timeout": 0,
+    "error": 0,
+    "unsolved": 2
+  },
+  "node_summary": [
+    {
+      "node": "intake",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 5,
+      "activation_count": 5,
+      "wall_time_ms": 203,
+      "written_fields": [
+        "last_node",
+        "next_node",
+        "revision",
+        "stage",
+        "status"
+      ],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 3,
+        "HELPFUL": 2
+      },
+      "issues": []
+    },
+    {
+      "node": "artifact_inventory",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 5,
+      "activation_count": 5,
+      "wall_time_ms": 172,
+      "written_fields": [
+        "last_node",
+        "next_node",
+        "stage"
+      ],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 3,
+        "HELPFUL": 2
+      },
+      "issues": []
+    },
+    {
+      "node": "human_interrupt",
+      "expected_activation": false,
+      "cases_total": 5,
+      "activated_cases": 0,
+      "activation_count": 0,
+      "wall_time_ms": 0,
+      "written_fields": [],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 5
+      },
+      "issues": []
+    },
+    {
+      "node": "observe_classify",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 5,
+      "activation_count": 5,
+      "wall_time_ms": 76516,
+      "written_fields": [
+        "budget",
+        "flavor_associations",
+        "last_node",
+        "next_node",
+        "observations",
+        "stage"
+      ],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 3,
+        "HELPFUL": 2
+      },
+      "issues": []
+    },
+    {
+      "node": "hypothesize_plan",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 5,
+      "activation_count": 6,
+      "wall_time_ms": 65952,
+      "written_fields": [
+        "budget",
+        "hypotheses",
+        "last_node",
+        "next_node",
+        "plan",
+        "stage"
+      ],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 3,
+        "HELPFUL": 2
+      },
+      "issues": []
+    },
+    {
+      "node": "tool_dispatch",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 5,
+      "activation_count": 6,
+      "wall_time_ms": 126,
+      "written_fields": [
+        "attempts",
+        "evidence",
+        "extractions",
+        "last_node",
+        "next_node",
+        "stage"
+      ],
+      "new_evidence_count": 10,
+      "usefulness_counts": {
+        "UNASSESSABLE": 3,
+        "HELPFUL": 2
+      },
+      "issues": []
+    },
+    {
+      "node": "evaluate_evidence",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 5,
+      "activation_count": 6,
+      "wall_time_ms": 19781,
+      "written_fields": [
+        "answer_candidates",
+        "budget",
+        "evaluation_decision",
+        "evidence",
+        "last_node",
+        "next_node",
+        "stage"
+      ],
+      "new_evidence_count": 7,
+      "usefulness_counts": {
+        "UNASSESSABLE": 3,
+        "HELPFUL": 2
+      },
+      "issues": []
+    },
+    {
+      "node": "verify_answer",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 5,
+      "activation_count": 5,
+      "wall_time_ms": 12344,
+      "written_fields": [
+        "blockers",
+        "budget",
+        "final_answer",
+        "last_node",
+        "next_node",
+        "stage",
+        "status"
+      ],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 3,
+        "ESSENTIAL": 2
+      },
+      "issues": []
+    }
+  ]
+}

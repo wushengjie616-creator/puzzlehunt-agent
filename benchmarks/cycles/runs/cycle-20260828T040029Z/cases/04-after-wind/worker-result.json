@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "case_id": "04-after-wind",
+  "session_id": "7594a2d039474efdaa57907b2c51e49c",
+  "status": "NEEDS_REVIEW",
+  "final_answer": null,
+  "calls_used": 6,
+  "calls_attempted": 6,
+  "trace": [
+    {
+      "node": "intake",
+      "stage": "ARTIFACT_INVENTORY",
+      "wall_time_ms": 32,
+      "written_fields": [
+        "last_node",
+        "next_node",
+        "revision",
+        "stage",
+        "status"
+      ],
+      "new_evidence_ids": [],
+      "calls_used": 0,
+      "provider_call_attempted": false,
+      "outcome": "completed"
+    },
+    {
+      "node": "artifact_inventory",
+      "stage": "OBSERVE_CLASSIFY",
+      "wall_time_ms": 31,
+      "written_fields": [
+        "last_node",
+        "next_node",
+        "stage"
+      ],
+      "new_evidence_ids": [],
+      "calls_used": 0,
+      "provider_call_attempted": false,
+      "outcome": "completed"
+    },
+    {
+      "node": "observe_classify",
+      "stage": "HYPOTHESIZE_PLAN",
+      "wall_time_ms": 13453,
+      "written_fields": [
+        "budget",
+        "flavor_associations",
+        "last_node",
+        "next_node",
+        "observations",
+        "stage"
+      ],
+      "new_evidence_ids": [],
+      "calls_used": 1,
+      "provider_call_attempted": true,
+      "outcome": "completed"
+    },
+    {
+      "node": "hypothesize_plan",
+      "stage": "TOOL_DISPATCH",
+      "wall_time_ms": 15469,
+      "written_fields": [
+        "budget",
+        "hypotheses",
+        "last_node",
+        "next_node",
+        "plan",
+        "stage"
+      ],
+      "new_evidence_ids": [],
+      "calls_used": 2,
+      "provider_call_attempted": true,
+      "outcome": "completed"
+    },
+    {
+      "node": "tool_dispatch",
+      "stage": "EVALUATE_EVIDENCE",
+      "wall_time_ms": 31,
+      "written_fields": [
+        "attempts",
+        "evidence",
+        "extractions",
+        "last_node",
+        "next_node",
+        "stage"
+      ],
+      "new_evidence_ids": [
+        "tool-1",
+        "tool-2",
+        "tool-3",
+        "tool-4",
+        "tool-5",
+        "tool-6"
+      ],
+      "calls_used": 2,
+      "provider_call_attempted": false,
+      "outcome": "completed"
+    },
+    {
+      "node": "evaluate_evidence",
+      "stage": "HYPOTHESIZE_PLAN",
+      "wall_time_ms": 4125,
+      "written_fields": [
+        "budget",
+        "evaluation_decision",
+        "evidence",
+        "last_node",
+        "next_node",
+        "stage"
+      ],
+      "new_evidence_ids": [
+        "assessment-1",
+        "assessment-2",
+        "assessment-3",
+        "assessment-4"
+      ],
+      "calls_used": 3,
+      "provider_call_attempted": true,
+      "outcome": "completed"
+    },
+    {
+      "node": "hypothesize_plan",
+      "stage": "TOOL_DISPATCH",
+      "wall_time_ms": 13766,
+      "written_fields": [
+        "budget",
+        "hypotheses",
+        "last_node",
+        "next_node",
+        "plan",
+        "stage"
+      ],
+      "new_evidence_ids": [],
+      "calls_used": 4,
+      "provider_call_attempted": true,
+      "outcome": "completed"
+    },
+    {
+      "node": "tool_dispatch",
+      "stage": "EVALUATE_EVIDENCE",
+      "wall_time_ms": 15,
+      "written_fields": [
+        "attempts",
+        "evidence",
+        "extractions",
+        "last_node",
+        "next_node",
+        "stage"
+      ],
+      "new_evidence_ids": [
+        "tool-11",
+        "tool-7",
+        "tool-8",
+        "tool-9"
+      ],
+      "calls_used": 4,
+      "provider_call_attempted": false,
+      "outcome": "completed"
+    },
+    {
+      "node": "evaluate_evidence",
+      "stage": "VERIFY_ANSWER",
+      "wall_time_ms": 2516,
+      "written_fields": [
+        "budget",
+        "evaluation_decision",
+        "evidence",
+        "last_node",
+        "next_node",
+        "stage"
+      ],
+      "new_evidence_ids": [
+        "assessment-5",
+        "assessment-6",
+        "assessment-7"
+      ],
+      "calls_used": 5,
+      "provider_call_attempted": true,
+      "outcome": "completed"
+    },
+    {
+      "node": "verify_answer",
+      "stage": "VERIFY_ANSWER",
+      "wall_time_ms": 2781,
+      "written_fields": [
+        "budget",
+        "last_node",
+        "next_node",
+        "status"
+      ],
+      "new_evidence_ids": [],
+      "calls_used": 6,
+      "provider_call_attempted": true,
+      "outcome": "completed"
+    }
+  ],
+  "state_path": "state.json"
+}

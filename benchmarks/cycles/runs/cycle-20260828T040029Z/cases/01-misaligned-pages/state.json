@@ -1,0 +1,238 @@
+{
+  "puzzle": {
+    "title": "错页校对",
+    "flavor_text": "装订员说，每一行都比原文推迟了与行号相同的距离。校回原位后，页边铅笔写着：第几行，就取第几个字母。",
+    "content": "1. GMJOU\n2. ITCRG\n3. DODUP\n4. GPEQT\n5. HWFSJ",
+    "notes": null
+  },
+  "artifacts": {},
+  "required_artifacts": [],
+  "missing_artifacts": [],
+  "status": "SOLVED",
+  "stage": "SOLVED",
+  "revision": 1,
+  "observations": [
+    {
+      "id": "obs-1",
+      "text": "The puzzle has 5 rows labeled 1 through 5, each containing a 5-letter string: 1. GMJOU, 2. ITCRG, 3. DODUP, 4. GPEQT, 5. HWFSJ",
+      "source": "content"
+    },
+    {
+      "id": "obs-2",
+      "text": "The title is '错页校对' which can be translated as 'Wrong Page Proofreading' or 'Misbound Page Collation'.",
+      "source": "title"
+    },
+    {
+      "id": "obs-3",
+      "text": "The flavor text describes a bookbinder saying each line was delayed by a distance equal to its line number; after realigning, a marginal note says: take the Nth letter for the Nth line.",
+      "source": "flavor_text"
+    },
+    {
+      "id": "obs-4",
+      "text": "Each line consists of exactly 5 uppercase letters, forming a 5x5 grid of letters when aligned by columns.",
+      "source": "content"
+    },
+    {
+      "id": "obs-5",
+      "text": "No numbers, symbols, or lowercase letters appear in the content; all letters are from A to Z.",
+      "source": "content"
+    }
+  ],
+  "flavor_associations": [
+    {
+      "trigger": "每一行都比原文推迟了与行号相同的距离",
+      "association": "A Caesar shift or Caesar-like letter shift where each row is shifted by its row number (1 for row 1, 2 for row 2, etc.).",
+      "evidence": "The flavor text explicitly says each line was postponed by a distance equal to the line number; '距离' (distance) suggests shift count in alphabet."
+    },
+    {
+      "trigger": "校回原位",
+      "association": "Undo the shift to recover the original lines.",
+      "evidence": "In Chinese, '校回原位' means 'correct back to original position', implying reversing the shift."
+    },
+    {
+      "trigger": "第几行，就取第几个字母",
+      "association": "After correcting, take the Nth letter from the Nth line (e.g., row 1's 1st letter, row 2's 2nd letter, etc.) to extract a message.",
+      "evidence": "The flavor text explicitly says 'for the Nth line, take the Nth letter', likely after correction."
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "H1",
+      "mechanism": "Each row has been Caesar shifted forward (alphabetically later) by its row number (row 1 shifted +1, row 2 +2, ..., row 5 +5). To correct, shift each row backward by that number; then take the nth letter of the nth corrected row to extract the message.",
+      "confidence": 0.75
+    },
+    {
+      "id": "H2",
+      "mechanism": "Each row has been shifted backward (alphabetically earlier) by its row number, and correction requires shifting forward by that number. The extraction step remains the same.",
+      "confidence": 0.15
+    },
+    {
+      "id": "H3",
+      "mechanism": "The 'delay' means a transposition/offset of columns rather than a Caesar shift; each row's letters are cyclically shifted right by row number. Correct by shifting left, then extract diagonal letters.",
+      "confidence": 0.1
+    }
+  ],
+  "plan": [
+    {
+      "id": "P1",
+      "tool": "caesar_shift",
+      "arguments": {
+        "text": "GMJOU",
+        "shift": -1
+      },
+      "purpose": "Test H1 by reversing a forward shift of +1 for row 1."
+    },
+    {
+      "id": "P2",
+      "tool": "caesar_shift",
+      "arguments": {
+        "text": "ITCRG",
+        "shift": -2
+      },
+      "purpose": "Test H1 for row 2."
+    },
+    {
+      "id": "P3",
+      "tool": "caesar_shift",
+      "arguments": {
+        "text": "DODUP",
+        "shift": -3
+      },
+      "purpose": "Test H1 for row 3."
+    },
+    {
+      "id": "P4",
+      "tool": "caesar_shift",
+      "arguments": {
+        "text": "GPEQT",
+        "shift": -4
+      },
+      "purpose": "Test H1 for row 4."
+    },
+    {
+      "id": "P5",
+      "tool": "caesar_shift",
+      "arguments": {
+        "text": "HWFSJ",
+        "shift": -5
+      },
+      "purpose": "Test H1 for row 5."
+    }
+  ],
+  "attempts": [
+    {
+      "tool": "caesar_shift",
+      "fingerprint": "[\"caesar_shift\", {\"shift\": -1, \"text\": \"GMJOU\"}]",
+      "outcome": "completed"
+    },
+    {
+      "tool": "caesar_shift",
+      "fingerprint": "[\"caesar_shift\", {\"shift\": -2, \"text\": \"ITCRG\"}]",
+      "outcome": "completed"
+    },
+    {
+      "tool": "caesar_shift",
+      "fingerprint": "[\"caesar_shift\", {\"shift\": -3, \"text\": \"DODUP\"}]",
+      "outcome": "completed"
+    },
+    {
+      "tool": "caesar_shift",
+      "fingerprint": "[\"caesar_shift\", {\"shift\": -4, \"text\": \"GPEQT\"}]",
+      "outcome": "completed"
+    },
+    {
+      "tool": "caesar_shift",
+      "fingerprint": "[\"caesar_shift\", {\"shift\": -5, \"text\": \"HWFSJ\"}]",
+      "outcome": "completed"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "tool-1",
+      "kind": "deterministic_tool_result",
+      "tool": "caesar_shift",
+      "output": "FLINT"
+    },
+    {
+      "id": "tool-2",
+      "kind": "deterministic_tool_result",
+      "tool": "caesar_shift",
+      "output": "GRAPE"
+    },
+    {
+      "id": "tool-3",
+      "kind": "deterministic_tool_result",
+      "tool": "caesar_shift",
+      "output": "ALARM"
+    },
+    {
+      "id": "tool-4",
+      "kind": "deterministic_tool_result",
+      "tool": "caesar_shift",
+      "output": "CLAMP"
+    },
+    {
+      "id": "tool-5",
+      "kind": "deterministic_tool_result",
+      "tool": "caesar_shift",
+      "output": "CRANE"
+    },
+    {
+      "id": "assessment-1",
+      "hypothesis_id": "H1",
+      "effect": "supports",
+      "evidence_ids": [
+        "tool-1",
+        "tool-2",
+        "tool-3",
+        "tool-4",
+        "tool-5"
+      ]
+    },
+    {
+      "id": "assessment-2",
+      "hypothesis_id": "H2",
+      "effect": "weakens",
+      "evidence_ids": [
+        "tool-1",
+        "tool-2",
+        "tool-3",
+        "tool-4",
+        "tool-5"
+      ]
+    },
+    {
+      "id": "assessment-3",
+      "hypothesis_id": "H3",
+      "effect": "weakens",
+      "evidence_ids": [
+        "tool-1",
+        "tool-2",
+        "tool-3",
+        "tool-4",
+        "tool-5"
+      ]
+    }
+  ],
+  "intermediate_answers": [],
+  "extractions": [],
+  "answer_candidates": [
+    {
+      "answer": "F",
+      "confidence": "high",
+      "evidence_ids": [
+        "tool-1"
+      ]
+    }
+  ],
+  "open_questions": [],
+  "blockers": [],
+  "budget": {
+    "max_calls": 6,
+    "calls_used": 4
+  },
+  "last_node": "verify_answer",
+  "next_node": null,
+  "final_answer": "F",
+  "evaluation_decision": "verify"
+}

@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "case_id": "03-rework-order",
+  "session_id": "78c3133147974e37a5ec6cfee938c36b",
+  "status": "SOLVED",
+  "final_answer": "SIGNAL",
+  "calls_used": 4,
+  "calls_attempted": 4,
+  "trace": [
+    {
+      "node": "intake",
+      "stage": "ARTIFACT_INVENTORY",
+      "wall_time_ms": 47,
+      "written_fields": [
+        "last_node",
+        "next_node",
+        "revision",
+        "stage",
+        "status"
+      ],
+      "new_evidence_ids": [],
+      "calls_used": 0,
+      "provider_call_attempted": false,
+      "outcome": "completed"
+    },
+    {
+      "node": "artifact_inventory",
+      "stage": "OBSERVE_CLASSIFY",
+      "wall_time_ms": 31,
+      "written_fields": [
+        "last_node",
+        "next_node",
+        "stage"
+      ],
+      "new_evidence_ids": [],
+      "calls_used": 0,
+      "provider_call_attempted": false,
+      "outcome": "completed"
+    },
+    {
+      "node": "observe_classify",
+      "stage": "HYPOTHESIZE_PLAN",
+      "wall_time_ms": 12485,
+      "written_fields": [
+        "budget",
+        "flavor_associations",
+        "last_node",
+        "next_node",
+        "observations",
+        "stage"
+      ],
+      "new_evidence_ids": [],
+      "calls_used": 1,
+      "provider_call_attempted": true,
+      "outcome": "completed"
+    },
+    {
+      "node": "hypothesize_plan",
+      "stage": "TOOL_DISPATCH",
+      "wall_time_ms": 10765,
+      "written_fields": [
+        "budget",
+        "hypotheses",
+        "last_node",
+        "next_node",
+        "plan",
+        "stage"
+      ],
+      "new_evidence_ids": [],
+      "calls_used": 2,
+      "provider_call_attempted": true,
+      "outcome": "completed"
+    },
+    {
+      "node": "tool_dispatch",
+      "stage": "EVALUATE_EVIDENCE",
+      "wall_time_ms": 32,
+      "written_fields": [
+        "attempts",
+        "evidence",
+        "extractions",
+        "last_node",
+        "next_node",
+        "stage"
+      ],
+      "new_evidence_ids": [
+        "tool-2",
+        "tool-3"
+      ],
+      "calls_used": 2,
+      "provider_call_attempted": false,
+      "outcome": "completed"
+    },
+    {
+      "node": "evaluate_evidence",
+      "stage": "VERIFY_ANSWER",
+      "wall_time_ms": 2609,
+      "written_fields": [
+        "answer_candidates",
+        "budget",
+        "evaluation_decision",
+        "evidence",
+        "last_node",
+        "next_node",
+        "stage"
+      ],
+      "new_evidence_ids": [
+        "assessment-1",
+        "assessment-2",
+        "assessment-3"
+      ],
+      "calls_used": 3,
+      "provider_call_attempted": true,
+      "outcome": "completed"
+    },
+    {
+      "node": "verify_answer",
+      "stage": "SOLVED",
+      "wall_time_ms": 2109,
+      "written_fields": [
+        "budget",
+        "final_answer",
+        "last_node",
+        "next_node",
+        "stage",
+        "status"
+      ],
+      "new_evidence_ids": [],
+      "calls_used": 4,
+      "provider_call_attempted": true,
+      "outcome": "completed"
+    }
+  ],
+  "state_path": "state.json"
+}

@@ -1,0 +1,143 @@
+[
+  {
+    "node": "intake",
+    "expected_activation": true,
+    "activated": true,
+    "activation_count": 1,
+    "wall_time_ms": 47,
+    "written_fields": [
+      "last_node",
+      "next_node",
+      "revision",
+      "stage",
+      "status"
+    ],
+    "new_evidence_ids": [],
+    "usefulness": "HELPFUL",
+    "issues": []
+  },
+  {
+    "node": "artifact_inventory",
+    "expected_activation": true,
+    "activated": true,
+    "activation_count": 1,
+    "wall_time_ms": 31,
+    "written_fields": [
+      "last_node",
+      "next_node",
+      "stage"
+    ],
+    "new_evidence_ids": [],
+    "usefulness": "HELPFUL",
+    "issues": []
+  },
+  {
+    "node": "human_interrupt",
+    "expected_activation": false,
+    "activated": false,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  },
+  {
+    "node": "observe_classify",
+    "expected_activation": true,
+    "activated": true,
+    "activation_count": 1,
+    "wall_time_ms": 12485,
+    "written_fields": [
+      "budget",
+      "flavor_associations",
+      "last_node",
+      "next_node",
+      "observations",
+      "stage"
+    ],
+    "new_evidence_ids": [],
+    "usefulness": "HELPFUL",
+    "issues": []
+  },
+  {
+    "node": "hypothesize_plan",
+    "expected_activation": true,
+    "activated": true,
+    "activation_count": 1,
+    "wall_time_ms": 10765,
+    "written_fields": [
+      "budget",
+      "hypotheses",
+      "last_node",
+      "next_node",
+      "plan",
+      "stage"
+    ],
+    "new_evidence_ids": [],
+    "usefulness": "HELPFUL",
+    "issues": []
+  },
+  {
+    "node": "tool_dispatch",
+    "expected_activation": true,
+    "activated": true,
+    "activation_count": 1,
+    "wall_time_ms": 32,
+    "written_fields": [
+      "attempts",
+      "evidence",
+      "extractions",
+      "last_node",
+      "next_node",
+      "stage"
+    ],
+    "new_evidence_ids": [
+      "tool-2",
+      "tool-3"
+    ],
+    "usefulness": "HELPFUL",
+    "issues": []
+  },
+  {
+    "node": "evaluate_evidence",
+    "expected_activation": true,
+    "activated": true,
+    "activation_count": 1,
+    "wall_time_ms": 2609,
+    "written_fields": [
+      "answer_candidates",
+      "budget",
+      "evaluation_decision",
+      "evidence",
+      "last_node",
+      "next_node",
+      "stage"
+    ],
+    "new_evidence_ids": [
+      "assessment-1",
+      "assessment-2",
+      "assessment-3"
+    ],
+    "usefulness": "HELPFUL",
+    "issues": []
+  },
+  {
+    "node": "verify_answer",
+    "expected_activation": true,
+    "activated": true,
+    "activation_count": 1,
+    "wall_time_ms": 2109,
+    "written_fields": [
+      "budget",
+      "final_answer",
+      "last_node",
+      "next_node",
+      "stage",
+      "status"
+    ],
+    "new_evidence_ids": [],
+    "usefulness": "ESSENTIAL",
+    "issues": []
+  }
+]
