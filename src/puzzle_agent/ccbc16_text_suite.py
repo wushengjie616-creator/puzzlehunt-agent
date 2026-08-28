@@ -128,6 +128,23 @@ def build_text_suite(
             reasons.append("empty-text-surface")
         surface_transcription = None
         script_surface = None
+        equivalent_copy_surface = (
+            puzzle_id == 8
+            and "方便复制版" in str(payload.get("html") or "")
+        )
+        if equivalent_copy_surface:
+            reasons = [
+                reason for reason in reasons
+                if reason not in {"source-image", "source-interaction"}
+            ]
+            runtime_input["content"] = "\n".join(
+                line for line in str(runtime_input.get("content") or "").splitlines()
+                if not line.startswith("[IMAGE:")
+            ).strip()
+            if reasons:
+                runtime_input["required_artifacts"] = reasons
+            else:
+                runtime_input.pop("required_artifacts", None)
         if puzzle_id in SCRIPT_SURFACE_URLS and fetch_text is not None:
             script_url = SCRIPT_SURFACE_URLS[puzzle_id]
             script_source = fetch_text(script_url)
@@ -216,6 +233,8 @@ def build_text_suite(
             provenance["surface_transcription"] = surface_transcription
         if script_surface is not None:
             provenance["script_surface"] = script_surface
+        if equivalent_copy_surface:
+            provenance["equivalent_copy_surface"] = True
         _write_json(case / "provenance.json", provenance)
         errors = validate_case(case)
         if errors:

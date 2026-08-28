@@ -157,6 +157,33 @@ class CCBC16TextSuiteTests(unittest.TestCase):
         self.assertNotIn("DO-NOT-LEAK", runtime)
         self.assertEqual(provenance["script_surface"]["adapter"], "official-public-clues-v1")
 
+    def test_builder_accepts_an_official_copy_equivalent_surface(self):
+        entry = {
+            "puzzle_id": 8,
+            "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/8",
+            "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/8.json",
+        }
+        payload = {
+            "answer_type": 0, "title": "Emoji",
+            "html": "<img src='render.webp'><div>方便复制版：<pre>➕➖✖️❓</pre></div>",
+            "script": "answer-input.vue", "answer": "FINAL",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = root / "manifest.json"
+            manifest.write_text(json.dumps({"puzzles": [entry]}), encoding="utf-8")
+            result = build_text_suite(
+                manifest_path=manifest,
+                output_root=root / "suite",
+                fetch_json=lambda _url: payload,
+            )
+            case = root / "suite" / "text" / "ccbc16-008"
+            runtime = (case / "input.json").read_text(encoding="utf-8")
+            provenance = json.loads((case / "provenance.json").read_text(encoding="utf-8"))
+        self.assertEqual(result["included_ids"], [8])
+        self.assertIn("➕➖✖️❓", runtime)
+        self.assertTrue(provenance["equivalent_copy_surface"])
+
 
 if __name__ == "__main__":
     unittest.main()
