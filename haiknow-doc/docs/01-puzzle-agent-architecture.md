@@ -159,6 +159,10 @@ watcher 每轮先对 allowlisted 工作树内容做 fingerprint，运行完整�
 
 `VALIDATE_SUBPROBLEMS` 是独立的局部答案证据门。16:00 批次在 89 个局部单元里产生了 33 个非空结果，但零个被正式提升为 evidence；其中 #3 已接近解出 8/9 个 clue answer，晚期验证只保留 2 个。新节点因此要求三分覆盖、值不可变、signal provenance 与可证伪依据，并只把 supported 结果写入 `validated_subproblem_result` evidence。
 
+模型输出契约与运行时状态契约并不等价。17:00 批次中，模型漏掉某个 verdict、把同一候选放进多个 verdict，或给出漂移后的 accepted value 时，旧实现会抛异常并截断整条图。现在运行时对“已知候选的不完整/矛盾判断”做保守总化：遗漏、冲突和漂移值统一降级为 `needs_test`，空结果 verdict 被忽略，`unresolved_subproblem_ids` 由 accepted 结果重新计算；只有引用完全未知 result ID 的响应仍被硬拒绝。这个容错只保证流程继续，不会把不可靠结果提升为 evidence。
+
+`VERIFY_INTERMEDIATES` 同样执行状态一致性门：模型只能逐字复制 `intermediate_answers` 中已存在的 value，且 evidence IDs 必须是源中间项已有引用的非空子集。评分器的模糊包含匹配只用于至少两个归一化字符的值，避免单字符别名在无关长文本中产生假阳性。
+
 每个 LLM 节点都有显式字符预算，并把单个字符串限制为 240 字符。预算按节点产物规模分配；例如 `ASSOCIATE_THEME` 为 3500 字符，而需要枚举题面单元的 `MATERIALIZE_SUBPROBLEMS` 为 9000 字符。DeepSeek 请求允许最多 16384 output tokens，以免 4096 的旧上限截断结构化阶段结果；这是生成上限而非固定消耗。若 DeepSeek 返回 `finish_reason=length`，provider 会报告截断错误，不会尝试猜补残缺 JSON 或把部分输出写进证据。
 
 终局还有一个机器门：若当前计划要求确定性工具，但所有相关 attempt 都失败，则即使模型返回全真 checks，也只能进入 `NEEDS_REVIEW`。这防止 cycle 2 中“工具全失败却把猜测标为 evidence-backed”的错误。
