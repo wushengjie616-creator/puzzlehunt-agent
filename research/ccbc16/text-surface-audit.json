@@ -249,8 +249,9 @@
         "e177739fc51647ddd61f82740a277228495b2f251372afaf12fd7c78f99f716a"
       ],
       "fidelity_notes": [
-        "The current candidate preserves 28 node coordinates, red endpoints, visible prefills, and triangular row geometry, but it deliberately omits the directed multigraph because several orange curves cross or share routes.",
-        "A reviewed transcription must pair every arrowhead with its origin, including self-loops, and preserve the three nonstandard glyph masks/orientations without forcing uncertain Unicode."
+        "The current candidate preserves 28 node coordinates, red endpoints, visible prefills, and triangular row geometry. Independent tracing against the official 1080x1080 raster established 43 directed edges: 19 ordinary one-way edges, 6 self-loops (including two distinct loops at R1C1), and 9 bidirectional pairs.",
+        "Two additional continuous paths from R5C5 and R6C6 merge before a shared terminal arrowhead at R4C5. The source cannot prove whether these are two independent edges, so a faithful transcription must retain a shared_terminal_group with multiplicity_unresolved=true instead of silently choosing a multiplicity.",
+        "The three nonstandard glyphs at R2C1, R4C5, and R6C3 must be represented by source-bounded raster masks/RLE plus readable previews; uncertain Unicode names are not lossless, and the visually similar lower glyphs must not be merged."
       ]
     },
     {
@@ -267,8 +268,9 @@
         "0aa06550407492fbd393b106daf8e47145e5519095e9ea1cda9f5edda9bbbc39"
       ],
       "fidelity_notes": [
-        "The two official 1536x2800 raster copies are pixel-equivalent, but the current candidate omits the main city's face-by-face lattice geometry and exact occlusion topology.",
-        "The fourth main-view arrow labeled 6 points southwest; the current candidate's southeast label is a known transcription error and must be corrected before review."
+        "The two official 1536x2800 raster copies are pixel-equivalent. A source-only connected-region inventory finds 43 visible main-city face regions (24 top/yellow, 9 left/green, 10 right/black) and 75 pairwise boundary-contact candidates, but the current candidate records none of their polygons, local z-order, T-junctions, or occlusion relations.",
+        "The fourth main-view arrow labeled 6 points southwest; the current candidate's southeast label is a known transcription error and must be corrected before review.",
+        "A faithful schema must preserve only visible polygons and local partial-order/occlusion facts, keep hidden extents unknown, and separately record the example, gray divider, decorative CCBC logo, and the centered placement of the downward (9) extraction arrow."
       ]
     },
     {
