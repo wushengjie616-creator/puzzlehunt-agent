@@ -19,7 +19,7 @@ HAS_LANGGRAPH = module_available("langgraph.graph") and module_available("langgr
 
 if HAS_LANGGRAPH:
     from langgraph.checkpoint.memory import InMemorySaver
-    from puzzle_agent.complex_graph import build_puzzle_graph
+    from puzzle_agent.complex_graph import build_puzzle_graph, _route_subproblem_validation
 
 
 class ScriptedStageProvider:
@@ -284,9 +284,10 @@ class DuplicateToolReplanningProvider(ScriptedStageProvider):
 
 
 class SemanticRecoveryProvider(ScriptedStageProvider):
-    def __init__(self, *, initial_anchor=True):
+    def __init__(self, *, initial_anchor=True, omit_anchor_during_recovery=False):
         super().__init__()
         self.initial_anchor = initial_anchor
+        self.omit_anchor_during_recovery = omit_anchor_during_recovery
         self.materialization_calls = 0
         self.validation_calls = 0
 
@@ -326,6 +327,8 @@ class SemanticRecoveryProvider(ScriptedStageProvider):
             values = [("sr1", "sp1", "ALPHA")] if self.initial_anchor else []
             if recovered:
                 values = [("sr1", "sp1", "ALPHA"), ("sr2", "sp2", "BRAVO"), ("sr3", "sp3", "CHARLIE")]
+                if self.omit_anchor_during_recovery:
+                    values = values[1:]
             return json.dumps({
                 "validated_results": [
                     {"result_id": rid, "subproblem_id": sid, "value": value,
@@ -343,6 +346,36 @@ class SemanticRecoveryProvider(ScriptedStageProvider):
 
 @unittest.skipUnless(HAS_LANGGRAPH, "complex extra is not installed")
 class ComplexGraphTests(unittest.TestCase):
+    def test_refinement_coverage_counts_unique_subproblems_not_results(self):
+        state = new_puzzle_state(PuzzleInput(content="three clues"), max_calls=10)
+        state.update({
+            "subproblems": [{"id": "sp1"}, {"id": "sp2"}, {"id": "sp3"}],
+            "validated_subproblem_results": [
+                {"result_id": "sr1", "subproblem_id": "sp1"},
+                {"result_id": "sr1b", "subproblem_id": "sp1"},
+            ],
+            "subproblem_validation": {"accepted": 2},
+            "budget": {"max_calls": 10, "calls_used": 4},
+        })
+
+        self.assertEqual(_route_subproblem_validation(state), "refine")
+
+    def test_recovery_keeps_an_accepted_anchor_when_second_validator_omits_it(self):
+        provider = SemanticRecoveryProvider(omit_anchor_during_recovery=True)
+        result = build_puzzle_graph(provider, checkpointer=InMemorySaver()).invoke(
+            new_puzzle_state(PuzzleInput(content="three semantic clues"), max_calls=10),
+            {"configurable": {"thread_id": "semantic-anchor-omission"}},
+        )
+
+        self.assertEqual(
+            {item["result_id"] for item in result["validated_subproblem_results"]},
+            {"sr1", "sr2", "sr3"},
+        )
+        self.assertNotIn("sr1", result["subproblem_validation"]["needs_test_result_ids"])
+        self.assertEqual(
+            sum(item.get("id") == "semantic-sr1" for item in result["evidence"]), 1
+        )
+
     def test_empty_first_pass_gets_one_bounded_semantic_recovery(self):
         provider = SemanticRecoveryProvider(initial_anchor=False)
         result = build_puzzle_graph(provider, checkpointer=InMemorySaver()).invoke(

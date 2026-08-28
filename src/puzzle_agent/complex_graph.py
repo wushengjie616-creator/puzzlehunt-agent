@@ -488,9 +488,24 @@ def _validate_subproblems(
     downgraded_ids = conflicting_ids | invalid_known_ids
     for result_id in downgraded_ids:
         validated_by_id.pop(result_id, None)
-    accepted_ids = set(validated_by_id)
     contradicted_ids -= downgraded_ids
     needs_test_ids |= downgraded_ids
+    preserved_anchor_ids: set[str] = set()
+    if state.get("semantic_refinement_used", 0):
+        for prior in state.get("validated_subproblem_results", []):
+            result_id = prior.get("result_id")
+            candidate = candidates.get(result_id)
+            if (
+                candidate is not None
+                and prior.get("subproblem_id") == candidate.get("subproblem_id")
+                and prior.get("value") == candidate.get("value")
+            ):
+                if result_id not in validated_by_id:
+                    preserved_anchor_ids.add(result_id)
+                validated_by_id[result_id] = prior
+                contradicted_ids.discard(result_id)
+                needs_test_ids.discard(result_id)
+    accepted_ids = set(validated_by_id)
     classified_ids = accepted_ids | contradicted_ids | needs_test_ids
     auto_classified = [result_id for result_id in candidates if result_id not in classified_ids]
     needs_test_ids.update(auto_classified)
@@ -517,14 +532,17 @@ def _validate_subproblems(
         issues.append(f"AUTO_DOWNGRADED_CONFLICTING_RESULTS:{len(conflicting_ids)}")
     if auto_classified:
         issues.append(f"AUTO_NEEDS_TEST_UNCLASSIFIED_RESULTS:{len(auto_classified)}")
+    if preserved_anchor_ids:
+        issues.append(f"AUTO_PRESERVED_ACCEPTED_ANCHORS:{len(preserved_anchor_ids)}")
     if (
         len(set(supplied_unresolved)) != len(supplied_unresolved)
         or set(supplied_unresolved) != set(unresolved)
     ):
         issues.append("AUTO_RECOMPUTED_UNRESOLVED_SUBPROBLEMS")
-    semantic_ids = {f"semantic-{item['result_id']}" for item in validated}
     evidence = [
-        item for item in state.get("evidence", []) if item.get("id") not in semantic_ids
+        item
+        for item in state.get("evidence", [])
+        if item.get("kind") != "validated_subproblem_result"
     ]
     evidence.extend({
         "id": f"semantic-{item['result_id']}",
@@ -922,9 +940,15 @@ def _route_subproblem_validation(state: PuzzleGraphState) -> str:
     if state.get("status") == "EXHAUSTED":
         return "end"
     subproblem_count = len(state.get("subproblems", []))
-    accepted = int(state.get("subproblem_validation", {}).get("accepted", 0))
+    accepted_subproblems = {
+        item.get("subproblem_id")
+        for item in state.get("validated_subproblem_results", [])
+        if item.get("subproblem_id")
+    }
     remaining = state.get("budget", {}).get("max_calls", 0) - state.get("budget", {}).get("calls_used", 0)
-    low_coverage = bool(subproblem_count and accepted / subproblem_count < 0.5)
+    low_coverage = bool(
+        subproblem_count and len(accepted_subproblems) / subproblem_count < 0.5
+    )
     if not state.get("semantic_refinement_used", 0) and low_coverage and remaining >= 6:
         return "refine"
     return "plan"
