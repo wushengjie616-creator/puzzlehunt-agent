@@ -4,6 +4,8 @@
 
 - [当前架构与运行契约](01-puzzle-agent-architecture.md)
 - [Agent 设计学习日志](02-agent-design-journey.md)
+- [CCBC16 第一阶段 24 题标准推理轨迹](03-ccbc16-24-case-solution-guide.md)
+- [D0001 · Puzzle Agent 第一阶段复盘](../decisions/D0001-puzzle-agent-stage1-retrospective.md)
 - [P0001 · MVP 实施计划](../plans/P0001-puzzle-agent-mvp.md)
 - [T0001 · MVP 执行记录](../tasks/T0001-puzzle-agent-mvp.md)
 - [P0002 · 可复用 PuzzleHunt 多阶段 Agent](../plans/P0002-complex-puzzlehunt-agent.md)
