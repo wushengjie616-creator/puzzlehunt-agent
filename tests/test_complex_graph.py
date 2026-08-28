@@ -823,6 +823,65 @@ class ComplexGraphTests(unittest.TestCase):
         self.assertFalse(result["intermediate_validation"]["passed"])
         self.assertIn("No evidence-backed intermediate was validated", result["blockers"])
 
+    def test_atomic_direct_answer_can_pass_without_a_distinct_intermediate(self):
+        class AtomicDirectAnswerProvider(ScriptedStageProvider):
+            def complete(self, messages):
+                marker = messages[0]["content"].split("PUZZLE_STAGE: ", 1)[1].splitlines()[0]
+                if marker == "MATERIALIZE_SUBPROBLEMS":
+                    self.stages.append(marker)
+                    self.messages.append(messages)
+                    return json.dumps({
+                        "structure_model": {
+                            "kind": "atomic", "unit_count": 1,
+                            "grouping_rule": "one ROT13 carrier", "dependencies": [],
+                        },
+                        "subproblems": [{
+                            "id": "sp1", "input_excerpt": "uryyb", "signal_ids": ["o1"],
+                            "group": "main", "depends_on": [],
+                            "predicted_product": "final word", "status": "solved",
+                        }],
+                        "subproblem_results": [{
+                            "id": "sr1", "subproblem_id": "sp1", "value": "HELLO",
+                            "status": "candidate", "signal_ids": ["o1"], "confidence": 0.99,
+                        }],
+                    })
+                if marker == "VALIDATE_SUBPROBLEMS":
+                    self.stages.append(marker)
+                    self.messages.append(messages)
+                    return json.dumps({
+                        "validated_results": [{
+                            "result_id": "sr1", "subproblem_id": "sp1", "value": "HELLO",
+                            "validation_kind": "semantic_derivation", "signal_ids": ["o1"],
+                            "prediction": "ROT13 of uryyb is HELLO.",
+                            "falsifier": "The character mapping differs.",
+                            "justification": "Each character maps under ROT13.",
+                        }],
+                        "contradicted_result_ids": [], "needs_test_result_ids": [],
+                        "unresolved_subproblem_ids": [], "issues": [],
+                    })
+                if marker == "VERIFY_INTERMEDIATES":
+                    self.stages.append(marker)
+                    self.messages.append(messages)
+                    state = json.loads(messages[1]["content"])
+                    return json.dumps({
+                        "validated_intermediates": state["intermediate_answers"],
+                        "checks": {
+                            "evidence_backed": True, "reproducible": True,
+                            "distinct_from_final": False, "extraction_ready": True,
+                        },
+                        "issues": ["No separate intermediate exists for this atomic puzzle."],
+                    })
+                return super().complete(messages)
+
+        result = build_puzzle_graph(AtomicDirectAnswerProvider()).invoke(
+            new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=8)
+        )
+
+        self.assertEqual(result["status"], "SOLVED")
+        self.assertEqual(result["final_answer"], "HELLO")
+        self.assertTrue(result["intermediate_validation"]["direct_answer_ready"])
+        self.assertTrue(result["intermediate_validation"]["passed"])
+
     def test_intermediate_verification_cannot_invent_a_value_missing_from_state(self):
         class InventedIntermediateProvider(ScriptedStageProvider):
             def complete(self, messages):

@@ -137,7 +137,10 @@ _STAGE_INSTRUCTIONS = {
         '"distinct_from_final":true,"extraction_ready":true},"issues":["..."]}. '
         "Validate only intermediate values already present in state and copy the value exactly; do not invent a "
         "replacement or final answer. Every validated value must cite a non-empty subset of that source "
-        "intermediate's existing evidence IDs and explain a role in the remaining extraction. "
+        "intermediate's existing evidence IDs and explain a role in the remaining extraction. For an atomic, "
+        "single-subproblem puzzle where the deterministically reproduced semantic result is itself the final answer, "
+        "set distinct_from_final=false; the runtime will independently decide whether the direct-answer exception "
+        "is safe. "
         "Use false checks and explicit issues when no carrier is sufficiently supported."
     ),
     "VERIFY_ANSWER": (
@@ -708,7 +711,7 @@ def _verify_intermediates(
         validated.append(item)
     if rejected:
         issues.append(f"REJECTED_INTERMEDIATES_NOT_PRESENT_IN_STATE:{rejected}")
-    passed = (
+    normal_intermediate_ready = (
         bool(validated)
         and len(validated) == len(raw_validated)
         and references_valid
@@ -716,6 +719,52 @@ def _verify_intermediates(
         and all(checks.values())
         and not issues
     )
+    normalized_answer_candidates = {
+        item["answer"].strip().casefold()
+        for item in state.get("answer_candidates", [])
+        if isinstance(item.get("answer"), str) and item["answer"].strip()
+    }
+    normalized_semantic_results = {
+        item["value"].strip().casefold()
+        for item in state.get("validated_subproblem_results", [])
+        if item.get("validation_kind") == "semantic_derivation"
+        and isinstance(item.get("value"), str)
+        and item["value"].strip()
+    }
+    reproduced_evidence_ids = {
+        str(item["id"])
+        for item in state.get("evidence", [])
+        if item.get("kind") != "validated_subproblem_result" and item.get("id") is not None
+    }
+    successful_tool_attempt = any(
+        item.get("outcome") in {"completed", "candidates_found"}
+        for item in state.get("attempts", [])
+    )
+    direct_value_reproduced = any(
+        isinstance(item.get("value"), str)
+        and item["value"].strip().casefold() in normalized_answer_candidates
+        and item["value"].strip().casefold() in normalized_semantic_results
+        and successful_tool_attempt
+        and bool(set(item.get("evidence_ids", [])) & reproduced_evidence_ids)
+        for item in validated
+    )
+    structure = state.get("structure_model", {})
+    direct_answer_ready = bool(
+        structure.get("kind") == "atomic"
+        and structure.get("unit_count") == 1
+        and len(state.get("subproblems", [])) == 1
+        and not state.get("subproblem_validation", {}).get("unresolved_subproblem_ids", [])
+        and bool(validated)
+        and len(validated) == len(raw_validated)
+        and references_valid
+        and source_values_valid
+        and checks.get("evidence_backed") is True
+        and checks.get("reproducible") is True
+        and checks.get("extraction_ready") is True
+        and checks.get("distinct_from_final") is False
+        and direct_value_reproduced
+    )
+    passed = normal_intermediate_ready or direct_answer_ready
     return {
         "budget": budget,
         "validated_intermediate_answers": validated,
@@ -724,6 +773,7 @@ def _verify_intermediates(
             "checks": checks,
             "evidence_references_valid": references_valid,
             "source_values_valid": source_values_valid,
+            "direct_answer_ready": direct_answer_ready,
             "issues": issues,
         },
         "stage": "VERIFY_ANSWER",
