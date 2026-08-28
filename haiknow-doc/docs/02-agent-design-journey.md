@@ -288,3 +288,15 @@ CCBC16 多次把“不唯一”本身用作机制。如果 solver 只返回第�
 ## 第 34 站：验证器也会制造假答案
 
 中间答案评分曾把单字符别名 `i` 匹配到无关长文本 `MOVIE BLUE CIRCLE`；中间验证节点也曾接受模型凭空创建、但 evidence ID 真实存在的 value。两者都说明“引用了证据”不等于“值来自证据”。现在中间验证要求 value 精确存在于上一阶段，引用只能取自该源值已有 evidence；评分的子串等价至少需要两个归一化字符。验收同时覆盖节点行为与 evaluator 行为，避免用有漏洞的尺子证明 Agent 已经进步。
+
+## 第 35 站：复杂题门禁不能否定原子题
+
+真实 DeepSeek CLI 样例把 `uryyb` 正确识别为 ROT13，局部语义验证、Caesar 工具、evidence evaluation 与最终六项检查全部通过，却因 `hello` 同时是解码产物和最终答案、没有“不同于最终答案”的中间载体而停在 `NEEDS_REVIEW`。这不是谨慎，而是把复杂题拓扑错误地强加给一步题。
+
+修复没有移除中间验证节点，而是加入机器可证的 direct-answer 窄路：仅限 atomic 单子题、无 unresolved、同值 semantic derivation、同值 answer candidate、成功工具复现且引用链完整。真实 checkpoint 分支随后只重跑两个验证节点，得到 `SOLVED/hello` 并成功 finalize；复杂结构和缺证据反例仍被拒绝。
+
+## 第 36 站：复制 checkpoint state 不等于复制执行位置
+
+第一次从 evidence evaluation 后 checkpoint 建分支时，新 session 虽然带着全部 state，却从 `START` 重新执行，最终重复观察、联想和局部验证并耗尽预算。原因是旧 `branch` 只把 snapshot 写成 `initial_state`，没有在新 LangGraph thread 中重建游标。
+
+现在 branch 以原 snapshot 的 `last_node` 调用 `update_state`，并强制核对新旧 `next`。回归测试证明分支 provider 只收到 `VERIFY_INTERMEDIATES`、`VERIFY_ANSWER` 两次调用；真实 DeepSeek 分支也从 calls=6 继续到 calls=8，而不是重跑入口节点。

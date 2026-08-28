@@ -129,9 +129,19 @@ class SessionManager:
             "branched_from": {"session_id": session_id, "checkpoint_id": checkpoint_id},
             "initial_state": state,
         })
+        last_node = state.get("last_node")
+        if isinstance(last_node, str) and last_node:
+            with self._open_graph(new_id, _UnavailableProvider()) as (graph, config):
+                graph.update_state(config, state, as_node=last_node)
+                seeded = graph.get_state(config)
+                if tuple(seeded.next) != tuple(selected["next"]):
+                    raise ValueError(
+                        "Selected checkpoint cursor could not be reproduced in the branch"
+                    )
         self._append_event(new_id, "session_branched", {
             "source_session_id": session_id,
             "checkpoint_id": checkpoint_id,
+            "next": selected["next"],
         })
         return new_id
 

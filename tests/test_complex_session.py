@@ -186,6 +186,31 @@ class PersistentSessionTests(unittest.TestCase):
         self.assertEqual(final.get("answer"), "HELLO")
         self.assertEqual(persisted_final, final)
 
+    def test_branch_resumes_from_the_selected_checkpoint_cursor(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manager = SessionManager(root)
+            source_id = manager.create(PuzzleInput(content="uryyb"), max_calls=8)
+            source_provider = ScriptedProvider()
+            for _ in range(9):
+                state = manager.step(source_id, source_provider)
+                if state.get("next_node") == "verify_intermediates":
+                    break
+            selected = next(
+                item for item in manager.history(source_id)
+                if item["values"].get("next_node") == "verify_intermediates"
+            )
+
+            branched_id = manager.branch(source_id, selected["checkpoint_id"])
+            branch_provider = ScriptedProvider()
+            result = manager.run(branched_id, branch_provider)
+
+        self.assertEqual(result["status"], "SOLVED")
+        self.assertEqual(
+            branch_provider.stages,
+            ["VERIFY_INTERMEDIATES", "VERIFY_ANSWER"],
+        )
+
     def test_provider_secret_is_not_persisted_in_session_files(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -91,6 +91,8 @@ INTAKE
 - state 限制为 JSON 兼容类型，并设置 strict msgpack；不启用 pickle fallback。
 - `final.json` 只在 `SOLVED` 后生成。
 
+分支建立时使用 `graph.update_state(..., as_node=last_node)` 在新 thread 中重建所选 snapshot 的执行游标，并核对新 snapshot 的 `next` 与原 checkpoint 完全一致；仅复制 state 而不复制游标会错误地从 `START` 重跑。
+
 ## 6. 工具层
 
 `CipherWorkbench` 负责高召回密码候选；`ToolRegistry` 负责模型可计划调用的确定性工具：
@@ -164,6 +166,8 @@ watcher 每轮先对 allowlisted 工作树内容做 fingerprint，运行完整�
 `VERIFY_INTERMEDIATES` 同样执行状态一致性门：模型只能逐字复制 `intermediate_answers` 中已存在的 value，且 evidence IDs 必须是源中间项已有引用的非空子集。评分器的模糊包含匹配只用于至少两个归一化字符的值，避免单字符别名在无关长文本中产生假阳性。
 
 每个 LLM 节点都有显式字符预算，并把单个字符串限制为 240 字符。预算按节点产物规模分配；例如 `ASSOCIATE_THEME` 为 3500 字符，而需要枚举题面单元的 `MATERIALIZE_SUBPROBLEMS` 为 9000 字符。DeepSeek 请求允许最多 16384 output tokens，以免 4096 的旧上限截断结构化阶段结果；这是生成上限而非固定消耗。若 DeepSeek 返回 `finish_reason=length`，provider 会报告截断错误，不会尝试猜补残缺 JSON 或把部分输出写进证据。
+
+中间载体门有一个机器可证的窄例外：若结构明确为 `atomic`、恰有一个子题、无 unresolved 局部单元、存在与 answer candidate 同值的 `semantic_derivation`、且同一值被成功确定性工具独立复现，则 `distinct_from_final=false` 可以形成 `direct_answer_ready`。这不是跳过 `VERIFY_INTERMEDIATES`；节点仍检查值来源、evidence 子集和可复现性。列表、网格、staged、meta 与 hybrid 结构不能使用这个例外。
 
 终局还有一个机器门：若当前计划要求确定性工具，但所有相关 attempt 都失败，则即使模型返回全真 checks，也只能进入 `NEEDS_REVIEW`。这防止 cycle 2 中“工具全失败却把猜测标为 evidence-backed”的错误。
 

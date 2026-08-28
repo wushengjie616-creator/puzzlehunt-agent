@@ -118,6 +118,8 @@ DeepSeek 官方 API 当前是 text-only。题目可以声明必须转写的 arti
 
 只有 `SOLVED` 状态可以 finalize。session 数据位于 `.puzzle-agent/sessions/<id>/`，包括 SQLite checkpoint、不可变初始输入、`events.jsonl`、artifact 转写和 `final.json`。
 
+`branch` 会同时复制所选 checkpoint 的公开 state 与 LangGraph 执行游标；分支随后从该 checkpoint 的下一节点继续，不会从 `INTAKE` 重跑。对于只有一个原子子题、局部语义结果和确定性工具结果完全一致的题，`VERIFY_INTERMEDIATES` 可记录受机器门约束的 direct-answer 路径；复杂题仍必须提供与最终答案不同的中间载体。
+
 ## 确定性工具
 
 密码工作台包括：
