@@ -47,7 +47,7 @@ class ComplexStateTests(unittest.TestCase):
         state = new_puzzle_state(PuzzleInput(content="x"))
         # Seven calls cover the normal path after subproblem materialization;
         # a bounded hypothesis/evaluation replan needs two more calls.
-        self.assertEqual(state["budget"], {"max_calls": 9, "calls_used": 0})
+        self.assertEqual(state["budget"], {"max_calls": 10, "calls_used": 0})
 
 
 if __name__ == "__main__":

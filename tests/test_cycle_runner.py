@@ -223,10 +223,10 @@ class CycleCaseContractTests(unittest.TestCase):
         self.assertIn("intermediate_pass", result["summary"])
         self.assertNotIn("oracle", manifest.casefold())
         self.assertNotIn("expected_answer", manifest.casefold())
-        self.assertEqual(len(node_summary), 11)
+        self.assertEqual(len(node_summary), 12)
         self.assertEqual({item["node"] for item in node_summary}, {
             "intake", "artifact_inventory", "human_interrupt", "observe_classify",
-            "associate_theme", "materialize_subproblems", "hypothesize_plan",
+            "associate_theme", "materialize_subproblems", "validate_subproblems", "hypothesize_plan",
             "tool_dispatch", "evaluate_evidence",
             "verify_intermediates",
             "verify_answer",

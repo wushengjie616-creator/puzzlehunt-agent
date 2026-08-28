@@ -104,6 +104,44 @@ class CCBC16TextSuiteTests(unittest.TestCase):
         self.assertIn("A . B", runtime["content"])
         self.assertEqual(provenance["surface_transcription"]["source_sha256"], ["a" * 64])
 
+    def test_verified_transcription_can_cover_documents_and_fragment_sets(self):
+        entry = {
+            "puzzle_id": 37,
+            "url": "https://ccbc16.cipherpuzzles.com/puzzle/4/37",
+            "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/37.json",
+        }
+        fragment = "https://static.cipherpuzzles.com/fragment.webp"
+        payload = {
+            "pid": 37,
+            "answer_type": 0,
+            "title": "Fragments",
+            "html": "<a href='https://static.cipherpuzzles.com/copy.pdf'>copy</a>",
+            "tips": [{"title": "你需要这些碎片吗", "content": f"<img src='{fragment}'>"}],
+            "answer": "SECRET",
+        }
+        override = {
+            "content": "Fragment f1: center=12; clockwise edges=A|B|C|D|E",
+            "artifact_urls": [fragment],
+            "source_sha256": ["b" * 64],
+            "transcription_method": "human-reviewed",
+            "fidelity_notes": "All fragment-local labels and order are preserved; PDF is a duplicate copy.",
+            "unrepresented_channels": [],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = root / "manifest.json"
+            manifest.write_text(json.dumps({"puzzles": [entry]}), encoding="utf-8")
+            result = build_text_suite(
+                manifest_path=manifest,
+                output_root=root / "suite",
+                fetch_json=lambda _url: payload,
+                surface_overrides={37: override},
+            )
+            case_input = root / "suite" / "text" / "ccbc16-037" / "input.json"
+            runtime = json.loads(case_input.read_text(encoding="utf-8")) if case_input.is_file() else {}
+        self.assertEqual(result["included_ids"], [37])
+        self.assertNotIn("required_artifacts", runtime)
+
     def test_builder_rejects_an_unverifiable_surface_transcription(self):
         entry = {
             "puzzle_id": 9,

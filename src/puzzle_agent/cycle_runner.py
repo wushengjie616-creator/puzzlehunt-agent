@@ -32,6 +32,7 @@ _GRAPH_NODES = (
     "observe_classify",
     "associate_theme",
     "materialize_subproblems",
+    "validate_subproblems",
     "hypothesize_plan",
     "tool_dispatch",
     "evaluate_evidence",
@@ -257,6 +258,17 @@ def _observable_effects(
     elif node == "materialize_subproblems":
         effects.append(f"SUBPROBLEMS_MATERIALIZED:{len(after.get('subproblems', []))}")
         effects.append(f"SUBPROBLEM_RESULTS:{len(after.get('subproblem_results', []))}")
+    elif node == "validate_subproblems":
+        validation = after.get("subproblem_validation", {})
+        effects.append(
+            f"SUBPROBLEM_RESULTS_VALIDATED:{len(after.get('validated_subproblem_results', []))}"
+        )
+        effects.append(
+            f"SUBPROBLEM_RESULTS_CONTRADICTED:{len(validation.get('contradicted_result_ids', []))}"
+        )
+        effects.append(
+            f"SUBPROBLEM_RESULTS_NEED_TEST:{len(validation.get('needs_test_result_ids', []))}"
+        )
     elif node == "hypothesize_plan":
         effects.append(f"HYPOTHESES_PRESERVED:{len(after.get('hypotheses', []))}")
         effects.append(f"PLAN_ITEMS:{len(after.get('plan', []))}")
@@ -317,7 +329,7 @@ def run_case_worker(
     error_type: str | None = None
     error_summary: str | None = None
     model_nodes = {
-        "observe_classify", "associate_theme", "materialize_subproblems",
+        "observe_classify", "associate_theme", "materialize_subproblems", "validate_subproblems",
         "hypothesize_plan", "evaluate_evidence",
         "verify_intermediates", "verify_answer"
     }

@@ -6,6 +6,7 @@ import json
 from hashlib import sha256
 from pathlib import Path
 import re
+import unicodedata
 from typing import Any, Callable
 
 from .benchmark import validate_case
@@ -21,7 +22,8 @@ _SHA256 = re.compile(r"[0-9a-f]{64}")
 
 
 def _normalized(value: str) -> str:
-    return re.sub(r"[^0-9a-z\u3400-\u9fff]+", "", value.casefold())
+    folded = unicodedata.normalize("NFKC", value).casefold()
+    return "".join(character for character in folded if character.isalnum())
 
 
 def extract_solution_checkpoints(solution: str, final_answer: str) -> list[dict[str, str]]:
@@ -93,6 +95,11 @@ def _verified_surface_transcription(
     image = payload.get("image")
     if isinstance(image, str) and image.strip():
         expected_urls.add(image.strip())
+    tips = payload.get("tips")
+    if isinstance(tips, list):
+        for tip in tips:
+            if isinstance(tip, dict) and "碎片" in str(tip.get("title") or ""):
+                expected_urls.update(_IMAGE_SRC.findall(str(tip.get("content") or "")))
     if expected_urls and not expected_urls.issubset(set(urls)):
         raise ValueError(f"surface transcription omits an official artifact for puzzle {puzzle_id}")
     return dict(override)
@@ -173,7 +180,13 @@ def build_text_suite(
             surface_transcription = _verified_surface_transcription(
                 puzzle_id, payload, surface_overrides[puzzle_id]
             )
-            reasons = [reason for reason in reasons if reason not in {"source-image", "empty-text-surface"}]
+            reasons = [
+                reason for reason in reasons
+                if reason not in {
+                    "source-image", "source-document", "source-media",
+                    "source-fragments", "empty-text-surface",
+                }
+            ]
             original = str(runtime_input.get("content") or "")
             original_lines = [
                 line for line in original.splitlines()

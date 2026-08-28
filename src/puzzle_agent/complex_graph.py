@@ -30,6 +30,8 @@ class PuzzleGraphState(TypedDict, total=False):
     association_candidates: list[dict[str, Any]]
     subproblems: list[dict[str, Any]]
     subproblem_results: list[dict[str, Any]]
+    validated_subproblem_results: list[dict[str, Any]]
+    subproblem_validation: dict[str, Any]
     structure_model: dict[str, Any]
     hypotheses: list[dict[str, Any]]
     plan: list[dict[str, Any]]
@@ -86,6 +88,20 @@ _STAGE_INSTRUCTIONS = {
         "Candidate results are provisional semantic solves, not evidence or final answers. Cite only visible "
         "signal IDs, preserve exact excerpts, and leave a value empty rather than inventing it. Do not select tools."
     ),
+    "VALIDATE_SUBPROBLEMS": (
+        'Output {"validated_results":[{"result_id":"...","subproblem_id":"...",'
+        '"value":"...","validation_kind":"semantic_derivation|faithful_transcription",'
+        '"signal_ids":["..."],"prediction":"...","falsifier":"...","justification":"..."}],'
+        '"contradicted_result_ids":["..."],"needs_test_result_ids":["..."],'
+        '"unresolved_subproblem_ids":["..."],"issues":["..."]}. '
+        "Independently check every existing non-empty subproblem result against its exact input excerpt and visible "
+        "signals. Accept only a uniquely supported semantic answer or faithful carrier transcription. The accepted "
+        "value, result_id, and subproblem_id must exactly copy an existing candidate; do not correct, extend, or "
+        "invent values. Partition every existing candidate result into validated_results, contradicted_result_ids, "
+        "or needs_test_result_ids. List every subproblem without a supported result in unresolved_subproblem_ids. "
+        "A faithful transcription preserves a carrier but does not claim its meaning is solved. Keep justification "
+        "short and falsifiable. Do not select tools, combine subproblems, extract a final answer, or rely on theme alone."
+    ),
     "HYPOTHESIZE_PLAN": (
         'Output {"hypotheses":[{"id":"...","mechanism":"...","association_id":"...",'
         '"prediction":"...","falsifier":"...","confidence":0.0}],'
@@ -136,6 +152,7 @@ _STAGE_OUTPUT_BUDGETS = {
     "OBSERVE_CLASSIFY": 6000,
     "ASSOCIATE_THEME": 3500,
     "MATERIALIZE_SUBPROBLEMS": 9000,
+    "VALIDATE_SUBPROBLEMS": 9000,
     "HYPOTHESIZE_PLAN": 6000,
     "EVALUATE_EVIDENCE": 7000,
     "VERIFY_INTERMEDIATES": 4000,
@@ -164,6 +181,8 @@ def _messages(stage: str, state: PuzzleGraphState) -> list[dict[str, str]]:
         "structure_model": state.get("structure_model", {}),
         "subproblems": state.get("subproblems", []),
         "subproblem_results": state.get("subproblem_results", []),
+        "validated_subproblem_results": state.get("validated_subproblem_results", []),
+        "subproblem_validation": state.get("subproblem_validation", {}),
         "hypotheses": state.get("hypotheses", []),
         "plan": state.get("plan", []),
         "attempts": state.get("attempts", []),
@@ -326,8 +345,87 @@ def _materialize(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGrap
         "subproblems": subproblems,
         "subproblem_results": results,
         "budget": budget,
-        "stage": "HYPOTHESIZE_PLAN",
+        "stage": "VALIDATE_SUBPROBLEMS",
         "last_node": "materialize_subproblems",
+        "next_node": "validate_subproblems",
+    }
+
+
+def _validate_subproblems(
+    provider: StageProvider, state: PuzzleGraphState
+) -> PuzzleGraphState:
+    data, budget = _call_stage(provider, "VALIDATE_SUBPROBLEMS", state)
+    if data is None:
+        return _exhausted("validate_subproblems", budget)
+    candidates = {
+        item["id"]: item
+        for item in state.get("subproblem_results", [])
+        if isinstance(item.get("id"), str) and str(item.get("value", "")).strip()
+    }
+    subproblem_ids = {
+        item["id"] for item in state.get("subproblems", []) if isinstance(item.get("id"), str)
+    }
+    validated = _array(data, "validated_results")
+    accepted_ids: set[str] = set()
+    for item in validated:
+        result_id = item.get("result_id")
+        candidate = candidates.get(result_id)
+        signal_ids = item.get("signal_ids")
+        if (
+            candidate is None
+            or item.get("subproblem_id") != candidate.get("subproblem_id")
+            or item.get("value") != candidate.get("value")
+            or not isinstance(signal_ids, list)
+            or not signal_ids
+            or not all(isinstance(value, str) and value for value in signal_ids)
+            or item.get("validation_kind") not in {"semantic_derivation", "faithful_transcription"}
+            or not all(isinstance(item.get(name), str) and item[name].strip() for name in (
+                "prediction", "falsifier", "justification"
+            ))
+            or not set(signal_ids).issubset(set(candidate.get("signal_ids", [])))
+        ):
+            raise ValueError("validated subproblem results must exactly reference supported candidates")
+        if result_id in accepted_ids:
+            raise ValueError("validated subproblem result ids must be unique")
+        accepted_ids.add(result_id)
+    contradicted = _string_array(data, "contradicted_result_ids")
+    needs_test = _string_array(data, "needs_test_result_ids")
+    partitions = [accepted_ids, set(contradicted), set(needs_test)]
+    if any(len(values) != len(original) for values, original in zip(
+        partitions[1:], (contradicted, needs_test)
+    )) or any(left & right for index, left in enumerate(partitions) for right in partitions[index + 1:]):
+        raise ValueError("subproblem result verdicts must be unique and disjoint")
+    if set().union(*partitions) != set(candidates):
+        raise ValueError("every non-empty subproblem result must receive exactly one verdict")
+    unresolved = _string_array(data, "unresolved_subproblem_ids")
+    unresolved_ids = set(unresolved)
+    accepted_subproblem_ids = {item["subproblem_id"] for item in validated}
+    if len(unresolved_ids) != len(unresolved) or unresolved_ids != subproblem_ids - accepted_subproblem_ids:
+        raise ValueError("unresolved subproblem ids must cover every subproblem without a supported result")
+    issues = _string_array(data, "issues")
+    evidence = list(state.get("evidence", []))
+    evidence.extend({
+        "id": f"semantic-{item['result_id']}",
+        "kind": "validated_subproblem_result",
+        "result_id": item["result_id"],
+        "subproblem_id": item["subproblem_id"],
+        "value": item["value"],
+        "signal_ids": item["signal_ids"],
+        "justification": item["justification"],
+    } for item in validated)
+    return {
+        "validated_subproblem_results": validated,
+        "subproblem_validation": {
+            "accepted": len(validated),
+            "contradicted_result_ids": contradicted,
+            "needs_test_result_ids": needs_test,
+            "unresolved_subproblem_ids": unresolved,
+            "issues": issues,
+        },
+        "evidence": evidence,
+        "budget": budget,
+        "stage": "HYPOTHESIZE_PLAN",
+        "last_node": "validate_subproblems",
         "next_node": "hypothesize_plan",
     }
 
@@ -627,6 +725,7 @@ def build_puzzle_graph(provider: StageProvider, *, checkpointer=None, step_mode:
     builder.add_node("observe_classify", lambda state: _observe(provider, state))
     builder.add_node("associate_theme", lambda state: _associate(provider, state))
     builder.add_node("materialize_subproblems", lambda state: _materialize(provider, state))
+    builder.add_node("validate_subproblems", lambda state: _validate_subproblems(provider, state))
     builder.add_node("hypothesize_plan", lambda state: _hypothesize(provider, state))
     builder.add_node("tool_dispatch", _tool_dispatch)
     builder.add_node("evaluate_evidence", lambda state: _evaluate(provider, state))
@@ -650,6 +749,10 @@ def build_puzzle_graph(provider: StageProvider, *, checkpointer=None, step_mode:
     )
     builder.add_conditional_edges(
         "materialize_subproblems", _continue_or_end,
+        {"continue": "validate_subproblems", "end": END}
+    )
+    builder.add_conditional_edges(
+        "validate_subproblems", _continue_or_end,
         {"continue": "hypothesize_plan", "end": END}
     )
     builder.add_conditional_edges(

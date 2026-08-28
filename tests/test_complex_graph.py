@@ -82,6 +82,22 @@ class ScriptedStageProvider:
                     "confidence": 0.4,
                 }],
             },
+            "VALIDATE_SUBPROBLEMS": {
+                "validated_results": [{
+                    "result_id": "sr1",
+                    "subproblem_id": "sp1",
+                    "value": "URYYB",
+                    "validation_kind": "faithful_transcription",
+                    "signal_ids": ["o1"],
+                    "prediction": "Later decoding should preserve all five carrier positions.",
+                    "falsifier": "The value differs from the visible five-letter carrier.",
+                    "justification": "The value exactly transcribes the visible carrier.",
+                }],
+                "contradicted_result_ids": [],
+                "needs_test_result_ids": [],
+                "unresolved_subproblem_ids": [],
+                "issues": [],
+            },
             "HYPOTHESIZE_PLAN": {
                 "hypotheses": [
                     {"id": "h1", "mechanism": "ROT13", "prediction": "HELLO", "falsifier": "not language", "confidence": 0.8},
@@ -256,18 +272,18 @@ class ComplexGraphTests(unittest.TestCase):
         result = graph.invoke(
             new_puzzle_state(
                 PuzzleInput(title="Shift", flavor_text="Move thirteen", content="uryyb"),
-                max_calls=8,
+                max_calls=10,
             ),
             {"configurable": {"thread_id": "ordered"}},
         )
 
         self.assertEqual(
             provider.stages,
-            ["OBSERVE_CLASSIFY", "ASSOCIATE_THEME", "MATERIALIZE_SUBPROBLEMS", "HYPOTHESIZE_PLAN", "EVALUATE_EVIDENCE", "VERIFY_INTERMEDIATES", "VERIFY_ANSWER"],
+            ["OBSERVE_CLASSIFY", "ASSOCIATE_THEME", "MATERIALIZE_SUBPROBLEMS", "VALIDATE_SUBPROBLEMS", "HYPOTHESIZE_PLAN", "EVALUATE_EVIDENCE", "VERIFY_INTERMEDIATES", "VERIFY_ANSWER"],
         )
         self.assertEqual(result["status"], "SOLVED")
         self.assertEqual(result["final_answer"], "HELLO")
-        self.assertEqual(result["budget"]["calls_used"], 7)
+        self.assertEqual(result["budget"]["calls_used"], 8)
         self.assertEqual(result["subproblems"], [{
             "id": "sp1",
             "input_excerpt": "uryyb",
@@ -285,6 +301,8 @@ class ComplexGraphTests(unittest.TestCase):
             "signal_ids": ["o1"],
             "confidence": 0.4,
         }])
+        self.assertEqual(result["validated_subproblem_results"][0]["result_id"], "sr1")
+        self.assertEqual(result["evidence"][0]["kind"], "validated_subproblem_result")
         json.dumps(result["subproblems"], ensure_ascii=False)
         json.dumps(result["subproblem_results"], ensure_ascii=False)
         self.assertGreaterEqual(len(result["attempts"]), 1)
@@ -292,6 +310,7 @@ class ComplexGraphTests(unittest.TestCase):
             "OBSERVE_CLASSIFY": ("observations", "tensions"),
             "ASSOCIATE_THEME": ("association_candidates", "prediction", "falsifier"),
             "MATERIALIZE_SUBPROBLEMS": ("subproblems",),
+            "VALIDATE_SUBPROBLEMS": ("validated_results", "contradicted_result_ids", "needs_test_result_ids"),
             "HYPOTHESIZE_PLAN": ("hypotheses", "plan"),
             "EVALUATE_EVIDENCE": ("evidence_assessment", "answer_candidates"),
             "VERIFY_INTERMEDIATES": ("validated_intermediates", "evidence_backed", "extraction_ready"),
@@ -357,6 +376,7 @@ class ComplexGraphTests(unittest.TestCase):
             "OBSERVE_CLASSIFY",
             "ASSOCIATE_THEME",
             "MATERIALIZE_SUBPROBLEMS",
+            "VALIDATE_SUBPROBLEMS",
             "HYPOTHESIZE_PLAN",
             "EVALUATE_EVIDENCE",
             "HYPOTHESIZE_PLAN",
@@ -365,7 +385,7 @@ class ComplexGraphTests(unittest.TestCase):
             "VERIFY_ANSWER",
         ])
         self.assertEqual(result["status"], "SOLVED")
-        self.assertEqual(result["budget"]["calls_used"], 9)
+        self.assertEqual(result["budget"]["calls_used"], 10)
         self.assertTrue(any(item.get("tool") == "extract_nth" for item in result["attempts"]))
         evidence_ids = [item["id"] for item in result["evidence"] if "id" in item]
         self.assertEqual(len(evidence_ids), len(set(evidence_ids)))
@@ -376,7 +396,7 @@ class ComplexGraphTests(unittest.TestCase):
             new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=8)
         )
         self.assertEqual(provider.stages, [
-            "OBSERVE_CLASSIFY", "ASSOCIATE_THEME", "MATERIALIZE_SUBPROBLEMS", "HYPOTHESIZE_PLAN",
+            "OBSERVE_CLASSIFY", "ASSOCIATE_THEME", "MATERIALIZE_SUBPROBLEMS", "VALIDATE_SUBPROBLEMS", "HYPOTHESIZE_PLAN",
             "EVALUATE_EVIDENCE", "VERIFY_INTERMEDIATES", "VERIFY_ANSWER",
         ])
         self.assertNotEqual(result["status"], "EXHAUSTED")
@@ -407,7 +427,7 @@ class ComplexGraphTests(unittest.TestCase):
     def test_plan_dispatches_registered_deterministic_tool(self):
         provider = RegistryPlanningProvider()
         result = build_puzzle_graph(provider).invoke(
-            new_puzzle_state(PuzzleInput(content="two indexed rows"), max_calls=7)
+            new_puzzle_state(PuzzleInput(content="two indexed rows"), max_calls=8)
         )
         attempts = [item for item in result["attempts"] if item.get("tool") == "extract_nth"]
         evidence = [item for item in result["evidence"] if item.get("tool") == "extract_nth"]
@@ -444,7 +464,7 @@ class ComplexGraphTests(unittest.TestCase):
                 return super().complete(messages)
 
         result = build_puzzle_graph(NoToolProvider()).invoke(
-            new_puzzle_state(PuzzleInput(content="ordinary semantic clues"), max_calls=7)
+            new_puzzle_state(PuzzleInput(content="ordinary semantic clues"), max_calls=8)
         )
 
         self.assertEqual(result["plan"], [])
@@ -470,7 +490,7 @@ class ComplexGraphTests(unittest.TestCase):
 
         provider = MemoryProvider()
         result = build_puzzle_graph(provider).invoke(
-            new_puzzle_state(PuzzleInput(title="Shift", content="uryyb"), max_calls=7)
+            new_puzzle_state(PuzzleInput(title="Shift", content="uryyb"), max_calls=8)
         )
         verification_state = json.loads(provider.messages[-1][1]["content"])
         self.assertEqual(verification_state["intermediate_answers"][0]["role"], "carrier")
@@ -495,7 +515,7 @@ class ComplexGraphTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "required verification checks"):
             build_puzzle_graph(IncompleteVerifyProvider()).invoke(
-                new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=7)
+                new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=8)
             )
 
     def test_verify_does_not_solve_when_every_planned_tool_failed(self):
@@ -522,7 +542,7 @@ class ComplexGraphTests(unittest.TestCase):
                 return super().complete(messages)
 
         result = build_puzzle_graph(FailedToolProvider()).invoke(
-            new_puzzle_state(PuzzleInput(content="grid"), max_calls=7)
+            new_puzzle_state(PuzzleInput(content="grid"), max_calls=8)
         )
         self.assertEqual(result["attempts"][0]["outcome"], "failed")
         self.assertEqual(result["status"], "NEEDS_REVIEW")

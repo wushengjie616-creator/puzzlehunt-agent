@@ -4,50 +4,244 @@
   "scope": "all 49 non-meta puzzles",
   "policy": "A case enters the text suite only when the complete pre-solve surface is directly textual or every static artifact has a source-hashed, human-reviewed transcription with no unrepresented clue channel.",
   "direct_text": [
-    {"puzzle_id": 3, "adapter": "primary-html"},
-    {"puzzle_id": 6, "adapter": "primary-html-style-aware"},
-    {"puzzle_id": 7, "adapter": "primary-html"},
-    {"puzzle_id": 8, "adapter": "official-equivalent-copy"},
-    {"puzzle_id": 10, "adapter": "primary-html-style-aware"},
-    {"puzzle_id": 18, "adapter": "primary-html"},
-    {"puzzle_id": 21, "adapter": "primary-html"},
-    {"puzzle_id": 27, "adapter": "primary-html-preformatted"},
-    {"puzzle_id": 46, "adapter": "official-script-public-clues"},
-    {"puzzle_id": 48, "adapter": "official-script-public-clues"}
+    {
+      "puzzle_id": 3,
+      "adapter": "primary-html"
+    },
+    {
+      "puzzle_id": 6,
+      "adapter": "primary-html-style-aware"
+    },
+    {
+      "puzzle_id": 7,
+      "adapter": "primary-html"
+    },
+    {
+      "puzzle_id": 8,
+      "adapter": "official-equivalent-copy"
+    },
+    {
+      "puzzle_id": 10,
+      "adapter": "primary-html-style-aware"
+    },
+    {
+      "puzzle_id": 18,
+      "adapter": "primary-html"
+    },
+    {
+      "puzzle_id": 21,
+      "adapter": "primary-html"
+    },
+    {
+      "puzzle_id": 27,
+      "adapter": "primary-html-preformatted"
+    },
+    {
+      "puzzle_id": 46,
+      "adapter": "official-script-public-clues"
+    },
+    {
+      "puzzle_id": 48,
+      "adapter": "official-script-public-clues"
+    }
   ],
   "reviewed_transcriptions": [
     {
+      "puzzle_id": 4,
+      "adapter": "human-reviewed-static-artifact",
+      "required_channels": [
+        "glyph order",
+        "bar count",
+        "bar color",
+        "arrow direction"
+      ],
+      "source_sha256": [
+        "f5bcf0f00410b11a0a0a774099173b95679c50cb91dd361cee813a514c5527e2"
+      ],
+      "unrepresented_channels": []
+    },
+    {
+      "puzzle_id": 14,
+      "adapter": "human-reviewed-static-artifact",
+      "required_channels": [
+        "Unicode glyphs",
+        "per-glyph color",
+        "subgrid geometry",
+        "arrows"
+      ],
+      "source_sha256": [
+        "21d5335bb90cf0604adf5d977bcaa22dcff52c528fc5ee8fcd8e43f0c83739b5",
+        "9389f950e8d535565e36184f16b1947556f0448b6874c8b5916727e4d36fb777"
+      ],
+      "unrepresented_channels": []
+    },
+    {
+      "puzzle_id": 15,
+      "adapter": "human-reviewed-static-artifact",
+      "required_channels": [
+        "15x15 half-grid coordinates",
+        "marker fill",
+        "marker color",
+        "legend"
+      ],
+      "source_sha256": [
+        "7423c270fec47a3a1ef17d6621199e9c3279749558042d083f007d7b7e2b8a88"
+      ],
+      "unrepresented_channels": []
+    },
+    {
+      "puzzle_id": 22,
+      "adapter": "human-reviewed-static-artifact",
+      "required_channels": [
+        "card boundary",
+        "80 columns",
+        "12 punch rows",
+        "program text",
+        "blank positions"
+      ],
+      "source_sha256": [
+        "55d919f84992372ebabd93217e1b07b3f86314ed5efc1c84de426f5215468050"
+      ],
+      "unrepresented_channels": []
+    },
+    {
+      "puzzle_id": 29,
+      "adapter": "human-reviewed-static-artifact",
+      "required_channels": [
+        "subpuzzle boundaries",
+        "grid slots",
+        "directed path",
+        "preformatted text"
+      ],
+      "source_sha256": [
+        "8bd1d4e62c66c8a0beb24bd6ada00bef69d1a1258009dda5bb2959b37ac1fd7c",
+        "bf292742f3e1639765ec08a1d0e22e18f8f2a1390db750301162e604fe826d2e"
+      ],
+      "unrepresented_channels": []
+    },
+    {
+      "puzzle_id": 37,
+      "adapter": "human-reviewed-structured-fragments",
+      "required_channels": [
+        "fragment-local coordinates and crop boundaries",
+        "pentagonal piece identity and chirality",
+        "center numbers",
+        "five edge labels in clockwise cyclic order",
+        "piece orientation without preassembly",
+        "target solid cue"
+      ],
+      "source_sha256": [
+        "1cb25ba65c5c9f3477016973ebd63e8ebb7e549a2b4cc457d93f52b39a8d14a1",
+        "94ce0d326ea84da6e695cf2bab88b3465a9b4f6316dd147b3bdeb06eb9f03bff",
+        "453689fd07b85e6927ee34f6059aa643d4fb2709d1e1c29b5aac617ce4111d31"
+      ],
+      "unrepresented_channels": [],
+      "fidelity_notes": [
+        "Transcribe each supplied pentagonal piece independently, preserving the cyclic position and reading direction of every edge condition.",
+        "Do not import assembled adjacency, opposite-face pairs, or ordering from the official solution model; those relationships are solver work."
+      ]
+    },
+    {
+      "puzzle_id": 38,
+      "adapter": "human-reviewed-structured-fragments",
+      "required_channels": [
+        "fragment-local coordinates and crop boundaries",
+        "pentagonal piece identity and chirality",
+        "center numbers",
+        "edge labels in clockwise cyclic order",
+        "piece orientation without preassembly",
+        "great-dodecahedron cue",
+        "numeric bounds"
+      ],
+      "source_sha256": [
+        "ac2900c98c5df5f349a04514aae63874890c044fbeb784376475ca5680e89531",
+        "4fed48c39ac57386fe1e4509b4b421ee6b8794383539d3ac3e4da8e4f8f4a29d",
+        "bf4ae59ad93bb78546ea516ac923c18a152e7e51736d585788752733af9af850"
+      ],
+      "unrepresented_channels": [],
+      "fidelity_notes": [
+        "Keep all pieces unassembled and preserve the local cyclic order of their conditions, including predicates shared around the star-polyhedron geometry.",
+        "Do not derive the solved adjacency or the three-condition groupings from solution-only diagrams or GLB output."
+      ]
+    },
+    {
       "puzzle_id": 52,
       "adapter": "human-reviewed-static-plus-upstream-state",
-      "required_channels": ["column order", "vertical position", "red outline style", "known printing-meta answer"],
-      "source_sha256": ["7d1a42d93281292d39815e1f1cce07dd576154adbfe7c0700189d0fc1c948047", "9b2bafaeb665dcaed38aa91ccc1201a2c8ffe4081d282da5e7bcfcbd3251e5c2"],
+      "required_channels": [
+        "column order",
+        "vertical position",
+        "red outline style",
+        "known printing-meta answer"
+      ],
+      "source_sha256": [
+        "7d1a42d93281292d39815e1f1cce07dd576154adbfe7c0700189d0fc1c948047",
+        "9b2bafaeb665dcaed38aa91ccc1201a2c8ffe4081d282da5e7bcfcbd3251e5c2"
+      ],
       "unrepresented_channels": []
     },
     {
       "puzzle_id": 53,
       "adapter": "human-reviewed-static-plus-upstream-state",
-      "required_channels": ["8x4 cell coordinates", "three letters per cell", "independent 12-color sequence", "known gunpowder-meta answer", "known solved upstream 8x4 color grid"],
-      "source_sha256": ["e13dc8ca559f50355eed0e342a670a0259ca753825c0abc04ed14afe9f5e96fd", "f8437f280f7853066ed7b288636d7765999b5071b09780f0143aaed48c04047a", "984b0b12bcd27095f24721a110424ff99fe0dfb2a99d98830f40a3ea703388b1"],
+      "required_channels": [
+        "8x4 cell coordinates",
+        "three letters per cell",
+        "independent 12-color sequence",
+        "known gunpowder-meta answer",
+        "known solved upstream 8x4 color grid"
+      ],
+      "source_sha256": [
+        "e13dc8ca559f50355eed0e342a670a0259ca753825c0abc04ed14afe9f5e96fd",
+        "f8437f280f7853066ed7b288636d7765999b5071b09780f0143aaed48c04047a",
+        "984b0b12bcd27095f24721a110424ff99fe0dfb2a99d98830f40a3ea703388b1"
+      ],
       "unrepresented_channels": []
     },
     {
       "puzzle_id": 54,
       "adapter": "human-reviewed-static-plus-upstream-state",
-      "required_channels": ["four exact English lines", "case and punctuation", "〔〕 outer scope", "known papermaking-meta answer", "known 〔〕 homophone operator"],
-      "source_sha256": ["b28bd34d8378f79599b0cd4281d8758d7a6c80de9af8b423a24ae32659fcebfb", "fce2f28cd82188ef60f19c250ae4209961db5ade21628d0362e2d832a01077b7"],
+      "required_channels": [
+        "four exact English lines",
+        "case and punctuation",
+        "〔〕 outer scope",
+        "known papermaking-meta answer",
+        "known 〔〕 homophone operator"
+      ],
+      "source_sha256": [
+        "b28bd34d8378f79599b0cd4281d8758d7a6c80de9af8b423a24ae32659fcebfb",
+        "fce2f28cd82188ef60f19c250ae4209961db5ade21628d0362e2d832a01077b7"
+      ],
       "unrepresented_channels": []
     }
   ],
   "static_transcription_queue": [
-    {"puzzle_id": 4, "required_channels": ["glyph order", "bar count", "bar color", "arrow direction"]},
-    {"puzzle_id": 9, "required_channels": ["node coordinates", "directed edges", "loops", "node color", "prefills"]},
-    {"puzzle_id": 14, "required_channels": ["Unicode glyphs", "per-glyph color", "subgrid geometry", "arrows"]},
-    {"puzzle_id": 15, "required_channels": ["15x15 half-grid coordinates", "marker fill", "marker color", "legend"]},
-    {"puzzle_id": 22, "required_channels": ["card boundary", "80 columns", "12 punch rows", "program text", "blank positions"]},
-    {"puzzle_id": 23, "required_channels": ["isometric faces", "occlusion", "face color", "view direction"]},
+    {
+      "puzzle_id": 9,
+      "required_channels": [
+        "node coordinates",
+        "directed edges",
+        "loops",
+        "node color",
+        "prefills"
+      ]
+    },
+    {
+      "puzzle_id": 23,
+      "required_channels": [
+        "isometric faces",
+        "occlusion",
+        "face color",
+        "view direction"
+      ]
+    },
     {
       "puzzle_id": 28,
-      "required_channels": ["grid coordinates", "cell boundaries", "grayscale and color classes", "given glyphs and punctuation", "row 14-15 column M edge correction"],
+      "required_channels": [
+        "grid coordinates",
+        "cell boundaries",
+        "grayscale and color classes",
+        "given glyphs and punctuation",
+        "row 14-15 column M edge correction"
+      ],
       "fidelity_notes": [
         "Treat the official PDF as authoritative and preserve its printed grayscale distinctions; do not restore inferred colors from hints or a solved fill.",
         "Record every cell boundary and the published removal of the horizontal edge between rows 14 and 15 in column M."
@@ -60,10 +254,15 @@
         "https://docs.qq.com/sheet/DVVFhT291aFJXY0JP?tab=000001"
       ]
     },
-    {"puzzle_id": 29, "required_channels": ["subpuzzle boundaries", "grid slots", "directed path", "preformatted text"]},
     {
       "puzzle_id": 30,
-      "required_channels": ["subpuzzle order and boundaries", "per-grid dimensions and coordinates", "clue symbols and letters", "ink occlusion masks", "Scrabble 7x20 geometry"],
+      "required_channels": [
+        "subpuzzle order and boundaries",
+        "per-grid dimensions and coordinates",
+        "clue symbols and letters",
+        "ink occlusion masks",
+        "Scrabble 7x20 geometry"
+      ],
       "fidelity_notes": [
         "Use a separate schema for each paper-puzzle type while retaining the PDF's common ordering and extraction layout.",
         "Occluded cells and clues must remain explicitly unknown; do not fill them from hints, alternate answers, or the official solution."
@@ -74,10 +273,23 @@
         "https://static.cipherpuzzles.com/static/images/5ee0573155ad4b86b277f599a63545ef.pdf"
       ]
     },
-    {"puzzle_id": 31, "required_channels": ["panel geometry", "occlusion boundary", "cell color", "shape orientation"]},
+    {
+      "puzzle_id": 31,
+      "required_channels": [
+        "panel geometry",
+        "occlusion boundary",
+        "cell color",
+        "shape orientation"
+      ]
+    },
     {
       "puzzle_id": 36,
-      "required_channels": ["three audio fragments and order", "verbatim utterances", "track durations, pauses, and cutoffs", "exact phonetics and pronunciation"],
+      "required_channels": [
+        "three audio fragments and order",
+        "verbatim utterances",
+        "track durations, pauses, and cutoffs",
+        "exact phonetics and pronunciation"
+      ],
       "fidelity_notes": [
         "A human reviewer must transcribe the actual three audio fragments; the official player thumbnails identify the fragments and durations but are not substitutes for the audio channel.",
         "Preserve heard wording and phonetic ambiguity, with pinyin finals where needed; do not normalize the recordings into semantic paraphrases."
@@ -89,71 +301,110 @@
         "https://static.cipherpuzzles.com/static/images/89dc0276826a40fcb1e7714b59e1834f.m4a",
         "https://static.cipherpuzzles.com/static/images/4e2ac86e0e35498f8051089dbad0ba06.m4a"
       ]
-    },
-    {
-      "puzzle_id": 37,
-      "required_channels": ["fragment-local coordinates and crop boundaries", "pentagonal piece identity and chirality", "center numbers", "five edge labels in clockwise cyclic order", "piece orientation without preassembly", "target solid cue"],
-      "fidelity_notes": [
-        "Transcribe each supplied pentagonal piece independently, preserving the cyclic position and reading direction of every edge condition.",
-        "Do not import assembled adjacency, opposite-face pairs, or ordering from the official solution model; those relationships are solver work."
-      ],
-      "source_urls": [
-        "https://ccbc16.cipherpuzzles.com/puzzle/4/37",
-        "https://ccbc16.cipherpuzzles.com/data/puzzles/37.json",
-        "https://static.cipherpuzzles.com/static/images/e406a4b82d3e4dcfbadccfa26d9d4d5b.webp",
-        "https://static.cipherpuzzles.com/static/images/d9a17db7a3724fc58f08dce861509491.webp",
-        "https://static.cipherpuzzles.com/static/images/02c845bcdc9e4e14bb5f3a6b3e6169d4.webp"
-      ]
-    },
-    {
-      "puzzle_id": 38,
-      "required_channels": ["fragment-local coordinates and crop boundaries", "pentagonal piece identity and chirality", "center numbers", "edge labels in clockwise cyclic order", "piece orientation without preassembly", "great-dodecahedron cue", "numeric bounds"],
-      "fidelity_notes": [
-        "Keep all pieces unassembled and preserve the local cyclic order of their conditions, including predicates shared around the star-polyhedron geometry.",
-        "Do not derive the solved adjacency or the three-condition groupings from solution-only diagrams or GLB output."
-      ],
-      "source_urls": [
-        "https://ccbc16.cipherpuzzles.com/puzzle/4/38",
-        "https://ccbc16.cipherpuzzles.com/data/puzzles/38.json",
-        "https://static.cipherpuzzles.com/static/images/e10c80e264ec434abbc368563d974232.webp",
-        "https://static.cipherpuzzles.com/static/images/b668aafefdf9435cb4d68bc8128cb6ce.webp",
-        "https://static.cipherpuzzles.com/static/images/cdd6d85fc71b40ae8bdff5ce2dd5c52c.webp"
-      ]
     }
   ],
   "pending_artifact_audit": [],
   "not_text_faithful": [
-    {"puzzle_id": 1, "reason": "visual stroke-shape recognition"},
-    {"puzzle_id": 2, "reason": "upload and human-review interaction"},
-    {"puzzle_id": 5, "reason": "visual component-shape matching"},
-    {"puzzle_id": 11, "reason": "photographic entity recognition"},
-    {"puzzle_id": 13, "reason": "dynamic association graph"},
-    {"puzzle_id": 16, "reason": "server-driven branching state"},
-    {"puzzle_id": 17, "reason": "drag-rotate spatial interaction"},
-    {"puzzle_id": 19, "reason": "physical cutting folding and object recognition"},
-    {"puzzle_id": 20, "reason": "server-driven generated sequence and feedback"},
-    {"puzzle_id": 24, "reason": "photographic object recognition and counting"},
-    {"puzzle_id": 26, "reason": "visual registration over an ultra-wide image"},
-    {"puzzle_id": 32, "reason": "stateful staged visual interaction"},
-    {"puzzle_id": 34, "reason": "curved fragment assembly and pose recognition"},
-    {"puzzle_id": 35, "reason": "archived pre-solve surface unavailable"},
-    {"puzzle_id": 39, "reason": "archived pre-solve surface unavailable"},
-    {"puzzle_id": 40, "reason": "archived pre-solve surface unavailable"},
-    {"puzzle_id": 41, "reason": "archived artifact set unavailable"},
-    {"puzzle_id": 42, "reason": "archived pre-solve surface unavailable"},
-    {"puzzle_id": 43, "reason": "archived interaction state unavailable"},
-    {"puzzle_id": 45, "reason": "staged visual playing-card rebuses"},
-    {"puzzle_id": 47, "reason": "heterogeneous visual question suite"},
-    {"puzzle_id": 49, "reason": "nested image-riddle corpus"},
-    {"puzzle_id": 51, "reason": "physical newspaper folding surface"}
+    {
+      "puzzle_id": 1,
+      "reason": "visual stroke-shape recognition"
+    },
+    {
+      "puzzle_id": 2,
+      "reason": "upload and human-review interaction"
+    },
+    {
+      "puzzle_id": 5,
+      "reason": "visual component-shape matching"
+    },
+    {
+      "puzzle_id": 11,
+      "reason": "photographic entity recognition"
+    },
+    {
+      "puzzle_id": 13,
+      "reason": "dynamic association graph"
+    },
+    {
+      "puzzle_id": 16,
+      "reason": "server-driven branching state"
+    },
+    {
+      "puzzle_id": 17,
+      "reason": "drag-rotate spatial interaction"
+    },
+    {
+      "puzzle_id": 19,
+      "reason": "physical cutting folding and object recognition"
+    },
+    {
+      "puzzle_id": 20,
+      "reason": "server-driven generated sequence and feedback"
+    },
+    {
+      "puzzle_id": 24,
+      "reason": "photographic object recognition and counting"
+    },
+    {
+      "puzzle_id": 26,
+      "reason": "visual registration over an ultra-wide image"
+    },
+    {
+      "puzzle_id": 32,
+      "reason": "stateful staged visual interaction"
+    },
+    {
+      "puzzle_id": 34,
+      "reason": "curved fragment assembly and pose recognition"
+    },
+    {
+      "puzzle_id": 35,
+      "reason": "archived pre-solve surface unavailable"
+    },
+    {
+      "puzzle_id": 39,
+      "reason": "archived pre-solve surface unavailable"
+    },
+    {
+      "puzzle_id": 40,
+      "reason": "archived pre-solve surface unavailable"
+    },
+    {
+      "puzzle_id": 41,
+      "reason": "archived artifact set unavailable"
+    },
+    {
+      "puzzle_id": 42,
+      "reason": "archived pre-solve surface unavailable"
+    },
+    {
+      "puzzle_id": 43,
+      "reason": "archived interaction state unavailable"
+    },
+    {
+      "puzzle_id": 45,
+      "reason": "staged visual playing-card rebuses"
+    },
+    {
+      "puzzle_id": 47,
+      "reason": "heterogeneous visual question suite"
+    },
+    {
+      "puzzle_id": 49,
+      "reason": "nested image-riddle corpus"
+    },
+    {
+      "puzzle_id": 51,
+      "reason": "physical newspaper folding surface"
+    }
   ],
   "counts": {
     "direct_text": 10,
-    "reviewed_transcriptions": 3,
-    "static_transcription_queue": 13,
+    "reviewed_transcriptions": 10,
+    "static_transcription_queue": 6,
     "pending_artifact_audit": 0,
     "not_text_faithful": 23,
-    "runnable_text_suite": 13,
+    "runnable_text_suite": 20,
     "total": 49
   }
 }

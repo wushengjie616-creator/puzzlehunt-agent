@@ -45,6 +45,13 @@ class ScriptedProvider:
                 }],
                 "subproblem_results": [],
             },
+            "VALIDATE_SUBPROBLEMS": {
+                "validated_results": [],
+                "contradicted_result_ids": [],
+                "needs_test_result_ids": [],
+                "unresolved_subproblem_ids": ["sp1"],
+                "issues": ["no semantic candidate was proposed"],
+            },
             "HYPOTHESIZE_PLAN": {
                 "hypotheses": [
                     {"id": "h1", "mechanism": "ROT13"},
@@ -97,7 +104,7 @@ class PersistentSessionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             manager = SessionManager(root)
-            session_id = manager.create(PuzzleInput(content="uryyb"), max_calls=7)
+            session_id = manager.create(PuzzleInput(content="uryyb"), max_calls=8)
             result = manager.run(session_id, ScriptedProvider())
             reopened = SessionManager(root)
             status = reopened.status(session_id)
@@ -127,7 +134,7 @@ class PersistentSessionTests(unittest.TestCase):
             manager = SessionManager(Path(directory))
             session_id = manager.create(
                 PuzzleInput(content="uryyb"),
-                max_calls=7,
+                max_calls=8,
                 required_artifacts=("grid",),
             )
             provider = ScriptedProvider()
@@ -152,7 +159,7 @@ class PersistentSessionTests(unittest.TestCase):
         self.assertEqual(blocked.get("missing_artifacts"), ["grid"])
         self.assertEqual(resumed.get("status"), "SOLVED")
         self.assertEqual(resumed.get("artifacts", {}).get("grid"), "A B C")
-        self.assertEqual(len(provider.stages), 7)
+        self.assertEqual(len(provider.stages), 8)
         self.assertEqual(artifact_text, "A B C")
         self.assertIn("session_created", event_types)
         self.assertIn("artifact_resumed", event_types)
@@ -161,7 +168,7 @@ class PersistentSessionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             manager = SessionManager(root)
-            unsolved_id = manager.create(PuzzleInput(content="uryyb"), max_calls=7)
+            unsolved_id = manager.create(PuzzleInput(content="uryyb"), max_calls=8)
             with self.assertRaisesRegex(ValueError, "SOLVED"):
                 manager.finalize(unsolved_id)
 
@@ -183,7 +190,7 @@ class PersistentSessionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             manager = SessionManager(root)
-            session_id = manager.create(PuzzleInput(content="uryyb"), max_calls=7)
+            session_id = manager.create(PuzzleInput(content="uryyb"), max_calls=8)
             provider = ScriptedProvider()
             provider.api_key = "checkpoint-secret-sentinel"
             manager.run(session_id, provider)

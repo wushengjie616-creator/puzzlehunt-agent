@@ -45,6 +45,23 @@ class DerivedBenchmarkTests(unittest.TestCase):
         self.assertTrue(evaluate_case(case_dir, {"final_answer": answer})["correct"])
         self.assertFalse(evaluate_case(case_dir, {"final_answer": "WRONG"})["correct"])
 
+    def test_evaluator_preserves_non_latin_unicode_answers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            case = Path(directory)
+            (case / "oracle.json").write_text(json.dumps({
+                "answer": "안녕",
+                "intermediate_answers": [{"value": "정답은안녕"}],
+            }, ensure_ascii=False), encoding="utf-8")
+            correct = evaluate_case(case, {"final_answer": "안녕"})
+            punctuation = evaluate_case(case, {"final_answer": "!!!"})
+            intermediate = evaluate_intermediate_case(case, {
+                "validated_intermediate_answers": [{"value": "정답은 안녕"}]
+            })
+        self.assertTrue(correct["correct"])
+        self.assertFalse(punctuation["correct"])
+        self.assertEqual(intermediate["matched"], 1)
+        self.assertTrue(intermediate["pass"])
+
     def test_blind_suite_is_present_and_uses_the_same_isolation_contract(self):
         cases = discover_cases(BENCHMARKS, "blind")
         self.assertGreaterEqual(len(cases), 2)

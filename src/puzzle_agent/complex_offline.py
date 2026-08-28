@@ -46,6 +46,14 @@ class OfflineStageProvider:
                 }],
                 "subproblem_results": [],
             }
+        elif stage == "VALIDATE_SUBPROBLEMS":
+            response = {
+                "validated_results": [],
+                "contradicted_result_ids": [],
+                "needs_test_result_ids": [],
+                "unresolved_subproblem_ids": ["sp-content"],
+                "issues": ["the offline fixture leaves semantic candidates unresolved"],
+            }
         elif stage == "HYPOTHESIZE_PLAN":
             response = {
                 "hypotheses": [

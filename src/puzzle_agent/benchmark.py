@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 import re
+import unicodedata
 from typing import Any
 
 
@@ -217,4 +218,5 @@ def _find_forbidden_keys(value: Any) -> set[str]:
 
 
 def _normalize(value: str) -> str:
-    return re.sub(r"[^0-9a-z\u3400-\u9fff]+", "", value.casefold())
+    folded = unicodedata.normalize("NFKC", value).casefold()
+    return "".join(character for character in folded if character.isalnum())

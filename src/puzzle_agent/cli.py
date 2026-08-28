@@ -31,7 +31,7 @@ def _parser() -> argparse.ArgumentParser:
     session_commands = session.add_subparsers(dest="session_command", required=True)
     init = session_commands.add_parser("init", help="Create a complex puzzle session")
     init.add_argument("--file", required=True, type=Path)
-    init.add_argument("--max-calls", type=int, default=9)
+    init.add_argument("--max-calls", type=int, default=10)
     init.add_argument("--sessions-root", type=Path, default=Path(".puzzle-agent/sessions"))
 
     for name in ("run", "step", "status", "history"):
@@ -65,7 +65,7 @@ def _parser() -> argparse.ArgumentParser:
     benchmark_run.add_argument("--root", type=Path, default=Path("benchmarks/derived"))
     benchmark_run.add_argument("--suite", choices=("dev", "blind"), default="dev")
     benchmark_run.add_argument("--provider", choices=("offline", "deepseek"), default="offline")
-    benchmark_run.add_argument("--max-calls", type=int, default=9)
+    benchmark_run.add_argument("--max-calls", type=int, default=10)
     benchmark_run.add_argument("--model", default=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro"))
     benchmark_run.add_argument(
         "--sessions-root", type=Path, default=Path(".puzzle-agent/benchmark-sessions")
@@ -94,7 +94,7 @@ def _parser() -> argparse.ArgumentParser:
     worker.add_argument("--output-dir", required=True, type=Path)
     worker.add_argument("--provider", choices=("offline", "deepseek"), required=True)
     worker.add_argument("--model", default=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro"))
-    worker.add_argument("--max-calls", type=int, default=9)
+    worker.add_argument("--max-calls", type=int, default=10)
     cycle_run = cycle_commands.add_parser("run")
     cycle_run.add_argument("--repository", type=Path, default=Path("."))
     cycle_run.add_argument("--cases-root", type=Path, default=Path("benchmarks/cycles/cases"))
@@ -102,7 +102,7 @@ def _parser() -> argparse.ArgumentParser:
     cycle_run.add_argument("--suite", default="v1")
     cycle_run.add_argument("--provider", choices=("offline", "deepseek"), default="deepseek")
     cycle_run.add_argument("--model", default=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro"))
-    cycle_run.add_argument("--max-calls", type=int, default=9)
+    cycle_run.add_argument("--max-calls", type=int, default=10)
     cycle_run.add_argument("--timeout", type=float, default=3600)
     cycle_run.add_argument("--cycle-id")
     cycle_run.add_argument("--expected-case-count", type=int, default=5)
@@ -114,7 +114,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     hard_once.add_argument("--provider", choices=("offline", "deepseek"), default="deepseek")
     hard_once.add_argument("--model", default=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro"))
-    hard_once.add_argument("--max-calls", type=int, default=9)
+    hard_once.add_argument("--max-calls", type=int, default=10)
     hard_once.add_argument("--timeout", type=float, default=3600)
     hard_once.add_argument("--max-workers", type=int, default=5)
     for name in ("status", "stop"):
@@ -128,7 +128,7 @@ def _parser() -> argparse.ArgumentParser:
     schedule.add_argument("--suite", default="v1")
     schedule.add_argument("--provider", choices=("offline", "deepseek"), default="deepseek")
     schedule.add_argument("--model", default=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro"))
-    schedule.add_argument("--max-calls", type=int, default=9)
+    schedule.add_argument("--max-calls", type=int, default=10)
     schedule.add_argument("--timeout", type=float, default=3600)
     schedule.add_argument("--interval-hours", type=float, default=3)
     schedule.add_argument("--duration-hours", type=float, default=24)
