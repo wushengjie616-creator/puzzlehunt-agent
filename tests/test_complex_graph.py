@@ -346,6 +346,84 @@ class SemanticRecoveryProvider(ScriptedStageProvider):
 
 @unittest.skipUnless(HAS_LANGGRAPH, "complex extra is not installed")
 class ComplexGraphTests(unittest.TestCase):
+    def test_invalid_stage_json_terminates_as_needs_review_instead_of_worker_error(self):
+        class InvalidObservationProvider(ScriptedStageProvider):
+            def complete(self, messages):
+                marker = messages[0]["content"].split("PUZZLE_STAGE: ", 1)[1].splitlines()[0]
+                self.stages.append(marker)
+                self.messages.append(messages)
+                return "{\"observations\":["
+
+        provider = InvalidObservationProvider()
+        result = build_puzzle_graph(provider).invoke(
+            new_puzzle_state(PuzzleInput(content="visible puzzle surface"), max_calls=10)
+        )
+
+        self.assertEqual(result["status"], "NEEDS_REVIEW")
+        self.assertIsNone(result["next_node"])
+        self.assertEqual(result["budget"]["calls_used"], 1)
+        self.assertEqual(provider.stages, ["OBSERVE_CLASSIFY"])
+        self.assertTrue(any(
+            item.startswith("AUTO_TERMINATED_INVALID_STAGE_JSON:OBSERVE_CLASSIFY:")
+            for item in result["blockers"]
+        ))
+
+    def test_semantic_recovery_ignores_results_for_unknown_subproblems(self):
+        class UnknownRecoveryProvider(SemanticRecoveryProvider):
+            def complete(self, messages):
+                marker = messages[0]["content"].split("PUZZLE_STAGE: ", 1)[1].splitlines()[0]
+                raw = super().complete(messages)
+                if marker == "MATERIALIZE_SUBPROBLEMS" and self.materialization_calls == 2:
+                    data = json.loads(raw)
+                    data["subproblem_results"].append({
+                        "id": "sr-ghost", "subproblem_id": "sp-ghost", "value": "INVENTED",
+                        "status": "candidate", "signal_ids": ["o1"], "confidence": 0.9,
+                    })
+                    return json.dumps(data)
+                return raw
+
+        result = build_puzzle_graph(UnknownRecoveryProvider()).invoke(
+            new_puzzle_state(PuzzleInput(content="three semantic clues"), max_calls=10)
+        )
+
+        self.assertNotIn("sr-ghost", {item.get("id") for item in result["subproblem_results"]})
+        self.assertIn(
+            "AUTO_IGNORED_UNKNOWN_SUBPROBLEM_RESULTS:1", result["blockers"]
+        )
+        self.assertEqual(result["status"], "NEEDS_REVIEW")
+
+    def test_plan_items_without_signal_ids_are_dropped_and_cannot_solve(self):
+        class UngroundedPlanProvider(ScriptedStageProvider):
+            def complete(self, messages):
+                marker = messages[0]["content"].split("PUZZLE_STAGE: ", 1)[1].splitlines()[0]
+                if marker == "HYPOTHESIZE_PLAN":
+                    self.stages.append(marker)
+                    self.messages.append(messages)
+                    return json.dumps({
+                        "hypotheses": [
+                            {"id": "h1", "mechanism": "one"},
+                            {"id": "h2", "mechanism": "two"},
+                        ],
+                        "plan": [{
+                            "id": "p1", "tool": "atbash_transform",
+                            "arguments": {"text": "Svool"},
+                            "purpose": "try a transform", "prediction": "word",
+                            "falsifier": "noise",
+                        }],
+                    })
+                return super().complete(messages)
+
+        provider = UngroundedPlanProvider()
+        result = build_puzzle_graph(provider).invoke(
+            new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=8)
+        )
+
+        self.assertEqual(result["plan"], [])
+        self.assertIn("AUTO_DROPPED_INVALID_PLAN_ITEMS:1", result["blockers"])
+        self.assertEqual(result["status"], "NEEDS_REVIEW")
+        self.assertIn("VERIFY_INTERMEDIATES", provider.stages)
+        self.assertIn("VERIFY_ANSWER", provider.stages)
+
     def test_refinement_coverage_counts_unique_subproblems_not_results(self):
         state = new_puzzle_state(PuzzleInput(content="three clues"), max_calls=10)
         state.update({

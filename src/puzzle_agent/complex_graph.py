@@ -225,10 +225,10 @@ def _call_stage(
     provider: StageProvider,
     stage: str,
     state: PuzzleGraphState,
-) -> tuple[dict[str, Any] | None, dict[str, int]]:
+) -> tuple[dict[str, Any] | None, dict[str, int], str | None]:
     budget = dict(state["budget"])
     if budget["calls_used"] >= budget["max_calls"]:
-        return None, budget
+        return None, budget, None
     raw = provider.complete(_messages(stage, state))
     budget["calls_used"] += 1
     try:
@@ -237,13 +237,33 @@ def _call_stage(
         import hashlib
         raw_bytes = raw.encode("utf-8", errors="replace") if isinstance(raw, str) else b""
         digest = hashlib.sha256(raw_bytes).hexdigest()[:16]
-        raise ValueError(
-            f"{stage} returned invalid JSON (length={len(raw_bytes)}, sha256={digest}); "
-            "no retry was attempted"
-        ) from exc
+        return (
+            None,
+            budget,
+            f"AUTO_TERMINATED_INVALID_STAGE_JSON:{stage}:{len(raw_bytes)}:{digest}",
+        )
     if not isinstance(data, dict):
-        raise ValueError(f"{stage} must return a JSON object")
-    return data, budget
+        return None, budget, f"AUTO_TERMINATED_NON_OBJECT_STAGE_OUTPUT:{stage}"
+    return data, budget, None
+
+
+def _stopped_stage(
+    node: str,
+    budget: dict[str, int],
+    state: PuzzleGraphState,
+    protocol_issue: str | None,
+) -> PuzzleGraphState:
+    if protocol_issue is None:
+        return _exhausted(node, budget)
+    return {
+        "budget": budget,
+        "status": "NEEDS_REVIEW",
+        "stage": "NEEDS_REVIEW",
+        "last_node": node,
+        "next_node": None,
+        "final_answer": None,
+        "blockers": list(state.get("blockers", [])) + [protocol_issue],
+    }
 
 
 def _array(data: dict[str, Any], name: str) -> list[dict[str, Any]]:
@@ -310,9 +330,9 @@ def _human_interrupt(state: PuzzleGraphState) -> PuzzleGraphState:
 
 
 def _observe(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphState:
-    data, budget = _call_stage(provider, "OBSERVE_CLASSIFY", state)
+    data, budget, protocol_issue = _call_stage(provider, "OBSERVE_CLASSIFY", state)
     if data is None:
-        return _exhausted("observe_classify", budget)
+        return _stopped_stage("observe_classify", budget, state, protocol_issue)
     return {
         "observations": _array(data, "observations"),
         "tensions": _array(data, "tensions"),
@@ -324,9 +344,9 @@ def _observe(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphSta
 
 
 def _associate(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphState:
-    data, budget = _call_stage(provider, "ASSOCIATE_THEME", state)
+    data, budget, protocol_issue = _call_stage(provider, "ASSOCIATE_THEME", state)
     if data is None:
-        return _exhausted("associate_theme", budget)
+        return _stopped_stage("associate_theme", budget, state, protocol_issue)
     candidates = _array(data, "association_candidates")
     if not 3 <= len(candidates) <= 5:
         raise ValueError("ASSOCIATE_THEME must preserve 3 to 5 candidate ontologies")
@@ -341,9 +361,9 @@ def _associate(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphS
 
 
 def _materialize(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphState:
-    data, budget = _call_stage(provider, "MATERIALIZE_SUBPROBLEMS", state)
+    data, budget, protocol_issue = _call_stage(provider, "MATERIALIZE_SUBPROBLEMS", state)
     if data is None:
-        return _exhausted("materialize_subproblems", budget)
+        return _stopped_stage("materialize_subproblems", budget, state, protocol_issue)
     structure_model = data.get("structure_model", {})
     if not isinstance(structure_model, dict):
         raise ValueError("structure_model must be an object")
@@ -394,12 +414,20 @@ def _materialize(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGrap
                 subproblems.append(prior_subproblems[subproblem_id])
                 subproblem_ids.add(subproblem_id)
     identifiers = {item.get("id") for item in subproblems}
-    if any(item.get("subproblem_id") not in identifiers for item in results):
-        raise ValueError("subproblem_results must reference a known subproblem")
+    known_results = [
+        item for item in results if item.get("subproblem_id") in identifiers
+    ]
+    ignored_unknown_results = len(results) - len(known_results)
+    blockers = list(state.get("blockers", []))
+    if ignored_unknown_results:
+        blockers.append(
+            f"AUTO_IGNORED_UNKNOWN_SUBPROBLEM_RESULTS:{ignored_unknown_results}"
+        )
     return {
         "structure_model": structure_model,
         "subproblems": subproblems,
-        "subproblem_results": results,
+        "subproblem_results": known_results,
+        "blockers": blockers,
         "budget": budget,
         "stage": "VALIDATE_SUBPROBLEMS",
         "last_node": "materialize_subproblems",
@@ -410,9 +438,9 @@ def _materialize(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGrap
 def _validate_subproblems(
     provider: StageProvider, state: PuzzleGraphState
 ) -> PuzzleGraphState:
-    data, budget = _call_stage(provider, "VALIDATE_SUBPROBLEMS", state)
+    data, budget, protocol_issue = _call_stage(provider, "VALIDATE_SUBPROBLEMS", state)
     if data is None:
-        return _exhausted("validate_subproblems", budget)
+        return _stopped_stage("validate_subproblems", budget, state, protocol_issue)
     all_results = {
         item["id"]: item
         for item in state.get("subproblem_results", [])
@@ -572,29 +600,35 @@ def _validate_subproblems(
 
 
 def _hypothesize(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphState:
-    data, budget = _call_stage(provider, "HYPOTHESIZE_PLAN", state)
+    data, budget, protocol_issue = _call_stage(provider, "HYPOTHESIZE_PLAN", state)
     if data is None:
-        return _exhausted("hypothesize_plan", budget)
+        return _stopped_stage("hypothesize_plan", budget, state, protocol_issue)
     hypotheses = _array(data, "hypotheses")
     if len(hypotheses) < 2:
         raise ValueError("HYPOTHESIZE_PLAN must preserve at least two competing hypotheses")
-    plan = _array(data, "plan")
-    for item in plan:
+    raw_plan = _array(data, "plan")
+    plan: list[dict[str, Any]] = []
+    for item in raw_plan:
         arguments = item.get("arguments", {})
         signal_ids = item.get("signal_ids")
-        if not isinstance(arguments, dict):
-            raise ValueError("plan arguments must be an object")
-        if not isinstance(signal_ids, list) or not signal_ids or not all(
-            isinstance(value, str) and value for value in signal_ids
-        ):
-            raise ValueError("every planned tool call must cite signal_ids")
-        if not all(isinstance(item.get(name), str) and item[name].strip() for name in (
-            "tool", "purpose", "prediction", "falsifier"
-        )):
-            raise ValueError("every planned tool call needs tool, purpose, prediction, and falsifier")
+        valid = (
+            isinstance(arguments, dict)
+            and isinstance(signal_ids, list)
+            and bool(signal_ids)
+            and all(isinstance(value, str) and value for value in signal_ids)
+            and all(isinstance(item.get(name), str) and item[name].strip() for name in (
+                "tool", "purpose", "prediction", "falsifier"
+            ))
+        )
+        if valid:
+            plan.append(item)
+    blockers = list(state.get("blockers", []))
+    if len(plan) != len(raw_plan):
+        blockers.append(f"AUTO_DROPPED_INVALID_PLAN_ITEMS:{len(raw_plan) - len(plan)}")
     return {
         "hypotheses": hypotheses,
         "plan": plan,
+        "blockers": blockers,
         "budget": budget,
         "stage": "TOOL_DISPATCH",
         "last_node": "hypothesize_plan",
@@ -680,9 +714,9 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
 
 
 def _evaluate(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphState:
-    data, budget = _call_stage(provider, "EVALUATE_EVIDENCE", state)
+    data, budget, protocol_issue = _call_stage(provider, "EVALUATE_EVIDENCE", state)
     if data is None:
-        return _exhausted("evaluate_evidence", budget)
+        return _stopped_stage("evaluate_evidence", budget, state, protocol_issue)
     assessments = _array(data, "evidence_assessment")
     evidence = list(state.get("evidence", []))
     prior_assessments = sum(
@@ -731,9 +765,9 @@ def _evaluate(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphSt
 def _verify_intermediates(
     provider: StageProvider, state: PuzzleGraphState
 ) -> PuzzleGraphState:
-    data, budget = _call_stage(provider, "VERIFY_INTERMEDIATES", state)
+    data, budget, protocol_issue = _call_stage(provider, "VERIFY_INTERMEDIATES", state)
     if data is None:
-        return _exhausted("verify_intermediates", budget)
+        return _stopped_stage("verify_intermediates", budget, state, protocol_issue)
     raw_validated = _array(data, "validated_intermediates")
     checks = data.get("checks", {})
     required_checks = {
@@ -856,9 +890,9 @@ def _verify_intermediates(
 
 
 def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphState:
-    data, budget = _call_stage(provider, "VERIFY_ANSWER", state)
+    data, budget, protocol_issue = _call_stage(provider, "VERIFY_ANSWER", state)
     if data is None:
-        return _exhausted("verify_answer", budget)
+        return _stopped_stage("verify_answer", budget, state, protocol_issue)
     answer = data.get("answer")
     confidence = data.get("confidence")
     checks = data.get("checks", {})
@@ -889,6 +923,7 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         state.get("open_questions", []) or state.get("unused_elements", [])
     )
     intermediate_gate = not bool(state.get("intermediate_validation", {}).get("passed"))
+    blocker_gate = bool(state.get("blockers", []))
     solved = (
         bool(answer)
         and confidence in {"medium", "high"}
@@ -897,6 +932,7 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         and not failed_tool_gate
         and not unresolved_memory_gate
         and not intermediate_gate
+        and not blocker_gate
     )
     return {
         "budget": budget,
@@ -926,7 +962,7 @@ def _exhausted(node: str, budget: dict[str, int]) -> PuzzleGraphState:
 
 
 def _continue_or_end(state: PuzzleGraphState) -> str:
-    return "end" if state.get("status") == "EXHAUSTED" else "continue"
+    return "end" if state.get("next_node") is None else "continue"
 
 
 def _prepare_semantic_refinement(state: PuzzleGraphState) -> PuzzleGraphState:
@@ -939,7 +975,7 @@ def _prepare_semantic_refinement(state: PuzzleGraphState) -> PuzzleGraphState:
 
 
 def _route_subproblem_validation(state: PuzzleGraphState) -> str:
-    if state.get("status") == "EXHAUSTED":
+    if state.get("next_node") is None:
         return "end"
     subproblem_count = len(state.get("subproblems", []))
     accepted_subproblems = {
@@ -961,7 +997,7 @@ def _route_artifacts(state: PuzzleGraphState) -> str:
 
 
 def _route_evaluation(state: PuzzleGraphState) -> str:
-    if state.get("status") == "EXHAUSTED":
+    if state.get("next_node") is None:
         return "end"
     return "replan" if state.get("evaluation_decision") == "replan" else "intermediate"
 

@@ -189,6 +189,8 @@ def analyze_node_effects(traces: list[dict[str, Any]], *, correct: bool) -> list
             issues.append("PROVIDER_ERROR")
         if any(effect.startswith("VALIDATION_NORMALIZATION:") for effect in observed_effects):
             issues.append("VALIDATION_NORMALIZATION")
+        if any(effect.startswith("PROTOCOL_NORMALIZATION:") for effect in observed_effects):
+            issues.append("PROTOCOL_NORMALIZATION")
         result.append({
             "node": node,
             "expected_activation": node not in {"human_interrupt", "prepare_semantic_refinement"},
@@ -328,6 +330,14 @@ def _observable_effects(
     elif node == "verify_answer":
         effects.append(f"TERMINAL_STATUS:{str(after.get('status', '')).upper()}")
         effects.append(f"FINAL_ANSWER_ACCEPTED:{int(bool(after.get('final_answer')))}")
+    prior_blockers = {
+        item for item in before.get("blockers", []) if isinstance(item, str)
+    }
+    effects.extend(
+        f"PROTOCOL_NORMALIZATION:{item}"
+        for item in after.get("blockers", [])
+        if isinstance(item, str) and item.startswith("AUTO_") and item not in prior_blockers
+    )
     return effects
 
 

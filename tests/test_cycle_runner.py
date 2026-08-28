@@ -31,6 +31,24 @@ HAS_COMPLEX = (
 
 
 class CycleCaseContractTests(unittest.TestCase):
+    def test_protocol_normalizations_are_visible_in_node_analysis(self):
+        effects = _observable_effects("hypothesize_plan", {"blockers": []}, {
+            "hypotheses": [{"id": "h1"}, {"id": "h2"}],
+            "plan": [],
+            "blockers": ["AUTO_DROPPED_INVALID_PLAN_ITEMS:1"],
+        })
+        report = analyze_node_effects([{
+            "node": "hypothesize_plan",
+            "observed_effects": effects,
+        }], correct=False)
+        node = next(item for item in report if item["node"] == "hypothesize_plan")
+
+        self.assertIn(
+            "PROTOCOL_NORMALIZATION:AUTO_DROPPED_INVALID_PLAN_ITEMS:1",
+            node["observed_effects"],
+        )
+        self.assertIn("PROTOCOL_NORMALIZATION", node["issues"])
+
     def test_validation_normalizations_are_visible_in_node_analysis(self):
         effects = _observable_effects("validate_subproblems", {}, {
             "validated_subproblem_results": [],
@@ -221,6 +239,29 @@ class CycleCaseContractTests(unittest.TestCase):
         self.assertEqual(result["calls_used"], 0)
         self.assertEqual(result["trace"][-1]["node"], "observe_classify")
         self.assertEqual(persisted["error_type"], "RuntimeError")
+
+    @unittest.skipUnless(HAS_COMPLEX, "complex extra is not installed")
+    def test_worker_totalizes_invalid_stage_json_as_needs_review(self):
+        class InvalidJsonProvider:
+            def complete(self, _messages):
+                return "{\"observations\":["
+
+        case = discover_cases(CYCLE_CASES, "v1")[0]
+        with tempfile.TemporaryDirectory() as directory:
+            result = run_case_worker(
+                case, Path(directory), provider=InvalidJsonProvider(), max_calls=10
+            )
+
+        self.assertEqual(result["status"], "NEEDS_REVIEW")
+        self.assertEqual(result["calls_attempted"], 1)
+        self.assertEqual(result["calls_used"], 1)
+        self.assertNotIn("error_summary", result)
+        self.assertTrue(any(
+            effect.startswith(
+                "PROTOCOL_NORMALIZATION:AUTO_TERMINATED_INVALID_STAGE_JSON:OBSERVE_CLASSIFY:"
+            )
+            for effect in result["trace"][-1]["observed_effects"]
+        ))
 
     @unittest.skipUnless(HAS_COMPLEX, "complex extra is not installed")
     def test_worker_resumes_the_same_checkpoint_once_after_transport_failure(self):
