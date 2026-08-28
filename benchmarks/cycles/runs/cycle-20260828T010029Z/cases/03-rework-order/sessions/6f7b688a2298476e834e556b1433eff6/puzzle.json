@@ -1,0 +1,35 @@
+{
+  "session_id": "6f7b688a2298476e834e556b1433eff6",
+  "initial_state": {
+    "puzzle": {
+      "title": "返工单",
+      "flavor_text": "抄写员强调：先看背面，再把奇数座与偶数座交替归队。所有数字最终都应按 A1Z26 阅读。",
+      "content": "返工单背面：\n\nC TEKCAP OT OG\n\nPacket C\nODD SEATS\n19 7 1\n\n附注（从右向左读）：\nD HTIW EVAELRETNI\n\nPacket D\nEVEN SEATS\n9 14 12\n\n校验：归队后的六个数字之和应为 62。",
+      "notes": null
+    },
+    "artifacts": {},
+    "required_artifacts": [],
+    "missing_artifacts": [],
+    "status": "READY",
+    "stage": "INTAKE",
+    "revision": 0,
+    "observations": [],
+    "flavor_associations": [],
+    "hypotheses": [],
+    "plan": [],
+    "attempts": [],
+    "evidence": [],
+    "intermediate_answers": [],
+    "extractions": [],
+    "answer_candidates": [],
+    "open_questions": [],
+    "blockers": [],
+    "budget": {
+      "max_calls": 6,
+      "calls_used": 0
+    },
+    "last_node": null,
+    "next_node": "intake",
+    "final_answer": null
+  }
+}

@@ -1,0 +1,294 @@
+{
+  "schema_version": 1,
+  "cycle_id": "cycle-20260828T010029Z",
+  "scheduled_at": "2026-08-28T09:00:29+08:00",
+  "started_at": "2026-08-28T01:01:32.427+00:00",
+  "finished_at": "2026-08-28T01:02:12.667+00:00",
+  "git_commit": "4c1400537a5a96b0558a5967b79ddaf52afcd910",
+  "dirty_worktree_at_start": false,
+  "framework": {
+    "prompt_hash": "a0503c77e9caf78fba47358d5f3215f94db501a1c5ed43cc62377dd76f94a501",
+    "tool_registry_hash": "a7f26b282e37438506b05bf1775495c0ce6c55972a9448f6ab1dc4f0002592ee",
+    "dependency_hash": "f0341617d6233d4f14e8cd29e241e03cc2962691f1c6e6c7ef95343a6265e106"
+  },
+  "provider": {
+    "name": "deepseek",
+    "model": "deepseek-v4-pro",
+    "max_calls": 6
+  },
+  "suite": "v1",
+  "timeout_seconds": 3600.0,
+  "cases": [
+    {
+      "case_id": "01-misaligned-pages",
+      "started_at": "2026-08-28T01:01:32.491+00:00",
+      "deadline_at": "2026-08-28T02:01:32.491+00:00",
+      "final_answer_frozen_at": "2026-08-28T01:01:49.116+00:00",
+      "status": "ERROR",
+      "failure_class": null,
+      "error_summary": "OBSERVE_CLASSIFY returned invalid JSON; no retry was attempted",
+      "timeout": false,
+      "duration_ms": 16625,
+      "normalized_answer": null,
+      "correct": false,
+      "rubric_score": 0.0,
+      "llm_calls": 1,
+      "llm_calls_succeeded": 0,
+      "node_report_path": "cases/01-misaligned-pages/node-analysis.json",
+      "trace_path": "cases/01-misaligned-pages/worker-result.json"
+    },
+    {
+      "case_id": "02-rain-transfer",
+      "started_at": "2026-08-28T01:01:32.491+00:00",
+      "deadline_at": "2026-08-28T02:01:32.491+00:00",
+      "final_answer_frozen_at": "2026-08-28T01:02:12.132+00:00",
+      "status": "SOLVED",
+      "failure_class": null,
+      "error_summary": null,
+      "timeout": false,
+      "duration_ms": 39641,
+      "normalized_answer": "COMPASS",
+      "correct": true,
+      "rubric_score": 1.0,
+      "llm_calls": 4,
+      "llm_calls_succeeded": 4,
+      "node_report_path": "cases/02-rain-transfer/node-analysis.json",
+      "trace_path": "cases/02-rain-transfer/worker-result.json"
+    },
+    {
+      "case_id": "03-rework-order",
+      "started_at": "2026-08-28T01:01:32.491+00:00",
+      "deadline_at": "2026-08-28T02:01:32.491+00:00",
+      "final_answer_frozen_at": "2026-08-28T01:02:02.835+00:00",
+      "status": "NEEDS_REVIEW",
+      "failure_class": null,
+      "error_summary": null,
+      "timeout": false,
+      "duration_ms": 30344,
+      "normalized_answer": null,
+      "correct": false,
+      "rubric_score": 0.0,
+      "llm_calls": 4,
+      "llm_calls_succeeded": 4,
+      "node_report_path": "cases/03-rework-order/node-analysis.json",
+      "trace_path": "cases/03-rework-order/worker-result.json"
+    },
+    {
+      "case_id": "04-after-wind",
+      "started_at": "2026-08-28T01:01:32.491+00:00",
+      "deadline_at": "2026-08-28T02:01:32.491+00:00",
+      "final_answer_frozen_at": "2026-08-28T01:02:12.647+00:00",
+      "status": "WRONG",
+      "failure_class": null,
+      "error_summary": null,
+      "timeout": false,
+      "duration_ms": 40156,
+      "normalized_answer": "M",
+      "correct": false,
+      "rubric_score": 0.0,
+      "llm_calls": 6,
+      "llm_calls_succeeded": 6,
+      "node_report_path": "cases/04-after-wind/node-analysis.json",
+      "trace_path": "cases/04-after-wind/worker-result.json"
+    },
+    {
+      "case_id": "05-sealed-packets",
+      "started_at": "2026-08-28T01:01:32.491+00:00",
+      "deadline_at": "2026-08-28T02:01:32.491+00:00",
+      "final_answer_frozen_at": "2026-08-28T01:02:00.913+00:00",
+      "status": "SOLVED",
+      "failure_class": null,
+      "error_summary": null,
+      "timeout": false,
+      "duration_ms": 28422,
+      "normalized_answer": "PLANET",
+      "correct": true,
+      "rubric_score": 1.0,
+      "llm_calls": 4,
+      "llm_calls_succeeded": 4,
+      "node_report_path": "cases/05-sealed-packets/node-analysis.json",
+      "trace_path": "cases/05-sealed-packets/worker-result.json"
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "correct": 2,
+    "wrong": 1,
+    "timeout": 0,
+    "error": 1
+  },
+  "node_summary": [
+    {
+      "node": "intake",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 5,
+      "activation_count": 5,
+      "wall_time_ms": 204,
+      "written_fields": [
+        "last_node",
+        "next_node",
+        "revision",
+        "stage",
+        "status"
+      ],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 3,
+        "HELPFUL": 2
+      },
+      "issues": []
+    },
+    {
+      "node": "artifact_inventory",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 5,
+      "activation_count": 5,
+      "wall_time_ms": 124,
+      "written_fields": [
+        "last_node",
+        "next_node",
+        "stage"
+      ],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 3,
+        "HELPFUL": 2
+      },
+      "issues": []
+    },
+    {
+      "node": "human_interrupt",
+      "expected_activation": false,
+      "cases_total": 5,
+      "activated_cases": 0,
+      "activation_count": 0,
+      "wall_time_ms": 0,
+      "written_fields": [],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 5
+      },
+      "issues": []
+    },
+    {
+      "node": "observe_classify",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 5,
+      "activation_count": 5,
+      "wall_time_ms": 78109,
+      "written_fields": [
+        "budget",
+        "flavor_associations",
+        "last_node",
+        "next_node",
+        "observations",
+        "stage"
+      ],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 3,
+        "HELPFUL": 2
+      },
+      "issues": []
+    },
+    {
+      "node": "hypothesize_plan",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 4,
+      "activation_count": 5,
+      "wall_time_ms": 40907,
+      "written_fields": [
+        "budget",
+        "hypotheses",
+        "last_node",
+        "next_node",
+        "plan",
+        "stage"
+      ],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 3,
+        "HELPFUL": 2
+      },
+      "issues": [
+        "NOT_ACTIVATED_IN_1_CASES"
+      ]
+    },
+    {
+      "node": "tool_dispatch",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 4,
+      "activation_count": 5,
+      "wall_time_ms": 125,
+      "written_fields": [
+        "attempts",
+        "evidence",
+        "last_node",
+        "next_node",
+        "stage"
+      ],
+      "new_evidence_count": 10,
+      "usefulness_counts": {
+        "UNASSESSABLE": 3,
+        "HELPFUL": 2
+      },
+      "issues": [
+        "NOT_ACTIVATED_IN_1_CASES"
+      ]
+    },
+    {
+      "node": "evaluate_evidence",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 4,
+      "activation_count": 5,
+      "wall_time_ms": 17875,
+      "written_fields": [
+        "answer_candidates",
+        "budget",
+        "evaluation_decision",
+        "evidence",
+        "last_node",
+        "next_node",
+        "stage"
+      ],
+      "new_evidence_count": 6,
+      "usefulness_counts": {
+        "UNASSESSABLE": 3,
+        "HELPFUL": 2
+      },
+      "issues": [
+        "NOT_ACTIVATED_IN_1_CASES"
+      ]
+    },
+    {
+      "node": "verify_answer",
+      "expected_activation": true,
+      "cases_total": 5,
+      "activated_cases": 4,
+      "activation_count": 4,
+      "wall_time_ms": 9094,
+      "written_fields": [
+        "budget",
+        "final_answer",
+        "last_node",
+        "next_node",
+        "stage",
+        "status"
+      ],
+      "new_evidence_count": 0,
+      "usefulness_counts": {
+        "UNASSESSABLE": 3,
+        "ESSENTIAL": 2
+      },
+      "issues": [
+        "NOT_ACTIVATED_IN_1_CASES"
+      ]
+    }
+  ]
+}

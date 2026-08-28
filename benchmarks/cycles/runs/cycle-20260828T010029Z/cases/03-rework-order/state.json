@@ -1,0 +1,333 @@
+{
+  "puzzle": {
+    "title": "返工单",
+    "flavor_text": "抄写员强调：先看背面，再把奇数座与偶数座交替归队。所有数字最终都应按 A1Z26 阅读。",
+    "content": "返工单背面：\n\nC TEKCAP OT OG\n\nPacket C\nODD SEATS\n19 7 1\n\n附注（从右向左读）：\nD HTIW EVAELRETNI\n\nPacket D\nEVEN SEATS\n9 14 12\n\n校验：归队后的六个数字之和应为 62。",
+    "notes": null
+  },
+  "artifacts": {},
+  "required_artifacts": [],
+  "missing_artifacts": [],
+  "status": "NEEDS_REVIEW",
+  "stage": "VERIFY_ANSWER",
+  "revision": 1,
+  "observations": [
+    {
+      "id": "obs1",
+      "text": "Title is '返工单', which translates to 'Rework Order' or 'Rework Sheet'.",
+      "source": "title"
+    },
+    {
+      "id": "obs2",
+      "text": "Flavor text in Chinese: '抄写员强调：先看背面，再把奇数座与偶数座交替归队。所有数字最终都应按 A1Z26 阅读。' Translation: 'The copyist emphasizes: First look at the back, then alternately return the odd-numbered seats and even-numbered seats to the team. All numbers should ultimately be read according to A1Z26.'",
+      "source": "flavor_text"
+    },
+    {
+      "id": "obs3",
+      "text": "Content starts with '返工单背面：' meaning 'Back of rework sheet:'.",
+      "source": "content"
+    },
+    {
+      "id": "obs4",
+      "text": "There is a sequence 'C TEKCAP OT OG' on the back.",
+      "source": "content"
+    },
+    {
+      "id": "obs5",
+      "text": "There is a section labeled 'Packet C' with 'ODD SEATS' and numbers '19 7 1'.",
+      "source": "content"
+    },
+    {
+      "id": "obs6",
+      "text": "There is a note '附注（从右向左读）：' meaning 'Note (read from right to left):' followed by 'D HTIW EVAELRETNI'.",
+      "source": "content"
+    },
+    {
+      "id": "obs7",
+      "text": "There is a section labeled 'Packet D' with 'EVEN SEATS' and numbers '9 14 12'.",
+      "source": "content"
+    },
+    {
+      "id": "obs8",
+      "text": "There is a checksum line: '校验：归队后的六个数字之和应为 62。' Translation: 'Checksum: The sum of the six numbers after returning should be 62.'",
+      "source": "content"
+    },
+    {
+      "id": "obs9",
+      "text": "The phrase 'C TEKCAP OT OG' appears to be reversed English, reading 'GO TO PACKET C' when reversed.",
+      "source": "content"
+    },
+    {
+      "id": "obs10",
+      "text": "The phrase 'D HTIW EVAELRETNI' when read right-to-left becomes 'INTERLEAVE WITH D'.",
+      "source": "content"
+    }
+  ],
+  "flavor_associations": [
+    {
+      "trigger": "先看背面 (first look at the back)",
+      "association": "The content includes a 'back' section and instructions to read from right to left, suggesting reversal mechanisms.",
+      "evidence": "The content says '返工单背面' and includes reversed text segments."
+    },
+    {
+      "trigger": "奇数座与偶数座交替归队 (odd seats and even seats alternately return to the team)",
+      "association": "The numbers from 'ODD SEATS' (19,7,1) and 'EVEN SEATS' (9,14,12) should be interleaved to form a sequence.",
+      "evidence": "Labels 'ODD SEATS' and 'EVEN SEATS' and the note 'INTERLEAVE WITH D' imply interleaving of odd and even seat numbers."
+    },
+    {
+      "trigger": "A1Z26 阅读 (read according to A1Z26)",
+      "association": "The six numbers after interleaving, when mapped to letters via A1Z26, may spell a message.",
+      "evidence": "Flavor text explicitly mentions A1Z26 reading of all numbers."
+    },
+    {
+      "trigger": "校验：归队后的六个数字之和应为 62 (checksum: sum should be 62)",
+      "association": "The sum of the six numbers (19+7+1+9+14+12) equals 62, matching the checksum, validating the grouping as a set of six numbers.",
+      "evidence": "19+7+1=27; 9+14+12=35; total=62."
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "H1",
+      "mechanism": "The reversed text on the back redirects to interleave the two number groups in a specific alternating order, then map via A1Z26 to form a plaintext message.",
+      "confidence": 0.8
+    },
+    {
+      "id": "H2",
+      "mechanism": "The numbers themselves are reversed or transformed before interleaving, and the result maps to A1Z26; the checksum is a red herring or indicates a different operation.",
+      "confidence": 0.3
+    },
+    {
+      "id": "H3",
+      "mechanism": "The final message is not obtained by simple numeric mapping but by using the numbers as positions or indices into another hidden text or artifact.",
+      "confidence": 0.2
+    }
+  ],
+  "plan": [
+    {
+      "id": "P1",
+      "tool": "cipher_workbench",
+      "arguments": {
+        "operation": "reverse",
+        "text": "D HTIW EVAELRETNI"
+      },
+      "purpose": "Confirm the right-to-left reading of the note to understand the interleave instruction."
+    },
+    {
+      "id": "P2",
+      "tool": "interleave_sequences",
+      "arguments": {
+        "sequence_a": "19,7,1",
+        "sequence_b": "9,14,12",
+        "pattern": "order specified by 'INTERLEAVE WITH D'"
+      },
+      "purpose": "Generate possible interleaved sequences of the six numbers."
+    },
+    {
+      "id": "P3",
+      "tool": "a1z26_decode",
+      "arguments": {
+        "numbers": "candidate interleaved sequence"
+      },
+      "purpose": "Decode each candidate number sequence to letters and check if it forms a coherent message."
+    },
+    {
+      "id": "P4",
+      "tool": "solution_position_analysis",
+      "arguments": {
+        "candidate_strings": "list of decoded strings from P3",
+        "checksum": 62,
+        "expected_length": 6
+      },
+      "purpose": "Evaluate which interleaving order produces a valid message and satisfies the checksum (although sum is order-independent)."
+    }
+  ],
+  "attempts": [
+    {
+      "tool": "cipher_workbench",
+      "fingerprint": "[\"cipher_workbench\", {\"operation\": \"reverse\", \"text\": \"D HTIW EVAELRETNI\"}]",
+      "candidate_count": 10,
+      "outcome": "candidates_found"
+    },
+    {
+      "tool": "interleave_sequences",
+      "fingerprint": "[\"interleave_sequences\", {\"pattern\": \"order specified by 'INTERLEAVE WITH D'\", \"sequence_a\": \"19,7,1\", \"sequence_b\": \"9,14,12\"}]",
+      "outcome": "failed",
+      "error": "interleave_sequences() got an unexpected keyword argument 'sequence_a'"
+    },
+    {
+      "tool": "a1z26_decode",
+      "fingerprint": "[\"a1z26_decode\", {\"numbers\": \"candidate interleaved sequence\"}]",
+      "outcome": "failed",
+      "error": "a1z26_decode() got an unexpected keyword argument 'numbers'"
+    },
+    {
+      "tool": "solution_position_analysis",
+      "fingerprint": "[\"solution_position_analysis\", {\"candidate_strings\": \"list of decoded strings from P3\", \"checksum\": 62, \"expected_length\": 6}]",
+      "outcome": "failed",
+      "error": "solution_position_analysis() got an unexpected keyword argument 'candidate_strings'"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "tool-1-1",
+      "kind": "cipher_candidate",
+      "method": "acrostic_first",
+      "source_segment": "content",
+      "output": "返CPO1附DPE9校",
+      "score": 0.4,
+      "parameters": {},
+      "warnings": []
+    },
+    {
+      "id": "tool-1-2",
+      "kind": "cipher_candidate",
+      "method": "atbash",
+      "source_segment": "flavor_text",
+      "output": "抄写员强调：先看背面，再把奇数座与偶数座交替归队。所有数字最终都应按 Z1A26 阅读。",
+      "score": 0.4,
+      "parameters": {},
+      "warnings": []
+    },
+    {
+      "id": "tool-1-3",
+      "kind": "cipher_candidate",
+      "method": "caesar",
+      "source_segment": "flavor_text",
+      "output": "抄写员强调：先看背面，再把奇数座与偶数座交替归队。所有数字最终都应按 B1A26 阅读。",
+      "score": 0.4,
+      "parameters": {
+        "shift": 25
+      },
+      "warnings": []
+    },
+    {
+      "id": "tool-1-4",
+      "kind": "cipher_candidate",
+      "method": "caesar",
+      "source_segment": "flavor_text",
+      "output": "抄写员强调：先看背面，再把奇数座与偶数座交替归队。所有数字最终都应按 E1D26 阅读。",
+      "score": 0.4,
+      "parameters": {
+        "shift": 22
+      },
+      "warnings": []
+    },
+    {
+      "id": "tool-1-5",
+      "kind": "cipher_candidate",
+      "method": "caesar",
+      "source_segment": "flavor_text",
+      "output": "抄写员强调：先看背面，再把奇数座与偶数座交替归队。所有数字最终都应按 F1E26 阅读。",
+      "score": 0.4,
+      "parameters": {
+        "shift": 21
+      },
+      "warnings": []
+    },
+    {
+      "id": "tool-1-6",
+      "kind": "cipher_candidate",
+      "method": "caesar",
+      "source_segment": "flavor_text",
+      "output": "抄写员强调：先看背面，再把奇数座与偶数座交替归队。所有数字最终都应按 I1H26 阅读。",
+      "score": 0.4,
+      "parameters": {
+        "shift": 18
+      },
+      "warnings": []
+    },
+    {
+      "id": "tool-1-7",
+      "kind": "cipher_candidate",
+      "method": "caesar",
+      "source_segment": "flavor_text",
+      "output": "抄写员强调：先看背面，再把奇数座与偶数座交替归队。所有数字最终都应按 J1I26 阅读。",
+      "score": 0.4,
+      "parameters": {
+        "shift": 17
+      },
+      "warnings": []
+    },
+    {
+      "id": "tool-1-8",
+      "kind": "cipher_candidate",
+      "method": "caesar",
+      "source_segment": "flavor_text",
+      "output": "抄写员强调：先看背面，再把奇数座与偶数座交替归队。所有数字最终都应按 O1N26 阅读。",
+      "score": 0.4,
+      "parameters": {
+        "shift": 12
+      },
+      "warnings": []
+    },
+    {
+      "id": "tool-1-9",
+      "kind": "cipher_candidate",
+      "method": "caesar",
+      "source_segment": "flavor_text",
+      "output": "抄写员强调：先看背面，再把奇数座与偶数座交替归队。所有数字最终都应按 P1O26 阅读。",
+      "score": 0.4,
+      "parameters": {
+        "shift": 11
+      },
+      "warnings": []
+    },
+    {
+      "id": "tool-1-10",
+      "kind": "cipher_candidate",
+      "method": "caesar",
+      "source_segment": "flavor_text",
+      "output": "抄写员强调：先看背面，再把奇数座与偶数座交替归队。所有数字最终都应按 U1T26 阅读。",
+      "score": 0.4,
+      "parameters": {
+        "shift": 6
+      },
+      "warnings": []
+    },
+    {
+      "id": "assessment-1",
+      "hypothesis_id": "H1",
+      "effect": "supports",
+      "notes": "Observations and manual reasoning confirm the reversal of 'C TEKCAP OT OG' to 'GO TO PACKET C' and 'D HTIW EVAELRETNI' to 'INTERLEAVE WITH D'. The two packets contain the numbers [19,7,1] and [9,14,12]. Interleaving yields sequences that map to meaningful A1Z26 letters and checksum is consistent."
+    },
+    {
+      "id": "assessment-2",
+      "hypothesis_id": "H2",
+      "effect": "weakens",
+      "notes": "No evidence suggests the numbers themselves need reversal or other transformation before interleaving; the checksum matches the raw numbers, and direct A1Z26 mapping produces a plausible word in one interleaving order."
+    },
+    {
+      "id": "assessment-3",
+      "hypothesis_id": "H3",
+      "effect": "weakens",
+      "notes": "No hidden text or index-based mechanism is indicated; the numbers are directly usable."
+    }
+  ],
+  "intermediate_answers": [],
+  "extractions": [],
+  "answer_candidates": [
+    {
+      "answer": "SLING?",
+      "confidence": "medium",
+      "evidence_ids": [
+        "obs4",
+        "obs5",
+        "obs6",
+        "obs7",
+        "obs8",
+        "obs9",
+        "obs10"
+      ]
+    }
+  ],
+  "open_questions": [],
+  "blockers": [],
+  "budget": {
+    "max_calls": 6,
+    "calls_used": 4
+  },
+  "last_node": "verify_answer",
+  "next_node": null,
+  "final_answer": null,
+  "evaluation_decision": "verify"
+}

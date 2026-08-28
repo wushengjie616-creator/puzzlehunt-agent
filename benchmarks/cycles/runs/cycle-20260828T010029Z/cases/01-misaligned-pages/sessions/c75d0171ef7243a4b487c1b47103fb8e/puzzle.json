@@ -1,0 +1,35 @@
+{
+  "session_id": "c75d0171ef7243a4b487c1b47103fb8e",
+  "initial_state": {
+    "puzzle": {
+      "title": "错页校对",
+      "flavor_text": "装订员说，每一行都比原文推迟了与行号相同的距离。校回原位后，页边铅笔写着：第几行，就取第几个字母。",
+      "content": "1. GMJOU\n2. ITCRG\n3. DODUP\n4. GPEQT\n5. HWFSJ",
+      "notes": null
+    },
+    "artifacts": {},
+    "required_artifacts": [],
+    "missing_artifacts": [],
+    "status": "READY",
+    "stage": "INTAKE",
+    "revision": 0,
+    "observations": [],
+    "flavor_associations": [],
+    "hypotheses": [],
+    "plan": [],
+    "attempts": [],
+    "evidence": [],
+    "intermediate_answers": [],
+    "extractions": [],
+    "answer_candidates": [],
+    "open_questions": [],
+    "blockers": [],
+    "budget": {
+      "max_calls": 6,
+      "calls_used": 0
+    },
+    "last_node": null,
+    "next_node": "intake",
+    "final_answer": null
+  }
+}

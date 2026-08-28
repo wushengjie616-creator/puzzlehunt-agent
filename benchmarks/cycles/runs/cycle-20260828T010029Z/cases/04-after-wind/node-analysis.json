@@ -1,0 +1,141 @@
+[
+  {
+    "node": "intake",
+    "expected_activation": true,
+    "activated": true,
+    "activation_count": 1,
+    "wall_time_ms": 47,
+    "written_fields": [
+      "last_node",
+      "next_node",
+      "revision",
+      "stage",
+      "status"
+    ],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  },
+  {
+    "node": "artifact_inventory",
+    "expected_activation": true,
+    "activated": true,
+    "activation_count": 1,
+    "wall_time_ms": 16,
+    "written_fields": [
+      "last_node",
+      "next_node",
+      "stage"
+    ],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  },
+  {
+    "node": "human_interrupt",
+    "expected_activation": false,
+    "activated": false,
+    "activation_count": 0,
+    "wall_time_ms": 0,
+    "written_fields": [],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  },
+  {
+    "node": "observe_classify",
+    "expected_activation": true,
+    "activated": true,
+    "activation_count": 1,
+    "wall_time_ms": 15297,
+    "written_fields": [
+      "budget",
+      "flavor_associations",
+      "last_node",
+      "next_node",
+      "observations",
+      "stage"
+    ],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  },
+  {
+    "node": "hypothesize_plan",
+    "expected_activation": true,
+    "activated": true,
+    "activation_count": 2,
+    "wall_time_ms": 14860,
+    "written_fields": [
+      "budget",
+      "hypotheses",
+      "last_node",
+      "next_node",
+      "plan",
+      "stage"
+    ],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  },
+  {
+    "node": "tool_dispatch",
+    "expected_activation": true,
+    "activated": true,
+    "activation_count": 2,
+    "wall_time_ms": 62,
+    "written_fields": [
+      "attempts",
+      "last_node",
+      "next_node",
+      "stage"
+    ],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  },
+  {
+    "node": "evaluate_evidence",
+    "expected_activation": true,
+    "activated": true,
+    "activation_count": 2,
+    "wall_time_ms": 5984,
+    "written_fields": [
+      "answer_candidates",
+      "budget",
+      "evaluation_decision",
+      "evidence",
+      "last_node",
+      "next_node",
+      "stage"
+    ],
+    "new_evidence_ids": [
+      "assessment-1",
+      "assessment-2",
+      "assessment-3",
+      "assessment-4",
+      "assessment-5",
+      "assessment-6"
+    ],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  },
+  {
+    "node": "verify_answer",
+    "expected_activation": true,
+    "activated": true,
+    "activation_count": 1,
+    "wall_time_ms": 2141,
+    "written_fields": [
+      "budget",
+      "final_answer",
+      "last_node",
+      "next_node",
+      "stage",
+      "status"
+    ],
+    "new_evidence_ids": [],
+    "usefulness": "UNASSESSABLE",
+    "issues": []
+  }
+]

@@ -1,0 +1,35 @@
+{
+  "session_id": "2b85ba6eb9964aad95741fd1a929b63d",
+  "initial_state": {
+    "puzzle": {
+      "title": "风停以后",
+      "flavor_text": "从 @ 开始，每次只向上下左右移动一格。六阵风依次藏在六行记录的开头。",
+      "content": "东边的云先散了。\n南窗传来铃声。\n东廊的灯又亮。\n南门无人经过。\n东墙留下一点粉笔。\n南侧台阶仍是湿的。\n\n|   | 1 | 2 | 3 | 4 | 5 |\n|---|---|---|---|---|---|\n| 1 | @ | A | Q | W | P |\n| 2 | N | S | T | C | O |\n| 3 | V | B | R | A | D |\n| 4 | K | U | M | L | E |\n| 5 | J | F | X | Y | Z |",
+      "notes": null
+    },
+    "artifacts": {},
+    "required_artifacts": [],
+    "missing_artifacts": [],
+    "status": "READY",
+    "stage": "INTAKE",
+    "revision": 0,
+    "observations": [],
+    "flavor_associations": [],
+    "hypotheses": [],
+    "plan": [],
+    "attempts": [],
+    "evidence": [],
+    "intermediate_answers": [],
+    "extractions": [],
+    "answer_candidates": [],
+    "open_questions": [],
+    "blockers": [],
+    "budget": {
+      "max_calls": 6,
+      "calls_used": 0
+    },
+    "last_node": null,
+    "next_node": "intake",
+    "final_answer": null
+  }
+}
