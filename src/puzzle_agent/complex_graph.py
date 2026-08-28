@@ -118,7 +118,13 @@ def _call_stage(
     try:
         data = json.loads(raw)
     except (json.JSONDecodeError, TypeError) as exc:
-        raise ValueError(f"{stage} returned invalid JSON; no retry was attempted") from exc
+        import hashlib
+        raw_bytes = raw.encode("utf-8", errors="replace") if isinstance(raw, str) else b""
+        digest = hashlib.sha256(raw_bytes).hexdigest()[:16]
+        raise ValueError(
+            f"{stage} returned invalid JSON (length={len(raw_bytes)}, sha256={digest}); "
+            "no retry was attempted"
+        ) from exc
     if not isinstance(data, dict):
         raise ValueError(f"{stage} must return a JSON object")
     return data, budget
@@ -340,7 +346,19 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
     }
     if not required_checks.issubset(checks):
         raise ValueError("required verification checks are missing")
-    solved = bool(answer) and confidence in {"medium", "high"} and bool(checks) and all(checks.values())
+    attempts = state.get("attempts", [])
+    tool_required = bool(state.get("plan"))
+    tool_succeeded = any(
+        item.get("outcome") in {"completed", "candidates_found"} for item in attempts
+    )
+    failed_tool_gate = tool_required and not tool_succeeded
+    solved = (
+        bool(answer)
+        and confidence in {"medium", "high"}
+        and bool(checks)
+        and all(checks.values())
+        and not failed_tool_gate
+    )
     return {
         "budget": budget,
         "status": "SOLVED" if solved else "NEEDS_REVIEW",
@@ -348,6 +366,10 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         "last_node": "verify_answer",
         "next_node": None,
         "final_answer": answer if solved else None,
+        "blockers": (
+            ["All planned deterministic experiments failed"]
+            if failed_tool_gate else state.get("blockers", [])
+        ),
     }
 
 

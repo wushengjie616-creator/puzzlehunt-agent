@@ -229,6 +229,32 @@ class ComplexGraphTests(unittest.TestCase):
                 new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=6)
             )
 
+    def test_verify_does_not_solve_when_every_planned_tool_failed(self):
+        class FailedToolProvider(ScriptedStageProvider):
+            def complete(self, messages):
+                marker = messages[0]["content"].split("PUZZLE_STAGE: ", 1)[1].splitlines()[0]
+                if marker == "HYPOTHESIZE_PLAN":
+                    self.stages.append(marker)
+                    self.messages.append(messages)
+                    return json.dumps({
+                        "hypotheses": [
+                            {"id": "h1", "mechanism": "grid path"},
+                            {"id": "h2", "mechanism": "indexing"},
+                        ],
+                        "plan": [{
+                            "id": "p1", "tool": "grid_trace",
+                            "arguments": {"moves": ["E"]}, "purpose": "test path",
+                        }],
+                    })
+                return super().complete(messages)
+
+        result = build_puzzle_graph(FailedToolProvider()).invoke(
+            new_puzzle_state(PuzzleInput(content="grid"), max_calls=6)
+        )
+        self.assertEqual(result["attempts"][0]["outcome"], "failed")
+        self.assertEqual(result["status"], "NEEDS_REVIEW")
+        self.assertIsNone(result["final_answer"])
+
 
 if __name__ == "__main__":
     unittest.main()

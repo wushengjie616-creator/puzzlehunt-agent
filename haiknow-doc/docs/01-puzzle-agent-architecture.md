@@ -105,6 +105,8 @@ INTAKE
 
 每次调用用 tool+arguments fingerprint 去重。未知工具或参数错误形成 failed attempt，不进入成功 evidence。
 
+规划 prompt 的工具签名由 `inspect.signature()` 对 ToolRegistry 当前 callable 生成，例如 `a1z26_decode(values)`、`grid_trace(grid, start, directions)`。它不是另一份手写 schema，因此注册函数改名会直接反映到 prompt 和契约测试。只列工具名已被正式 cycle 2 证伪：14/14 调用因模型发明参数别名失败。
+
 ## 7. 模块责任
 
 | 模块 | 责任 |
@@ -134,6 +136,8 @@ watcher 每轮先对 allowlisted 工作树内容做 fingerprint，运行完整�
 节点报告只依据可观察数据。正确证据链中的写入节点可标 `HELPFUL/ESSENTIAL`；错误答案时保持 `UNASSESSABLE`，避免从失败运行反推虚假的节点因果作用。每轮还生成 `node-summary.json` 和 analysis 中的全节点聚合表，列出跨题激活数、总次数、耗时、写入字段、evidence 数、作用标签计数与未激活/无可观察效果问题。
 
 证据评估默认进入终局验证；若它显式给出 `decision=replan` 且剩余预算至少能容纳“新规划 + 新评估 + 最终验证”三次调用，则回到 `hypothesize_plan`。第二轮能读取上一轮 attempts/evidence，工具和 assessment ID 跨轮次保持唯一。`max_calls=6` 时最长调用路径正好为六次，不形成无限 ReAct loop。
+
+终局还有一个机器门：若当前计划要求确定性工具，但所有相关 attempt 都失败，则即使模型返回全真 checks，也只能进入 `NEEDS_REVIEW`。这防止 cycle 2 中“工具全失败却把猜测标为 evidence-backed”的错误。
 
 ## 8. 依赖策略
 

@@ -90,6 +90,7 @@ convention / coordinate_system / normalization
 - `observe_classify`：分离事实、异常、风味联想；列出所有 clue channels。
 - `hypothesize_plan`：比较主体机制、答案仍是载体、冲突是机制三类解释；计划必须可证伪。
 - `tool_dispatch`：只执行显式参数的 bounded 工具；保留 fingerprint、失败状态和 extraction provenance。
+- 工具清单必须由实际 callable 自动生成精确参数名；模型不得发明 `moves/numbers/strings` 等别名。若计划中的确定性实验全部失败，终局不能声明 evidence check 通过。
 - `evaluate_evidence`：固定检查 coverage、consumption、uniqueness、invariant、reversibility。
 - `evaluate_evidence` 可在证据否定原计划且存在不同的有界实验时选择 `replan`；运行时必须预留一次最终验证调用，不能把预算全耗在搜索上。
 - `verify_answer`：要求 format、evidence、flavor callback、clue coverage、all elements consumed、independent derivation 全部为真。
