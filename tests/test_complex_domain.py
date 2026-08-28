@@ -22,6 +22,8 @@ class ComplexStateTests(unittest.TestCase):
         for collection in (
             "observations",
             "flavor_associations",
+            "tensions",
+            "association_candidates",
             "hypotheses",
             "plan",
             "attempts",
@@ -38,6 +40,10 @@ class ComplexStateTests(unittest.TestCase):
     def test_invalid_call_budget_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "max_calls"):
             new_puzzle_state(PuzzleInput(content="x"), max_calls=0)
+
+    def test_default_budget_covers_association_and_one_bounded_replan(self):
+        state = new_puzzle_state(PuzzleInput(content="x"))
+        self.assertEqual(state["budget"], {"max_calls": 8, "calls_used": 0})
 
 
 if __name__ == "__main__":

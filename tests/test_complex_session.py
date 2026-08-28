@@ -26,7 +26,15 @@ class ScriptedProvider:
         return json.dumps({
             "OBSERVE_CLASSIFY": {
                 "observations": [{"id": "o1", "text": "uryyb", "source": "content"}],
+                "tensions": [{"id": "t1", "signal_ids": ["o1"], "question": "why this spelling?"}],
+            },
+            "ASSOCIATE_THEME": {
                 "flavor_associations": [],
+                "association_candidates": [
+                    {"id": "a1", "ontology": "rotation", "prediction": "language", "falsifier": "noise"},
+                    {"id": "a2", "ontology": "layout", "prediction": "pattern", "falsifier": "none"},
+                    {"id": "a3", "ontology": "reversal", "prediction": "language", "falsifier": "noise"},
+                ],
             },
             "HYPOTHESIZE_PLAN": {
                 "hypotheses": [
@@ -115,7 +123,7 @@ class PersistentSessionTests(unittest.TestCase):
         self.assertEqual(blocked.get("missing_artifacts"), ["grid"])
         self.assertEqual(resumed.get("status"), "SOLVED")
         self.assertEqual(resumed.get("artifacts", {}).get("grid"), "A B C")
-        self.assertEqual(len(provider.stages), 4)
+        self.assertEqual(len(provider.stages), 5)
         self.assertEqual(artifact_text, "A B C")
         self.assertIn("session_created", event_types)
         self.assertIn("artifact_resumed", event_types)

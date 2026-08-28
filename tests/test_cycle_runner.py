@@ -160,10 +160,11 @@ class CycleCaseContractTests(unittest.TestCase):
             self.assertIn("final_answer_frozen_at", item)
         self.assertNotIn("oracle", manifest.casefold())
         self.assertNotIn("expected_answer", manifest.casefold())
-        self.assertEqual(len(node_summary), 8)
+        self.assertEqual(len(node_summary), 9)
         self.assertEqual({item["node"] for item in node_summary}, {
             "intake", "artifact_inventory", "human_interrupt", "observe_classify",
-            "hypothesize_plan", "tool_dispatch", "evaluate_evidence", "verify_answer",
+            "associate_theme", "hypothesize_plan", "tool_dispatch", "evaluate_evidence",
+            "verify_answer",
         })
         self.assertIn("Node aggregate", analysis)
         self.assertIn("verify_answer", analysis)

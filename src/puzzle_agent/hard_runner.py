@@ -147,7 +147,7 @@ def run_hard_once(
     manifest_path: str | Path,
     provider_name: str = "deepseek",
     model: str = "deepseek-v4-pro",
-    max_calls: int = 6,
+    max_calls: int = 8,
     timeout_seconds: float = 3600,
     max_workers: int = 5,
     fetch_json: JsonFetcher = _fetch_json,

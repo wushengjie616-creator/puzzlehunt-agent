@@ -32,14 +32,22 @@ class ScriptedStageProvider:
         responses = {
             "OBSERVE_CLASSIFY": {
                 "observations": [{"id": "o1", "text": "content is uryyb", "source": "content"}],
-                "flavor_associations": [{"trigger": "thirteen", "association": "ROT13"}],
+                "tensions": [{"id": "t1", "signal_ids": ["o1"], "question": "why this spelling?"}],
+            },
+            "ASSOCIATE_THEME": {
+                "flavor_associations": [{"trigger": "thirteen", "association": "rotation", "role": "decoder"}],
+                "association_candidates": [
+                    {"id": "a1", "ontology": "alphabet rotation", "bridge": [{"surface": "thirteen", "domain": "half turn"}], "signal_ids": ["o1"], "prediction": "a rotation yields language", "falsifier": "no shift yields language", "confidence": 0.7},
+                    {"id": "a2", "ontology": "keyboard layout", "bridge": [], "signal_ids": ["o1"], "prediction": "adjacent keys yield language", "falsifier": "layout is inconsistent", "confidence": 0.2},
+                    {"id": "a3", "ontology": "reversal", "bridge": [], "signal_ids": ["o1"], "prediction": "reverse yields language", "falsifier": "reverse is noise", "confidence": 0.1},
+                ],
             },
             "HYPOTHESIZE_PLAN": {
                 "hypotheses": [
-                    {"id": "h1", "mechanism": "ROT13", "confidence": 0.8},
-                    {"id": "h2", "mechanism": "Caesar shift", "confidence": 0.4},
+                    {"id": "h1", "mechanism": "ROT13", "prediction": "HELLO", "falsifier": "not language", "confidence": 0.8},
+                    {"id": "h2", "mechanism": "Caesar shift", "prediction": "a word", "falsifier": "all shifts noise", "confidence": 0.4},
                 ],
-                "plan": [{"id": "p1", "tool": "cipher_workbench", "purpose": "distinguish shifts"}],
+                "plan": [{"id": "p1", "tool": "cipher_workbench", "purpose": "distinguish shifts", "prediction": "one shift is readable"}],
             },
             "EVALUATE_EVIDENCE": {
                 "evidence_assessment": [{"hypothesis_id": "h1", "effect": "supports"}],
@@ -136,21 +144,22 @@ class ComplexGraphTests(unittest.TestCase):
         result = graph.invoke(
             new_puzzle_state(
                 PuzzleInput(title="Shift", flavor_text="Move thirteen", content="uryyb"),
-                max_calls=6,
+                max_calls=8,
             ),
             {"configurable": {"thread_id": "ordered"}},
         )
 
         self.assertEqual(
             provider.stages,
-            ["OBSERVE_CLASSIFY", "HYPOTHESIZE_PLAN", "EVALUATE_EVIDENCE", "VERIFY_ANSWER"],
+            ["OBSERVE_CLASSIFY", "ASSOCIATE_THEME", "HYPOTHESIZE_PLAN", "EVALUATE_EVIDENCE", "VERIFY_ANSWER"],
         )
         self.assertEqual(result["status"], "SOLVED")
         self.assertEqual(result["final_answer"], "HELLO")
-        self.assertEqual(result["budget"]["calls_used"], 4)
+        self.assertEqual(result["budget"]["calls_used"], 5)
         self.assertGreaterEqual(len(result["attempts"]), 1)
         required_fields = {
-            "OBSERVE_CLASSIFY": ("observations", "flavor_associations"),
+            "OBSERVE_CLASSIFY": ("observations", "tensions"),
+            "ASSOCIATE_THEME": ("association_candidates", "prediction", "falsifier"),
             "HYPOTHESIZE_PLAN": ("hypotheses", "plan"),
             "EVALUATE_EVIDENCE": ("evidence_assessment", "answer_candidates"),
             "VERIFY_ANSWER": ("answer", "confidence", "checks"),
@@ -158,7 +167,9 @@ class ComplexGraphTests(unittest.TestCase):
         for stage, messages in zip(provider.stages, provider.messages):
             for field in required_fields[stage]:
                 self.assertIn(field, messages[0]["content"])
-        hypothesis_prompt = provider.messages[1][0]["content"]
+        self.assertNotIn("caesar_shift", provider.messages[0][0]["content"])
+        self.assertNotIn("caesar_shift", provider.messages[1][0]["content"])
+        hypothesis_prompt = provider.messages[2][0]["content"]
         self.assertIn("interleave_sequences(sequences)", hypothesis_prompt)
         self.assertIn("grid_trace(grid, start, directions)", hypothesis_prompt)
         self.assertIn("directions uses N|E|S|W", hypothesis_prompt)
@@ -193,10 +204,11 @@ class ComplexGraphTests(unittest.TestCase):
     def test_evidence_can_trigger_one_budgeted_replan_before_verification(self):
         provider = ReplanningProvider()
         result = build_puzzle_graph(provider).invoke(
-            new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=6)
+            new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=7)
         )
         self.assertEqual(provider.stages, [
             "OBSERVE_CLASSIFY",
+            "ASSOCIATE_THEME",
             "HYPOTHESIZE_PLAN",
             "EVALUATE_EVIDENCE",
             "HYPOTHESIZE_PLAN",
@@ -204,7 +216,7 @@ class ComplexGraphTests(unittest.TestCase):
             "VERIFY_ANSWER",
         ])
         self.assertEqual(result["status"], "SOLVED")
-        self.assertEqual(result["budget"]["calls_used"], 6)
+        self.assertEqual(result["budget"]["calls_used"], 7)
         self.assertTrue(any(item.get("tool") == "extract_nth" for item in result["attempts"]))
         evidence_ids = [item["id"] for item in result["evidence"] if "id" in item]
         self.assertEqual(len(evidence_ids), len(set(evidence_ids)))

@@ -35,7 +35,7 @@ class SessionManager:
         self,
         puzzle,
         *,
-        max_calls: int = 6,
+        max_calls: int = 8,
         required_artifacts=(),
         artifacts=None,
     ) -> str:

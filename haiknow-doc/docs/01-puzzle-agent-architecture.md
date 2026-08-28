@@ -30,8 +30,9 @@ INTAKE
   → ARTIFACT_INVENTORY
       ├─ missing → HUMAN_INTERRUPT → ARTIFACT_INVENTORY
       └─ ready
-  → OBSERVE_CLASSIFY              # LLM call 1
-  → HYPOTHESIZE_PLAN              # LLM call 2
+  → OBSERVE_CLASSIFY              # LLM call 1：事实与 surface tension
+  → ASSOCIATE_THEME               # LLM call 2：ontology beam、bridge、预测与反证
+  → HYPOTHESIZE_PLAN              # LLM call 3：机制承诺与有界实验
   → TOOL_DISPATCH                 # zero LLM calls
   → EVALUATE_EVIDENCE             # LLM call 3
   → VERIFY_ANSWER                 # LLM call 4
@@ -141,7 +142,9 @@ watcher 每轮先对 allowlisted 工作树内容做 fingerprint，运行完整�
 
 节点报告只依据可观察数据。正确证据链中的写入节点可标 `HELPFUL/ESSENTIAL`；错误答案时保持 `UNASSESSABLE`，避免从失败运行反推虚假的节点因果作用。每轮还生成 `node-summary.json` 和 analysis 中的全节点聚合表，列出跨题激活数、总次数、耗时、写入字段、evidence 数、作用标签计数与未激活/无可观察效果问题。
 
-证据评估默认进入终局验证；若它显式给出 `decision=replan` 且剩余预算至少能容纳“新规划 + 新评估 + 最终验证”三次调用，则回到 `hypothesize_plan`。第二轮能读取上一轮 attempts/evidence，工具和 assessment ID 跨轮次保持唯一。`max_calls=6` 时最长调用路径正好为六次，不形成无限 ReAct loop。
+证据评估默认进入终局验证；若它显式给出 `decision=replan` 且剩余预算至少能容纳“新规划 + 新评估 + 最终验证”三次调用，则回到 `hypothesize_plan`。第二轮能读取上一轮 attempts/evidence，工具和 assessment ID 跨轮次保持唯一。新增 association call 后默认 `max_calls=8`；正常路径使用五次，单次 replan 路径使用七次，不形成无限 ReAct loop。
+
+`ASSOCIATE_THEME` 是独立发现阶段：输入观察、surface tensions、题面与既有 memory，输出 3–5 个 ontology candidates、bridge、association role、holdout prediction 和 falsifier。它不能看到 ToolRegistry；只有 `HYPOTHESIZE_PLAN` 才接收工具签名与契约，防止工具名反向泄露机制。
 
 终局还有一个机器门：若当前计划要求确定性工具，但所有相关 attempt 都失败，则即使模型返回全真 checks，也只能进入 `NEEDS_REVIEW`。这防止 cycle 2 中“工具全失败却把猜测标为 evidence-backed”的错误。
 

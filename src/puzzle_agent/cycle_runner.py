@@ -23,6 +23,7 @@ _GRAPH_NODES = (
     "artifact_inventory",
     "human_interrupt",
     "observe_classify",
+    "associate_theme",
     "hypothesize_plan",
     "tool_dispatch",
     "evaluate_evidence",
@@ -235,6 +236,9 @@ def _observable_effects(
         effects.append(f"ARTIFACTS_ADDED:{max(delta, 0)}")
     elif node == "observe_classify":
         effects.append(f"OBSERVATIONS_RECORDED:{len(after.get('observations', []))}")
+        effects.append(f"TENSIONS_RECORDED:{len(after.get('tensions', []))}")
+    elif node == "associate_theme":
+        effects.append(f"ASSOCIATION_CANDIDATES:{len(after.get('association_candidates', []))}")
         effects.append(f"FLAVOR_ASSOCIATIONS:{len(after.get('flavor_associations', []))}")
     elif node == "hypothesize_plan":
         effects.append(f"HYPOTHESES_PRESERVED:{len(after.get('hypotheses', []))}")
@@ -290,7 +294,7 @@ def run_case_worker(
     error_type: str | None = None
     error_summary: str | None = None
     model_nodes = {
-        "observe_classify", "hypothesize_plan", "evaluate_evidence", "verify_answer"
+        "observe_classify", "associate_theme", "hypothesize_plan", "evaluate_evidence", "verify_answer"
     }
     terminal = {"SOLVED", "UNSOLVED", "EXHAUSTED", "BLOCKED_INPUT"}
     for _ in range(max_steps):
@@ -389,7 +393,7 @@ def run_cycle(
     suite: str = "v1",
     provider_name: str = "deepseek",
     model: str = "deepseek-v4-pro",
-    max_calls: int = 6,
+    max_calls: int = 8,
     timeout_seconds: float = 3600,
     cycle_id: str | None = None,
     require_clean: bool = True,

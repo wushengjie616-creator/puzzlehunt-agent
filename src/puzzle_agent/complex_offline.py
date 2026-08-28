@@ -16,18 +16,28 @@ class OfflineStageProvider:
                     {"id": "o-flavor", "text": puzzle.get("flavor_text", ""), "source": "flavor_text"},
                     {"id": "o-content", "text": puzzle.get("content", ""), "source": "content"},
                 ],
+                "tensions": [{"id": "t-content", "signal_ids": ["o-content"], "question": "what structure explains the content?"}],
+            }
+        elif stage == "ASSOCIATE_THEME":
+            response = {
                 "flavor_associations": [],
+                "association_candidates": [
+                    {"id": "a-cipher", "ontology": "classical encoding", "bridge": [], "signal_ids": ["o-content"], "prediction": "a bounded transform yields language", "falsifier": "no transform yields language", "confidence": 0.5},
+                    {"id": "a-layout", "ontology": "layout", "bridge": [], "signal_ids": ["o-content"], "prediction": "positions carry information", "falsifier": "layout is uniform", "confidence": 0.3},
+                    {"id": "a-language", "ontology": "wordplay", "bridge": [], "signal_ids": ["o-content"], "prediction": "surface wording has systematic ambiguity", "falsifier": "wording is literal", "confidence": 0.2},
+                ],
             }
         elif stage == "HYPOTHESIZE_PLAN":
             response = {
                 "hypotheses": [
-                    {"id": "h-cipher", "mechanism": "common cipher or encoding", "confidence": 0.6},
-                    {"id": "h-extraction", "mechanism": "positional extraction", "confidence": 0.3},
+                    {"id": "h-cipher", "mechanism": "common cipher or encoding", "association_id": "a-cipher", "prediction": "one candidate is language", "falsifier": "no candidate is language", "confidence": 0.6},
+                    {"id": "h-extraction", "mechanism": "positional extraction", "association_id": "a-layout", "prediction": "positions form language", "falsifier": "positions are noise", "confidence": 0.3},
                 ],
                 "plan": [{
                     "id": "plan-cipher",
                     "tool": "cipher_workbench",
                     "purpose": "test deterministic common transforms",
+                    "prediction": "one bounded transform yields language",
                 }],
             }
         elif stage == "EVALUATE_EVIDENCE":

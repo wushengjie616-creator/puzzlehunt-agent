@@ -73,6 +73,8 @@ related_commits: []
 - 为使 scheduler 父进程加载新版 cycle report 代码，12:17 做可恢复重启：旧 PID `23336` 正常停止，新 runtime PID `28164`；前三轮从相同 `start_at` 状态恢复且不会重跑，下一锚点仍为 15:00:29，最终锚点不变。
 - 用户于 12:39 否定 v1 难度与风味设计：复核确认五题均把关键 operator/顺序/提取直接写出，主要测 instruction following。12:40:15 正常停止 PID `28164`，15:00 旧批次取消；前三轮降级为 `v1-explicit-baseline`，不删除历史。纠偏设计见 `_drafts/P0004-human-association-benchmark-v2.md`。
 - 旧 subagent 事实：`ccbc_01_20_audit`、`ccbc_21_40_audit`、`ccbc_41_55_audit` 已完成 CCBC16 机制审计，但没有研究逐题 human association trace，不能作为新要求的完成证据。现已启动 CCBC16/15/12 三个独立 human-reasoning 研究流。
+- 新研究流已完成：CCBC16 13 题、CCBC15 11 题、CCBC12 13 题，共 37 道代表性非-meta；逐题包含 observable、弱/强提示边界、背景联想、两条错路/falsifier、aha 与中间验证。综合文档为 `research/human-association-reasoning.md`。
+- HA-BRIDGE RED/GREEN：新增独立 `ASSOCIATE_THEME` 节点与 tensions/association_candidates memory；要求 3–5 个 ontology、bridge、prediction、falsifier，且该阶段看不到工具目录。默认 max_calls 由 6 调整为 8；正常路径五次、一次 replan 七次。
 
 ## 后续 todo
 

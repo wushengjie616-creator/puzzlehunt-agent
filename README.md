@@ -62,7 +62,7 @@ shell 环境变量优先于 `.env.local`。只允许上述三个 `DEEPSEEK_*` �
 ```powershell
 $pa = ".\.venv\Scripts\puzzle-agent.exe"
 
-& $pa session init --file puzzle.json --max-calls 6
+& $pa session init --file puzzle.json --max-calls 8
 & $pa session run <session-id> --offline
 & $pa session status <session-id>
 & $pa session history <session-id>
@@ -75,6 +75,7 @@ complex mode 的非阻塞流程至少包含四个独立推理节点：
 
 ```text
 OBSERVE_CLASSIFY
+  → ASSOCIATE_THEME
   → HYPOTHESIZE_PLAN
   → deterministic tool dispatch
   → EVALUATE_EVIDENCE
@@ -163,7 +164,7 @@ CCBC16 只作为离线方法学习来源，不会把官方题面或题解交给 
 真实 DeepSeek benchmark 可能产生多次计费请求，只有手动指定时才运行：
 
 ```powershell
-& $pa benchmark run --suite blind --provider deepseek --max-calls 6
+& $pa benchmark run --suite blind --provider deepseek --max-calls 8
 ```
 
 ## 24 小时周期评测

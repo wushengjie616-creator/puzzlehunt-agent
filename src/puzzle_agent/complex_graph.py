@@ -25,7 +25,9 @@ class PuzzleGraphState(TypedDict, total=False):
     stage: str
     revision: int
     observations: list[dict[str, Any]]
+    tensions: list[dict[str, Any]]
     flavor_associations: list[dict[str, Any]]
+    association_candidates: list[dict[str, Any]]
     hypotheses: list[dict[str, Any]]
     plan: list[dict[str, Any]]
     attempts: list[dict[str, Any]]
@@ -49,14 +51,25 @@ _TOOL_CATALOG = ", ".join(("cipher_workbench()", *ToolRegistry().signatures))
 _STAGE_INSTRUCTIONS = {
     "OBSERVE_CLASSIFY": (
         'Output {"observations":[{"id":"...","text":"...","source":"title|flavor_text|content|artifact"}],'
-        '"flavor_associations":[{"trigger":"...","association":"...","evidence":"..."}]}. '
+        '"tensions":[{"id":"...","signal_ids":["..."],"question":"why is this unnatural?"}]}. '
         "Record directly visible facts, formatting, repetitions, anomalies, missing/conflicting information, "
-        "and every clue channel (title, flavor, order, labels, coordinates). Keep flavor associations as "
-        "testable hypotheses, not facts. Do not propose or verify a final answer."
+        "and every clue channel (title, flavor, order, labels, coordinates). A tension names what needs explaining, "
+        "not a cipher, tool, theme, mechanism, or answer. Do not solve in this stage."
+    ),
+    "ASSOCIATE_THEME": (
+        'Output {"flavor_associations":[{"trigger":"...","association":"...",'
+        '"role":"theme|parameter|ordering|decoder|extractor|instruction"}],'
+        '"association_candidates":[{"id":"...","ontology":"...","bridge":['
+        '{"surface":"...","domain":"..."}],"signal_ids":["..."],"prediction":"...",'
+        '"falsifier":"...","unexplained_signal_ids":["..."],"confidence":0.0}]}. '
+        "Generate 3-5 genuinely different candidate ontologies. Each bridge must explain at least two independent "
+        "signals and predict one untreated holdout. Distinguish a flavor association from proven evidence. "
+        "Do not name or select tools and do not propose a final answer."
     ),
     "HYPOTHESIZE_PLAN": (
-        'Output {"hypotheses":[{"id":"...","mechanism":"...","confidence":0.0}],'
-        '"plan":[{"id":"...","tool":"...","arguments":{},"purpose":"..."}]}. '
+        'Output {"hypotheses":[{"id":"...","mechanism":"...","association_id":"...",'
+        '"prediction":"...","falsifier":"...","confidence":0.0}],'
+        '"plan":[{"id":"...","tool":"...","arguments":{},"purpose":"...","prediction":"..."}]}. '
         "Preserve at least two competing, distinguishable hypotheses. Consider whether an intermediate answer "
         "is still a carrier and whether an inconsistency or multiple solutions are intentional information. "
         "Choose the smallest discriminating plan, normally 1-4 calls, and cover the final extraction, "
@@ -97,7 +110,9 @@ def _messages(stage: str, state: PuzzleGraphState) -> list[dict[str, str]]:
         "puzzle": state["puzzle"],
         "artifacts": state.get("artifacts", {}),
         "observations": state.get("observations", []),
+        "tensions": state.get("tensions", []),
         "flavor_associations": state.get("flavor_associations", []),
+        "association_candidates": state.get("association_candidates", []),
         "hypotheses": state.get("hypotheses", []),
         "plan": state.get("plan", []),
         "attempts": state.get("attempts", []),
@@ -209,10 +224,27 @@ def _observe(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphSta
         return _exhausted("observe_classify", budget)
     return {
         "observations": _array(data, "observations"),
+        "tensions": _array(data, "tensions"),
+        "budget": budget,
+        "stage": "ASSOCIATE_THEME",
+        "last_node": "observe_classify",
+        "next_node": "associate_theme",
+    }
+
+
+def _associate(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphState:
+    data, budget = _call_stage(provider, "ASSOCIATE_THEME", state)
+    if data is None:
+        return _exhausted("associate_theme", budget)
+    candidates = _array(data, "association_candidates")
+    if not 3 <= len(candidates) <= 5:
+        raise ValueError("ASSOCIATE_THEME must preserve 3 to 5 candidate ontologies")
+    return {
         "flavor_associations": _array(data, "flavor_associations"),
+        "association_candidates": candidates,
         "budget": budget,
         "stage": "HYPOTHESIZE_PLAN",
-        "last_node": "observe_classify",
+        "last_node": "associate_theme",
         "next_node": "hypothesize_plan",
     }
 
@@ -441,6 +473,7 @@ def build_puzzle_graph(provider: StageProvider, *, checkpointer=None, step_mode:
     builder.add_node("artifact_inventory", _artifact_inventory)
     builder.add_node("human_interrupt", _human_interrupt)
     builder.add_node("observe_classify", lambda state: _observe(provider, state))
+    builder.add_node("associate_theme", lambda state: _associate(provider, state))
     builder.add_node("hypothesize_plan", lambda state: _hypothesize(provider, state))
     builder.add_node("tool_dispatch", _tool_dispatch)
     builder.add_node("evaluate_evidence", lambda state: _evaluate(provider, state))
@@ -455,7 +488,10 @@ def build_puzzle_graph(provider: StageProvider, *, checkpointer=None, step_mode:
     )
     builder.add_edge("human_interrupt", "artifact_inventory")
     builder.add_conditional_edges(
-        "observe_classify", _continue_or_end, {"continue": "hypothesize_plan", "end": END}
+        "observe_classify", _continue_or_end, {"continue": "associate_theme", "end": END}
+    )
+    builder.add_conditional_edges(
+        "associate_theme", _continue_or_end, {"continue": "hypothesize_plan", "end": END}
     )
     builder.add_conditional_edges(
         "hypothesize_plan", _continue_or_end, {"continue": "tool_dispatch", "end": END}

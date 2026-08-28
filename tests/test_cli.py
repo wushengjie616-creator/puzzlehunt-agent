@@ -167,7 +167,7 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "SOLVED")
         self.assertEqual(result["final_answer"].lower(), "hello")
-        self.assertEqual(result["budget"]["calls_used"], 4)
+        self.assertEqual(result["budget"]["calls_used"], 5)
         self.assertEqual(persisted["final_answer"].lower(), "hello")
         self.assertNotEqual(branched_id, session_id)
         self.assertEqual(final["answer"].lower(), "hello")

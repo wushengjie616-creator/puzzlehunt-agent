@@ -68,7 +68,7 @@ def run_cycle_scheduler(
     runs_root: str | Path,
     provider_name: str = "deepseek",
     model: str = "deepseek-v4-pro",
-    max_calls: int = 6,
+    max_calls: int = 8,
     timeout_seconds: float = 3600,
     interval_hours: float = 3,
     duration_hours: float = 24,
