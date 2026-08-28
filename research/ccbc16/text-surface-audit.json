@@ -211,6 +211,27 @@
         "fce2f28cd82188ef60f19c250ae4209961db5ade21628d0362e2d832a01077b7"
       ],
       "unrepresented_channels": []
+    },
+    {
+      "puzzle_id": 31,
+      "adapter": "human-reviewed-static-artifact",
+      "required_channels": [
+        "eight-panel geometry and membership",
+        "answer-card numbered boxes and semantic occlusion",
+        "visible answer-card boundary landmarks",
+        "cell color",
+        "discrete shape identity and orientation",
+        "all printed letters, numbers, symbols, and instructions"
+      ],
+      "source_sha256": [
+        "fc845ff16abe0dbd1300c13870d177585656e000ba8cab6ec6e64ac20316469d",
+        "a92232a853a70cf8502a2882fe4bc7ddda084173fc482cd7a2a4899f0552aa23"
+      ],
+      "unrepresented_channels": [],
+      "fidelity_notes": [
+        "Checked against the freshly downloaded official 3000x1680 pre-solve raster; occluded answer-card content remains explicitly unknown.",
+        "The ink splatter's exact pixel contour is decorative/occlusive, not an independent clue channel; all numbered boxes, semantic occlusion, and visible boundary landmarks are represented."
+      ]
     }
   ],
   "static_transcription_queue": [
@@ -271,15 +292,6 @@
         "https://ccbc16.cipherpuzzles.com/puzzle/3/30",
         "https://ccbc16.cipherpuzzles.com/data/puzzles/30.json",
         "https://static.cipherpuzzles.com/static/images/5ee0573155ad4b86b277f599a63545ef.pdf"
-      ]
-    },
-    {
-      "puzzle_id": 31,
-      "required_channels": [
-        "panel geometry",
-        "occlusion boundary",
-        "cell color",
-        "shape orientation"
       ]
     },
     {
@@ -400,11 +412,11 @@
   ],
   "counts": {
     "direct_text": 10,
-    "reviewed_transcriptions": 10,
-    "static_transcription_queue": 6,
+    "reviewed_transcriptions": 11,
+    "static_transcription_queue": 5,
     "pending_artifact_audit": 0,
     "not_text_faithful": 23,
-    "runnable_text_suite": 20,
+    "runnable_text_suite": 21,
     "total": 49
   }
 }
