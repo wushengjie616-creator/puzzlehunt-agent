@@ -108,8 +108,13 @@ def evaluate_intermediate_case(
     matched = sum(
         any(
             expected_value == actual_value
-            or expected_value in actual_value
-            or actual_value in expected_value
+            or (
+                min(len(expected_value), len(actual_value)) >= 2
+                and (
+                    expected_value in actual_value
+                    or actual_value in expected_value
+                )
+            )
             for expected_value in group
             for actual_value in actual_values
         )

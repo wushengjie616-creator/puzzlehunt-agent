@@ -374,7 +374,7 @@ class ComplexGraphTests(unittest.TestCase):
         self.assertIn("independent_derivation", verify_prompt)
         self.assertIn("open question", verify_prompt)
 
-    def test_subproblem_validation_rejects_drifted_accepted_value(self):
+    def test_subproblem_validation_downgrades_a_drifted_accepted_value(self):
         provider = ValidationContractProvider({
             "validated_results": [{
                 "result_id": "sr1",
@@ -392,22 +392,47 @@ class ComplexGraphTests(unittest.TestCase):
             "issues": [],
         })
 
-        with self.assertRaisesRegex(
-            ValueError, "validated subproblem results must exactly reference supported candidates"
-        ):
-            build_puzzle_graph(provider).invoke(
-                new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=10)
-            )
+        result = build_puzzle_graph(provider).invoke(
+            new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=10)
+        )
 
-    def test_subproblem_validation_requires_one_unique_verdict_per_nonempty_candidate(self):
-        invalid_responses = {
-            "missing": {
-                "validated_results": [],
-                "contradicted_result_ids": [],
-                "needs_test_result_ids": [],
-                "unresolved_subproblem_ids": ["sp1"],
-                "issues": [],
-            },
+        self.assertEqual(result["validated_subproblem_results"], [])
+        self.assertEqual(result["subproblem_validation"]["needs_test_result_ids"], ["sr1"])
+        self.assertFalse(any(
+            item.get("kind") == "validated_subproblem_result"
+            for item in result["evidence"]
+        ))
+        self.assertIn(
+            "AUTO_DOWNGRADED_INVALID_VALIDATIONS:1",
+            result["subproblem_validation"]["issues"],
+        )
+
+    def test_subproblem_validation_safely_downgrades_an_omitted_verdict(self):
+        response = {
+            "validated_results": [],
+            "contradicted_result_ids": [],
+            "needs_test_result_ids": [],
+            "unresolved_subproblem_ids": [],
+            "issues": [],
+        }
+
+        result = build_puzzle_graph(ValidationContractProvider(response)).invoke(
+            new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=10)
+        )
+
+        self.assertEqual(result["validated_subproblem_results"], [])
+        self.assertEqual(result["subproblem_validation"]["needs_test_result_ids"], ["sr1"])
+        self.assertEqual(result["subproblem_validation"]["unresolved_subproblem_ids"], ["sp1"])
+        self.assertEqual(
+            result["subproblem_validation"]["auto_classified_result_ids"], ["sr1"]
+        )
+        self.assertIn(
+            "AUTO_NEEDS_TEST_UNCLASSIFIED_RESULTS:1",
+            result["subproblem_validation"]["issues"],
+        )
+
+    def test_subproblem_validation_conservatively_normalizes_conflicting_verdicts(self):
+        inconsistent_responses = {
             "overlapping": {
                 "validated_results": [{
                     "result_id": "sr1",
@@ -433,18 +458,77 @@ class ComplexGraphTests(unittest.TestCase):
             },
         }
 
-        for name, response in invalid_responses.items():
+        for name, response in inconsistent_responses.items():
             with self.subTest(name=name):
-                with self.assertRaisesRegex(
-                    ValueError,
-                    "every non-empty subproblem result must receive exactly one verdict|"
-                    "subproblem result verdicts must be unique and disjoint",
-                ):
-                    build_puzzle_graph(ValidationContractProvider(response)).invoke(
-                        new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=10)
+                result = build_puzzle_graph(ValidationContractProvider(response)).invoke(
+                    new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=10)
+                )
+                validation = result["subproblem_validation"]
+                self.assertEqual(result["validated_subproblem_results"], [])
+                self.assertFalse(any(
+                    item.get("kind") == "validated_subproblem_result"
+                    for item in result["evidence"]
+                ))
+                if name == "duplicate_within_partition":
+                    self.assertEqual(validation["contradicted_result_ids"], ["sr1"])
+                    self.assertIn("AUTO_DEDUPLICATED_VERDICTS", validation["issues"])
+                else:
+                    self.assertEqual(validation["needs_test_result_ids"], ["sr1"])
+                if name == "overlapping":
+                    self.assertIn(
+                        "AUTO_DOWNGRADED_CONFLICTING_RESULTS:1", validation["issues"]
                     )
 
-    def test_subproblem_validation_requires_exact_unresolved_subproblem_coverage(self):
+    def test_subproblem_validation_rejects_a_hallucinated_result_id(self):
+        response = {
+            "validated_results": [],
+            "contradicted_result_ids": ["not-a-result"],
+            "needs_test_result_ids": [],
+            "unresolved_subproblem_ids": ["sp1"],
+            "issues": [],
+        }
+
+        with self.assertRaisesRegex(
+            ValueError, "subproblem result verdicts must reference existing candidates"
+        ):
+            build_puzzle_graph(ValidationContractProvider(response)).invoke(
+                new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=10)
+            )
+
+    def test_subproblem_validation_ignores_verdicts_for_empty_results(self):
+        materialization = {
+            "structure_model": {
+                "kind": "list", "unit_count": 1,
+                "grouping_rule": "one carrier", "dependencies": [],
+            },
+            "subproblems": [{
+                "id": "sp1", "input_excerpt": "?????", "signal_ids": ["o1"],
+                "group": "main", "depends_on": [],
+                "predicted_product": "readable carrier", "status": "open",
+            }],
+            "subproblem_results": [{
+                "id": "sr-empty", "subproblem_id": "sp1", "value": "",
+                "status": "candidate", "signal_ids": ["o1"], "confidence": 0.0,
+            }],
+        }
+        response = {
+            "validated_results": [],
+            "contradicted_result_ids": [],
+            "needs_test_result_ids": ["sr-empty"],
+            "unresolved_subproblem_ids": ["sp1"],
+            "issues": [],
+        }
+
+        result = build_puzzle_graph(ValidationContractProvider(
+            response, materialization_response=materialization
+        )).invoke(new_puzzle_state(PuzzleInput(content="?????"), max_calls=10))
+
+        validation = result["subproblem_validation"]
+        self.assertEqual(validation["needs_test_result_ids"], [])
+        self.assertEqual(validation["unresolved_subproblem_ids"], ["sp1"])
+        self.assertIn("AUTO_IGNORED_EMPTY_RESULT_IDS:1", validation["issues"])
+
+    def test_subproblem_validation_recomputes_exact_unresolved_subproblem_coverage(self):
         base_validation = {
             "validated_results": [{
                 "result_id": "sr1",
@@ -494,25 +578,35 @@ class ComplexGraphTests(unittest.TestCase):
                 "confidence": 0.4,
             }],
         }
-        invalid_cases = {
-            "missing_unresolved_sp2": ValidationContractProvider(
-                base_validation, materialization_response=two_subproblems
+        inconsistent_cases = {
+            "missing_unresolved_sp2": (
+                ValidationContractProvider(
+                    base_validation, materialization_response=two_subproblems
+                ),
+                ["sp2"],
             ),
-            "accepted_sp1_also_marked_unresolved": ValidationContractProvider({
-                **base_validation,
-                "unresolved_subproblem_ids": ["sp1"],
-            }),
+            "accepted_sp1_also_marked_unresolved": (
+                ValidationContractProvider({
+                    **base_validation,
+                    "unresolved_subproblem_ids": ["sp1"],
+                }),
+                [],
+            ),
         }
 
-        for name, provider in invalid_cases.items():
+        for name, (provider, expected_unresolved) in inconsistent_cases.items():
             with self.subTest(name=name):
-                with self.assertRaisesRegex(
-                    ValueError,
-                    "unresolved subproblem ids must cover every subproblem without a supported result",
-                ):
-                    build_puzzle_graph(provider).invoke(
-                        new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=10)
-                    )
+                result = build_puzzle_graph(provider).invoke(
+                    new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=10)
+                )
+                self.assertEqual(
+                    result["subproblem_validation"]["unresolved_subproblem_ids"],
+                    expected_unresolved,
+                )
+                self.assertIn(
+                    "AUTO_RECOMPUTED_UNRESOLVED_SUBPROBLEMS",
+                    result["subproblem_validation"]["issues"],
+                )
 
     def test_call_budget_stops_graph_without_overrun(self):
         provider = ScriptedStageProvider()
@@ -728,6 +822,52 @@ class ComplexGraphTests(unittest.TestCase):
         self.assertEqual(result["status"], "NEEDS_REVIEW")
         self.assertFalse(result["intermediate_validation"]["passed"])
         self.assertIn("No evidence-backed intermediate was validated", result["blockers"])
+
+    def test_intermediate_verification_cannot_invent_a_value_missing_from_state(self):
+        class InventedIntermediateProvider(ScriptedStageProvider):
+            def complete(self, messages):
+                marker = messages[0]["content"].split("PUZZLE_STAGE: ", 1)[1].splitlines()[0]
+                if marker == "EVALUATE_EVIDENCE":
+                    self.stages.append(marker)
+                    self.messages.append(messages)
+                    return json.dumps({
+                        "decision": "verify",
+                        "evidence_assessment": [{"hypothesis_id": "h1", "effect": "supports"}],
+                        "intermediate_answers": [],
+                        "answer_candidates": [],
+                    })
+                if marker == "VERIFY_INTERMEDIATES":
+                    self.stages.append(marker)
+                    self.messages.append(messages)
+                    state = json.loads(messages[1]["content"])
+                    evidence_id = state["evidence"][0]["id"]
+                    return json.dumps({
+                        "validated_intermediates": [{
+                            "value": "INVENTED",
+                            "role": "carrier",
+                            "evidence_ids": [evidence_id],
+                        }],
+                        "checks": {
+                            "evidence_backed": True,
+                            "reproducible": True,
+                            "distinct_from_final": True,
+                            "extraction_ready": True,
+                        },
+                        "issues": [],
+                    })
+                return super().complete(messages)
+
+        result = build_puzzle_graph(InventedIntermediateProvider()).invoke(
+            new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=8)
+        )
+
+        self.assertEqual(result["validated_intermediate_answers"], [])
+        self.assertFalse(result["intermediate_validation"]["passed"])
+        self.assertFalse(result["intermediate_validation"]["source_values_valid"])
+        self.assertIn(
+            "REJECTED_INTERMEDIATES_NOT_PRESENT_IN_STATE:1",
+            result["intermediate_validation"]["issues"],
+        )
 
 
 if __name__ == "__main__":

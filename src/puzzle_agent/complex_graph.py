@@ -99,6 +99,8 @@ _STAGE_INSTRUCTIONS = {
         "value, result_id, and subproblem_id must exactly copy an existing candidate; do not correct, extend, or "
         "invent values. Partition every existing candidate result into validated_results, contradicted_result_ids, "
         "or needs_test_result_ids. List every subproblem without a supported result in unresolved_subproblem_ids. "
+        "When uncertain, use needs_test_result_ids; omitted candidates are conservatively downgraded to needs-test, "
+        "and unresolved coverage is recomputed from supported results by the runtime. "
         "A faithful transcription preserves a carrier but does not claim its meaning is solved. Keep justification "
         "short and falsifiable. Do not select tools, combine subproblems, extract a final answer, or rely on theme alone."
     ),
@@ -133,8 +135,9 @@ _STAGE_INSTRUCTIONS = {
         'Output {"validated_intermediates":[{"value":"...","role":"carrier|instruction|ordering|parameter",'
         '"evidence_ids":["..."]}],"checks":{"evidence_backed":true,"reproducible":true,'
         '"distinct_from_final":true,"extraction_ready":true},"issues":["..."]}. '
-        "Validate only intermediate values already present in state; do not invent a replacement or final answer. "
-        "Every validated value must cite existing evidence IDs and explain a role in the remaining extraction. "
+        "Validate only intermediate values already present in state and copy the value exactly; do not invent a "
+        "replacement or final answer. Every validated value must cite a non-empty subset of that source "
+        "intermediate's existing evidence IDs and explain a role in the remaining extraction. "
         "Use false checks and explicit issues when no carrier is sufficiently supported."
     ),
     "VERIFY_ANSWER": (
@@ -357,23 +360,37 @@ def _validate_subproblems(
     data, budget = _call_stage(provider, "VALIDATE_SUBPROBLEMS", state)
     if data is None:
         return _exhausted("validate_subproblems", budget)
-    candidates = {
+    all_results = {
         item["id"]: item
         for item in state.get("subproblem_results", [])
-        if isinstance(item.get("id"), str) and str(item.get("value", "")).strip()
+        if isinstance(item.get("id"), str)
     }
-    subproblem_ids = {
+    candidates = {
+        result_id: item
+        for result_id, item in all_results.items()
+        if str(item.get("value", "")).strip()
+    }
+    ordered_subproblem_ids = [
         item["id"] for item in state.get("subproblems", []) if isinstance(item.get("id"), str)
-    }
-    validated = _array(data, "validated_results")
-    accepted_ids: set[str] = set()
-    for item in validated:
+    ]
+    raw_validated = _array(data, "validated_results")
+    validated_by_id: dict[str, dict[str, Any]] = {}
+    invalid_known_ids: set[str] = set()
+    ignored_empty_ids: set[str] = set()
+    unknown_ids: set[str] = set()
+    duplicate_verdicts = False
+    for item in raw_validated:
         result_id = item.get("result_id")
         candidate = candidates.get(result_id)
         signal_ids = item.get("signal_ids")
+        if candidate is None:
+            if result_id in all_results:
+                ignored_empty_ids.add(result_id)
+            else:
+                unknown_ids.add(str(result_id))
+            continue
         if (
-            candidate is None
-            or item.get("subproblem_id") != candidate.get("subproblem_id")
+            item.get("subproblem_id") != candidate.get("subproblem_id")
             or item.get("value") != candidate.get("value")
             or not isinstance(signal_ids, list)
             or not signal_ids
@@ -384,25 +401,74 @@ def _validate_subproblems(
             ))
             or not set(signal_ids).issubset(set(candidate.get("signal_ids", [])))
         ):
-            raise ValueError("validated subproblem results must exactly reference supported candidates")
-        if result_id in accepted_ids:
-            raise ValueError("validated subproblem result ids must be unique")
-        accepted_ids.add(result_id)
-    contradicted = _string_array(data, "contradicted_result_ids")
-    needs_test = _string_array(data, "needs_test_result_ids")
-    partitions = [accepted_ids, set(contradicted), set(needs_test)]
-    if any(len(values) != len(original) for values, original in zip(
-        partitions[1:], (contradicted, needs_test)
-    )) or any(left & right for index, left in enumerate(partitions) for right in partitions[index + 1:]):
-        raise ValueError("subproblem result verdicts must be unique and disjoint")
-    if set().union(*partitions) != set(candidates):
-        raise ValueError("every non-empty subproblem result must receive exactly one verdict")
-    unresolved = _string_array(data, "unresolved_subproblem_ids")
-    unresolved_ids = set(unresolved)
+            invalid_known_ids.add(result_id)
+            continue
+        if result_id in validated_by_id:
+            duplicate_verdicts = True
+            continue
+        validated_by_id[result_id] = item
+
+    def normalize_ids(values: list[str]) -> set[str]:
+        nonlocal duplicate_verdicts
+        normalized: set[str] = set()
+        for result_id in values:
+            if result_id in candidates:
+                if result_id in normalized:
+                    duplicate_verdicts = True
+                normalized.add(result_id)
+            elif result_id in all_results:
+                ignored_empty_ids.add(result_id)
+            else:
+                unknown_ids.add(result_id)
+        return normalized
+
+    contradicted_ids = normalize_ids(_string_array(data, "contradicted_result_ids"))
+    needs_test_ids = normalize_ids(_string_array(data, "needs_test_result_ids"))
+    accepted_ids = set(validated_by_id)
+    if unknown_ids:
+        raise ValueError("subproblem result verdicts must reference existing candidates")
+    conflicting_ids = (
+        (accepted_ids & contradicted_ids)
+        | (accepted_ids & needs_test_ids)
+        | (contradicted_ids & needs_test_ids)
+    )
+    downgraded_ids = conflicting_ids | invalid_known_ids
+    for result_id in downgraded_ids:
+        validated_by_id.pop(result_id, None)
+    accepted_ids = set(validated_by_id)
+    contradicted_ids -= downgraded_ids
+    needs_test_ids |= downgraded_ids
+    classified_ids = accepted_ids | contradicted_ids | needs_test_ids
+    auto_classified = [result_id for result_id in candidates if result_id not in classified_ids]
+    needs_test_ids.update(auto_classified)
+    validated = [
+        validated_by_id[result_id] for result_id in candidates if result_id in validated_by_id
+    ]
+    contradicted = [result_id for result_id in candidates if result_id in contradicted_ids]
+    needs_test = [result_id for result_id in candidates if result_id in needs_test_ids]
+    supplied_unresolved = _string_array(data, "unresolved_subproblem_ids")
     accepted_subproblem_ids = {item["subproblem_id"] for item in validated}
-    if len(unresolved_ids) != len(unresolved) or unresolved_ids != subproblem_ids - accepted_subproblem_ids:
-        raise ValueError("unresolved subproblem ids must cover every subproblem without a supported result")
+    unresolved = [
+        subproblem_id
+        for subproblem_id in ordered_subproblem_ids
+        if subproblem_id not in accepted_subproblem_ids
+    ]
     issues = _string_array(data, "issues")
+    if duplicate_verdicts:
+        issues.append("AUTO_DEDUPLICATED_VERDICTS")
+    if ignored_empty_ids:
+        issues.append(f"AUTO_IGNORED_EMPTY_RESULT_IDS:{len(ignored_empty_ids)}")
+    if invalid_known_ids:
+        issues.append(f"AUTO_DOWNGRADED_INVALID_VALIDATIONS:{len(invalid_known_ids)}")
+    if conflicting_ids:
+        issues.append(f"AUTO_DOWNGRADED_CONFLICTING_RESULTS:{len(conflicting_ids)}")
+    if auto_classified:
+        issues.append(f"AUTO_NEEDS_TEST_UNCLASSIFIED_RESULTS:{len(auto_classified)}")
+    if (
+        len(set(supplied_unresolved)) != len(supplied_unresolved)
+        or set(supplied_unresolved) != set(unresolved)
+    ):
+        issues.append("AUTO_RECOMPUTED_UNRESOLVED_SUBPROBLEMS")
     evidence = list(state.get("evidence", []))
     evidence.extend({
         "id": f"semantic-{item['result_id']}",
@@ -419,6 +485,7 @@ def _validate_subproblems(
             "accepted": len(validated),
             "contradicted_result_ids": contradicted,
             "needs_test_result_ids": needs_test,
+            "auto_classified_result_ids": auto_classified,
             "unresolved_subproblem_ids": unresolved,
             "issues": issues,
         },
@@ -591,7 +658,7 @@ def _verify_intermediates(
     data, budget = _call_stage(provider, "VERIFY_INTERMEDIATES", state)
     if data is None:
         return _exhausted("verify_intermediates", budget)
-    validated = _array(data, "validated_intermediates")
+    raw_validated = _array(data, "validated_intermediates")
     checks = data.get("checks", {})
     required_checks = {
         "evidence_backed", "reproducible", "distinct_from_final", "extraction_ready"
@@ -606,20 +673,49 @@ def _verify_intermediates(
     evidence_ids = {
         str(item["id"]) for item in state.get("evidence", []) if item.get("id") is not None
     }
-    references_valid = bool(validated)
-    for item in validated:
+    source_evidence: dict[str, set[str]] = {}
+    for item in state.get("intermediate_answers", []):
+        value = item.get("value")
         item_evidence = item.get("evidence_ids")
-        if (
+        if isinstance(value, str) and isinstance(item_evidence, list):
+            source_evidence.setdefault(value, set()).update(
+                evidence_id for evidence_id in item_evidence
+                if isinstance(evidence_id, str) and evidence_id in evidence_ids
+            )
+    validated: list[dict[str, Any]] = []
+    references_valid = bool(raw_validated)
+    source_values_valid = bool(raw_validated)
+    rejected = 0
+    for item in raw_validated:
+        item_evidence = item.get("evidence_ids")
+        value = item.get("value")
+        source_ids = source_evidence.get(value) if isinstance(value, str) else None
+        valid = not (
             not isinstance(item.get("value"), str)
             or not item["value"].strip()
             or not isinstance(item.get("role"), str)
             or not isinstance(item_evidence, list)
             or not item_evidence
             or not all(isinstance(value, str) and value in evidence_ids for value in item_evidence)
-        ):
+        )
+        if source_ids is None or not source_ids or not set(item_evidence or []).issubset(source_ids):
+            source_values_valid = False
+            valid = False
+        if not valid:
             references_valid = False
-            break
-    passed = bool(validated) and references_valid and all(checks.values()) and not issues
+            rejected += 1
+            continue
+        validated.append(item)
+    if rejected:
+        issues.append(f"REJECTED_INTERMEDIATES_NOT_PRESENT_IN_STATE:{rejected}")
+    passed = (
+        bool(validated)
+        and len(validated) == len(raw_validated)
+        and references_valid
+        and source_values_valid
+        and all(checks.values())
+        and not issues
+    )
     return {
         "budget": budget,
         "validated_intermediate_answers": validated,
@@ -627,6 +723,7 @@ def _verify_intermediates(
             "passed": passed,
             "checks": checks,
             "evidence_references_valid": references_valid,
+            "source_values_valid": source_values_valid,
             "issues": issues,
         },
         "stage": "VERIFY_ANSWER",

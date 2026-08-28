@@ -160,6 +160,28 @@ class DerivedBenchmarkTests(unittest.TestCase):
         self.assertEqual(partial["score"], 0.5)
         self.assertEqual(alias["matched"], 1)
 
+    def test_intermediate_evaluator_does_not_substring_match_one_character_aliases(self):
+        with tempfile.TemporaryDirectory() as directory:
+            case = Path(directory)
+            (case / "oracle.json").write_text(json.dumps({
+                "answer": "FINAL",
+                "intermediate_answers": [{
+                    "value": "ℹ️",
+                    "aliases": ["i"],
+                    "source": "human-reviewed-official-solution",
+                }],
+            }), encoding="utf-8")
+            result = evaluate_intermediate_case(case, {
+                "validated_intermediate_answers": [{
+                    "value": "MOVIE BLUE CIRCLE",
+                    "role": "carrier",
+                    "evidence_ids": ["e1"],
+                }]
+            })
+
+        self.assertEqual(result["matched"], 0)
+        self.assertFalse(result["pass"])
+
 
 if __name__ == "__main__":
     unittest.main()
