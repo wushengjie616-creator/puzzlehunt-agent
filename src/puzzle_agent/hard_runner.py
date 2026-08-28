@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 import json
 from pathlib import Path
+import re
 import shutil
 from typing import Any, Callable
 from urllib.request import Request, urlopen
@@ -24,37 +25,113 @@ class _TextConverter(HTMLParser):
         self.parts: list[str] = []
         self.has_image = False
         self.has_script = False
+        self.has_document = False
+        self.has_media = False
+        self._in_style = False
+        self._style_parts: list[str] = []
+        self._class_backgrounds: dict[str, str] = {}
+        self._in_pre = False
+        self._pre_parts: list[str] = []
+        self._pre_blocks: list[str] = []
+        self._cell_start: int | None = None
+        self._cell_background: str | None = None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = dict(attrs)
+        if tag == "style":
+            self._in_style = True
+            self._style_parts = []
+            return
+        if tag == "pre":
+            self.parts.append("\n")
+            self._in_pre = True
+            self._pre_parts = []
+            return
         if tag in self._BREAK_TAGS:
             self.parts.append("\n")
+        if tag in {"td", "th"}:
+            self._cell_start = len(self.parts)
+            style = values.get("style") or ""
+            match = re.search(r"background-color\s*:\s*([^;\s]+)", style, re.IGNORECASE)
+            background = match.group(1) if match else None
+            if background is None:
+                for class_name in (values.get("class") or "").split():
+                    if class_name in self._class_backgrounds:
+                        background = self._class_backgrounds[class_name]
+                        break
+            self._cell_background = background
         if tag == "img":
             self.has_image = True
-            values = dict(attrs)
             label = values.get("alt") or values.get("src") or "image"
             self.parts.append(f"[IMAGE: {label}]")
         if tag == "script":
             self.has_script = True
+        if tag in {"audio", "video", "iframe", "object", "embed", "canvas"}:
+            self.has_media = True
+        if tag == "a":
+            href = (values.get("href") or "").casefold()
+            if (
+                re.search(r"\.(?:pdf|xlsx?|docx?|zip|csv)(?:[?#]|$)", href)
+                or "docs.google.com/" in href
+                or "docs.qq.com/" in href
+            ):
+                self.has_document = True
 
     def handle_endtag(self, tag: str) -> None:
+        if tag == "style":
+            css = "".join(self._style_parts)
+            for selector, color in re.findall(
+                r"\.([A-Za-z_][\w-]*)\s*\{[^}]*?background-color\s*:\s*([^;\s}]+)",
+                css,
+                re.IGNORECASE | re.DOTALL,
+            ):
+                self._class_backgrounds[selector] = color
+            self._in_style = False
+            return
+        if tag == "pre":
+            placeholder = f"\x00PRE{len(self._pre_blocks)}\x00"
+            self._pre_blocks.append("".join(self._pre_parts).strip("\r\n"))
+            self.parts.extend([placeholder, "\n"])
+            self._in_pre = False
+            return
+        if tag in {"td", "th"} and self._cell_background:
+            visible = "".join(self.parts[self._cell_start or 0:]).strip()
+            self.parts.append(
+                f" [bg={self._cell_background}]" if visible
+                else f"[blank bg={self._cell_background}]"
+            )
+            self._cell_background = None
+            self._cell_start = None
         if tag in self._BREAK_TAGS or tag in {"td", "th"}:
             self.parts.append("\n" if tag in self._BREAK_TAGS else " | ")
 
     def handle_data(self, data: str) -> None:
+        if self._in_style:
+            self._style_parts.append(data)
+            return
+        if self._in_pre:
+            self._pre_parts.append(data)
+            return
         self.parts.append(data)
 
     def text(self) -> str:
         lines = [" ".join(line.split()) for line in "".join(self.parts).splitlines()]
-        return "\n".join(line for line in lines if line).strip()
+        result = "\n".join(line for line in lines if line).strip()
+        for index, block in enumerate(self._pre_blocks):
+            result = result.replace(f"\x00PRE{index}\x00", block)
+        return result
 
 
-def _html_details(value: Any) -> tuple[str, bool, bool]:
+def _html_details(value: Any) -> tuple[str, bool, bool, bool, bool]:
     if not isinstance(value, str) or not value:
-        return "", False, False
+        return "", False, False, False, False
     parser = _TextConverter()
     parser.feed(value)
     parser.close()
-    return parser.text(), parser.has_image, parser.has_script
+    return (
+        parser.text(), parser.has_image, parser.has_script,
+        parser.has_document, parser.has_media,
+    )
 
 
 def _html_to_text(value: Any) -> str:
@@ -90,7 +167,7 @@ def convert_official_payload(payload: dict[str, Any], source_url: str) -> dict[s
         raise ValueError("official payload has no usable answer")
     surface_fields = (payload.get("html"), payload.get("content"), payload.get("extend_content"))
     details = [_html_details(value) for value in surface_fields]
-    content_parts = [text for text, _has_image, _has_script in details]
+    content_parts = [text for text, *_flags in details]
     image = payload.get("image")
     if isinstance(image, str) and image.strip():
         content_parts.append(f"[SOURCE ARTIFACT: {image.strip()}]")
@@ -100,12 +177,24 @@ def convert_official_payload(payload: dict[str, Any], source_url: str) -> dict[s
     required_artifacts: list[str] = []
     if isinstance(image, str) and image.strip():
         required_artifacts.append("source-image")
-    elif any(has_image for _text, has_image, _has_script in details):
+    elif any(item[1] for item in details):
         required_artifacts.append("source-image")
     if (
         isinstance(payload.get("script"), str) and payload["script"].strip()
-    ) or any(has_script for _text, _has_image, has_script in details):
+    ) or any(item[2] for item in details):
         required_artifacts.append("source-interaction")
+    if any(item[3] for item in details):
+        required_artifacts.append("source-document")
+    if any(item[4] for item in details):
+        required_artifacts.append("source-media")
+    tips = payload.get("tips")
+    if isinstance(tips, list) and any(
+        isinstance(tip, dict)
+        and "碎片" in str(tip.get("title") or "")
+        and "<img" in str(tip.get("content") or "").casefold()
+        for tip in tips
+    ):
+        required_artifacts.append("source-fragments")
     runtime_input: dict[str, Any] = {
         "title": _html_to_text(payload.get("title")),
         "flavor_text": _html_to_text(payload.get("desc")),

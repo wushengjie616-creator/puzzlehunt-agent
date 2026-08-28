@@ -61,6 +61,72 @@ class CCBC16TextSuiteTests(unittest.TestCase):
             {"value": "OMEGA", "source": "human-reviewed-official-solution"},
         ])
 
+    def test_builder_accepts_a_human_reviewed_static_artifact_transcription(self):
+        entry = {
+            "puzzle_id": 9,
+            "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/9",
+            "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/9.json",
+        }
+        payload = {
+            "pid": 9,
+            "answer_type": 0,
+            "title": "Grid",
+            "content": "Fill the grid.",
+            "image": "https://static.cipherpuzzles.com/grid.png",
+            "answer": "SECRET",
+            "analysis": "先得到 **BRIDGE**，最终为 SECRET。",
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = root / "manifest.json"
+            manifest.write_text(json.dumps({"puzzles": [entry]}), encoding="utf-8")
+            result = build_text_suite(
+                manifest_path=manifest,
+                output_root=root / "suite",
+                fetch_json=lambda _url: payload,
+                surface_overrides={9: {
+                    "content": "Rows, top to bottom:\nA . B\n. C .",
+                    "artifact_urls": [payload["image"]],
+                    "source_sha256": ["a" * 64],
+                    "transcription_method": "human-reviewed",
+                    "fidelity_notes": "Dots are empty cells; row and column order preserved.",
+                    "unrepresented_channels": [],
+                }},
+            )
+            case = root / "suite" / "text" / "ccbc16-009"
+            runtime = json.loads((case / "input.json").read_text(encoding="utf-8"))
+            provenance = json.loads(
+                (case / "provenance.json").read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(result["included_ids"], [9])
+        self.assertNotIn("required_artifacts", runtime)
+        self.assertIn("A . B", runtime["content"])
+        self.assertEqual(provenance["surface_transcription"]["source_sha256"], ["a" * 64])
+
+    def test_builder_rejects_an_unverifiable_surface_transcription(self):
+        entry = {
+            "puzzle_id": 9,
+            "url": "https://ccbc16.cipherpuzzles.com/puzzle/1/9",
+            "data_url": "https://ccbc16.cipherpuzzles.com/data/puzzles/9.json",
+        }
+        payload = {
+            "answer_type": 0, "title": "Grid", "image": "grid.png",
+            "answer": "SECRET",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = root / "manifest.json"
+            manifest.write_text(json.dumps({"puzzles": [entry]}), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "surface transcription"):
+                build_text_suite(
+                    manifest_path=manifest,
+                    output_root=root / "suite",
+                    fetch_json=lambda _url: payload,
+                    surface_overrides={9: {"content": "guessed from solution"}},
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

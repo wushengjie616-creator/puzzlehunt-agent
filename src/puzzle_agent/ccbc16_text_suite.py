@@ -13,6 +13,8 @@ from .hard_runner import convert_official_payload, load_nonmeta_manifest
 
 JsonFetcher = Callable[[str], dict[str, Any]]
 _EMPHASIZED = re.compile(r"\*\*([^*\r\n]{1,100})\*\*|`([^`\r\n]{1,100})`")
+_IMAGE_SRC = re.compile(r"<img\b[^>]*\bsrc=[\"']([^\"']+)[\"']", re.IGNORECASE)
+_SHA256 = re.compile(r"[0-9a-f]{64}")
 
 
 def _normalized(value: str) -> str:
@@ -56,12 +58,50 @@ def _write_json(path: Path, value: Any) -> None:
     temporary.replace(path)
 
 
+def _verified_surface_transcription(
+    puzzle_id: int,
+    payload: dict[str, Any],
+    override: Any,
+) -> dict[str, Any]:
+    if not isinstance(override, dict):
+        raise ValueError(f"invalid surface transcription for puzzle {puzzle_id}")
+    content = override.get("content")
+    urls = override.get("artifact_urls")
+    hashes = override.get("source_sha256")
+    method = override.get("transcription_method")
+    notes = override.get("fidelity_notes")
+    missing = override.get("unrepresented_channels")
+    if (
+        not isinstance(content, str) or not content.strip()
+        or not isinstance(urls, list) or not urls
+        or not all(isinstance(item, str) and item.startswith(("http://", "https://")) for item in urls)
+        or not isinstance(hashes, list) or len(hashes) != len(urls)
+        or not all(isinstance(item, str) and _SHA256.fullmatch(item) for item in hashes)
+        or method not in {"human-reviewed", "deterministic-plus-human-reviewed"}
+        or not isinstance(notes, str) or not notes.strip()
+        or not isinstance(missing, list) or missing
+    ):
+        raise ValueError(f"invalid surface transcription for puzzle {puzzle_id}")
+
+    surface = "\n".join(
+        str(payload.get(field) or "") for field in ("html", "content", "extend_content")
+    )
+    expected_urls = set(_IMAGE_SRC.findall(surface))
+    image = payload.get("image")
+    if isinstance(image, str) and image.strip():
+        expected_urls.add(image.strip())
+    if expected_urls and not expected_urls.issubset(set(urls)):
+        raise ValueError(f"surface transcription omits an official artifact for puzzle {puzzle_id}")
+    return dict(override)
+
+
 def build_text_suite(
     *,
     manifest_path: str | Path,
     output_root: str | Path,
     fetch_json: JsonFetcher,
     checkpoint_overrides: dict[int, list[dict[str, str]]] | None = None,
+    surface_overrides: dict[int, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Fetch official payloads and retain only self-contained textual surfaces."""
 
@@ -71,6 +111,7 @@ def build_text_suite(
         raise ValueError("text suite output must be empty to avoid stale cases")
     entries = load_nonmeta_manifest(manifest_path)
     checkpoint_overrides = checkpoint_overrides or {}
+    surface_overrides = surface_overrides or {}
     included_ids: list[int] = []
     excluded: list[dict[str, Any]] = []
     for entry in entries:
@@ -81,6 +122,27 @@ def build_text_suite(
         reasons = list(runtime_input.get("required_artifacts", []))
         if str(runtime_input.get("content", "")).startswith("[NO TEXTUAL SURFACE"):
             reasons.append("empty-text-surface")
+        surface_transcription = None
+        if puzzle_id in surface_overrides:
+            surface_transcription = _verified_surface_transcription(
+                puzzle_id, payload, surface_overrides[puzzle_id]
+            )
+            reasons = [reason for reason in reasons if reason not in {"source-image", "empty-text-surface"}]
+            original = str(runtime_input.get("content") or "")
+            original_lines = [
+                line for line in original.splitlines()
+                if not line.startswith("[SOURCE ARTIFACT:")
+                and not line.startswith("[NO TEXTUAL SURFACE")
+            ]
+            runtime_input["content"] = "\n\n".join(filter(None, [
+                "\n".join(original_lines).strip(),
+                "[HUMAN-REVIEWED STATIC ARTIFACT TRANSCRIPTION]\n"
+                + surface_transcription["content"].strip(),
+            ]))
+            if reasons:
+                runtime_input["required_artifacts"] = reasons
+            else:
+                runtime_input.pop("required_artifacts", None)
         if reasons:
             excluded.append({"puzzle_id": puzzle_id, "reasons": reasons})
             continue
@@ -115,12 +177,15 @@ def build_text_suite(
             ],
             "intermediate_checkpoint_count": len(oracle["intermediate_answers"]),
         })
-        _write_json(case / "provenance.json", {
+        provenance = {
             "source_url": entry["url"],
             "source_data_url": entry["data_url"],
             "original_surface_and_data": True,
             "runtime_cache_only": True,
-        })
+        }
+        if surface_transcription is not None:
+            provenance["surface_transcription"] = surface_transcription
+        _write_json(case / "provenance.json", provenance)
         errors = validate_case(case)
         if errors:
             raise ValueError(f"generated case {puzzle_id} is invalid: {errors}")

@@ -58,6 +58,41 @@ class HardRunnerContractTests(unittest.TestCase):
         self.assertIn("[IMAGE: answer grid]", converted["input"]["content"])
         self.assertEqual(converted["input"]["required_artifacts"], ["source-image"])
 
+    def test_converter_preserves_preformatted_spacing_and_table_colors(self):
+        payload = {
+            "answer_type": 0,
+            "title": "Styled grid",
+            "html": (
+                "<style>.red { background-color: red; }</style>"
+                "<table><tr><td class='red'>A</td>"
+                "<td style='background-color: blue'></td></tr></table>"
+                "<pre>X  Y\n Z</pre>"
+            ),
+            "answer": "RESULT",
+        }
+        content = convert_official_payload(payload, "https://example.test/1.json")["input"]["content"]
+        self.assertNotIn("background-color", content.splitlines()[0])
+        self.assertIn("A [bg=red]", content)
+        self.assertIn("[blank bg=blue]", content)
+        self.assertIn("X  Y\n Z", content)
+
+    def test_converter_gates_linked_documents_and_fragment_sets(self):
+        payload = {
+            "answer_type": 0,
+            "title": "External surface",
+            "html": "<a href='https://static.example/grid.pdf'>download</a>",
+            "tips": [{
+                "title": "你需要这些碎片吗",
+                "content": "<img src='https://static.example/fragment.webp'>",
+            }],
+            "answer": "RESULT",
+        }
+        converted = convert_official_payload(payload, "https://example.test/1.json")
+        self.assertEqual(
+            converted["input"]["required_artifacts"],
+            ["source-document", "source-fragments"],
+        )
+
     def test_once_only_run_redacts_report_and_removes_transient_source(self):
         payload = {
             "pid": 1,
