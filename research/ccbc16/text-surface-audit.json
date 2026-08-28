@@ -252,6 +252,28 @@
         "Independent source-only review rechecked the official 1080x1080 raster, UTF-8 note/prefills, 28 nodes, 43 confirmed edges, 46 visible paths, and both unresolved shared-terminal groups.",
         "Each nonstandard glyph's bbox, GRAY8 row RLE, RGB/gray hashes, and preview reconstruct the official crop byte-for-byte; no solution or solved fill was used in the runtime transcription."
       ]
+    },
+    {
+      "puzzle_id": 28,
+      "adapter": "deterministic-plus-human-reviewed-static-document",
+      "required_channels": [
+        "54x70 coordinates and 52x68 printed window",
+        "2572 unit cell boundaries",
+        "ten grayscale/fill classes",
+        "91 visible glyphs plus one U+3000 sheet value",
+        "row 14-15 column M edge correction"
+      ],
+      "source_sha256": [
+        "bf53bbbb3d01c5507f9f6396a4d19b96bcd2da6d0023aae5c627e41368c7433f",
+        "d7fa42af05aebdeafbb8626572af7d7941c310f2e9eb33a0d43156f887203f86",
+        "b6862e4b2b496a3035dde1b17f3060090230ae3019b2f8a80bb1725c733c444f",
+        "508a69c4e85eb84739c5d1963564b5aaec3ff6b5a0bc5669476014fc4469500d"
+      ],
+      "unrepresented_channels": [],
+      "fidelity_notes": [
+        "The main reviewer independently re-fetched the official data, page, and PDF and matched all recorded hashes, then recomputed 54 valid 70-cell RLE rows, fill counts, 1357 vertical and 1215 horizontal unit edges, glyph counts, and the absent M14/M15 edge.",
+        "The source-only candidate and its 38-check reconstruction use no answer, solution, hints, solved fill, or inferred colors; the official-solution mechanism and extraction remain evaluator-only."
+      ]
     }
   ],
   "static_transcription_queue": [
@@ -272,27 +294,6 @@
         "The two official 1536x2800 raster copies are pixel-equivalent. A source-only connected-region inventory finds 43 visible main-city face regions (24 top/yellow, 9 left/green, 10 right/black) and 75 pairwise boundary-contact candidates, but the current candidate records none of their polygons, local z-order, T-junctions, or occlusion relations.",
         "The fourth main-view arrow labeled 6 points southwest; the current candidate's southeast label is a known transcription error and must be corrected before review.",
         "A faithful schema must preserve only visible polygons and local partial-order/occlusion facts, keep hidden extents unknown, and separately record the example, gray divider, decorative CCBC logo, and the centered placement of the downward (9) extraction arrow."
-      ]
-    },
-    {
-      "puzzle_id": 28,
-      "required_channels": [
-        "grid coordinates",
-        "cell boundaries",
-        "grayscale and color classes",
-        "given glyphs and punctuation",
-        "row 14-15 column M edge correction"
-      ],
-      "fidelity_notes": [
-        "Treat the official PDF as authoritative and preserve its printed grayscale distinctions; do not restore inferred colors from hints or a solved fill.",
-        "Record every cell boundary and the published removal of the horizontal edge between rows 14 and 15 in column M."
-      ],
-      "source_urls": [
-        "https://ccbc16.cipherpuzzles.com/puzzle/3/28",
-        "https://ccbc16.cipherpuzzles.com/data/puzzles/28.json",
-        "https://static.cipherpuzzles.com/static/images/6a3dd69fdec64cb0848f86188fc12eb0.pdf",
-        "https://docs.google.com/spreadsheets/d/1F8t2vnFuNqBL-T-SDRgHVmDAUYkkAZ-CNqpS28RelDs/edit?usp=sharing",
-        "https://docs.qq.com/sheet/DVVFhT291aFJXY0JP?tab=000001"
       ]
     },
     {
@@ -432,11 +433,11 @@
   ],
   "counts": {
     "direct_text": 10,
-    "reviewed_transcriptions": 12,
-    "static_transcription_queue": 4,
+    "reviewed_transcriptions": 13,
+    "static_transcription_queue": 3,
     "pending_artifact_audit": 0,
     "not_text_faithful": 23,
-    "runnable_text_suite": 22,
+    "runnable_text_suite": 23,
     "total": 49
   }
 }

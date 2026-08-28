@@ -326,3 +326,9 @@ cycle worker 因此只对明确的 transport exception 做一次同 checkpoint�
 #9 的三角图不是把 28 个汉字抄下来就完成。source-only 复核把 43 条可独立确认的有向边、3 条额外可见但重数不确定的路径、两个 shared-terminal group、两条同点自环以及三个非标准字形分别编码。无法从像素证明的边重数保留为 `multiplicity_unresolved`，没有用题解反向修图。
 
 三个非标准字形使用源坐标 bbox、逐行 GRAY8 RLE、RGB/灰度 hash 和可读 preview，独立审查逐字节重建一致。只有通过这层复核后，#9 才从 queue 移入 reviewed；解后填字图与“三个角红框字”只进入 evaluator checkpoint。v17 因此扩为 22 题，而不是用摘要冒充完整题面。
+
+## 第 41 站：大型网格文本化需要可重建的不变量
+
+#28 的题面不是字符矩阵，而是 54×70 坐标、十类灰度填充、2572 条单位边、92 个源单元值和一条官方删边勘误的组合。候选以逐行 fill RLE、横纵边区间和带 Unicode codepoint 的 glyph 表表达；PDF 与 Sheet 只用于离散通道交叉检查，不从解后颜色反推。
+
+主审查者独立重取 data/page/PDF 并匹配三份 hash，又从候选重新计算 54 行均为 70 格、fill 总数 3780、vertical=1357、horizontal=1215、visible glyph=91、U+3000=1，并确认 M14/M15 横边不存在。题解侧的“不分青红皂白”、逐行俗语、异字符分割线和最终提取指令另存为四个 evaluator checkpoint。通过这些重建证据后，v18 扩为 23 题。
