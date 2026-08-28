@@ -132,11 +132,26 @@ _STAGE_INSTRUCTIONS = {
 }
 
 
+_STAGE_OUTPUT_BUDGETS = {
+    "OBSERVE_CLASSIFY": 6000,
+    "ASSOCIATE_THEME": 3500,
+    "MATERIALIZE_SUBPROBLEMS": 9000,
+    "HYPOTHESIZE_PLAN": 6000,
+    "EVALUATE_EVIDENCE": 7000,
+    "VERIFY_INTERMEDIATES": 4000,
+    "VERIFY_ANSWER": 2500,
+}
+
+
 def _messages(stage: str, state: PuzzleGraphState) -> list[dict[str, str]]:
     system = (
         f"PUZZLE_STAGE: {stage}\n"
         "Return exactly one JSON object. Give concise, verifiable conclusions and evidence; "
         "do not provide hidden chain-of-thought. Do not treat hypotheses as observations.\n"
+        f"OUTPUT_BUDGET: at most {_STAGE_OUTPUT_BUDGETS[stage]} Unicode characters. "
+        "Each string value must be at most 240 characters. Use compact evidence references; "
+        "never add prose outside the JSON object. If detail exceeds the budget, preserve required "
+        "items and shorten explanations rather than continuing past the limit.\n"
         f"STAGE_CONTRACT: {_STAGE_INSTRUCTIONS[stage]}"
     )
     visible_state = {

@@ -23,6 +23,16 @@ class EmptyContentResponse(FakeResponse):
         }).encode()
 
 
+class TruncatedContentResponse(FakeResponse):
+    def read(self):
+        return json.dumps({
+            "choices": [{
+                "finish_reason": "length",
+                "message": {"content": '{"association_candidates":['},
+            }]
+        }).encode()
+
+
 class RecordingOpener:
     def __init__(self, response=None):
         self.calls = []
@@ -78,6 +88,14 @@ class DeepSeekContractTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(RuntimeError, "empty content.*length"):
             empty.complete([{"role": "user", "content": "hello"}])
+
+    def test_nonempty_length_response_is_reported_as_truncated(self):
+        provider = DeepSeekProvider(
+            DeepSeekConfig(api_key="secret"),
+            opener=RecordingOpener(TruncatedContentResponse()),
+        )
+        with self.assertRaisesRegex(RuntimeError, "truncated content.*length"):
+            provider.complete([{"role": "user", "content": "hello"}])
 
 
 if __name__ == "__main__":

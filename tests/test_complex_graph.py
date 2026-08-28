@@ -302,6 +302,13 @@ class ComplexGraphTests(unittest.TestCase):
                 self.assertIn(field, messages[0]["content"])
         self.assertNotIn("caesar_shift", provider.messages[0][0]["content"])
         self.assertNotIn("caesar_shift", provider.messages[1][0]["content"])
+        associate_prompt = next(
+            messages[0]["content"]
+            for stage, messages in zip(provider.stages, provider.messages)
+            if stage == "ASSOCIATE_THEME"
+        )
+        self.assertIn("OUTPUT_BUDGET: at most 3500 Unicode characters", associate_prompt)
+        self.assertIn("Each string value must be at most 240 characters", associate_prompt)
         hypothesis_message = next(
             messages for stage, messages in zip(provider.stages, provider.messages)
             if stage == "HYPOTHESIZE_PLAN"

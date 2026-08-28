@@ -49,10 +49,14 @@ class DeepSeekProvider:
                 body = json.loads(response.read().decode("utf-8"))
             choice = body["choices"][0]
             content = choice["message"]["content"]
+            reason = str(choice.get("finish_reason") or "unknown")
             if not isinstance(content, str) or not content.strip():
-                reason = str(choice.get("finish_reason") or "unknown")
                 raise RuntimeError(
                     f"DeepSeek API returned empty content (finish_reason={reason})"
+                )
+            if reason == "length":
+                raise RuntimeError(
+                    "DeepSeek API returned truncated content (finish_reason=length)"
                 )
             return content
         except error.HTTPError as exc:
