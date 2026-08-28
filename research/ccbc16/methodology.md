@@ -93,6 +93,7 @@ convention / coordinate_system / normalization
 - 工具清单必须由实际 callable 自动生成精确参数名；模型不得发明 `moves/numbers/strings` 等别名。若计划中的确定性实验全部失败，终局不能声明 evidence check 通过。
 - 参数名仍不等于完整契约：ToolSpec 同时声明容器类型、坐标基准、枚举和前置条件。规划通常限制为 1–4 个有明确预测的判别调用，并必须覆盖最后提取，禁止用大量无关转换 shotgun。
 - `evaluate_evidence`：固定检查 coverage、consumption、uniqueness、invariant、reversibility。
+- 阶段 memory 必须运行时可见：评价节点写回 `intermediate_answers/open_questions/unused_elements`，后续规划与验证同时读取它们；仍有未决问题或未消费线索时禁止终局通过。
 - `evaluate_evidence` 可在证据否定原计划且存在不同的有界实验时选择 `replan`；运行时必须预留一次最终验证调用，不能把预算全耗在搜索上。
 - `verify_answer`：要求 format、evidence、flavor callback、clue coverage、all elements consumed、independent derivation 全部为真。
 

@@ -72,12 +72,20 @@ class RegistryPlanningProvider(ScriptedStageProvider):
                     {"id": "h1", "mechanism": "indexed extraction"},
                     {"id": "h2", "mechanism": "acrostic"},
                 ],
-                "plan": [{
-                    "id": "p1",
-                    "tool": "extract_nth",
-                    "arguments": {"lines": ["ALPHA", "BRAVO"], "indices": [1, 2]},
-                    "purpose": "test requested indices",
-                }],
+                "plan": [
+                    {
+                        "id": "p1",
+                        "tool": "extract_nth",
+                        "arguments": {"lines": ["ALPHA", "BRAVO"], "indices": [1, 2]},
+                        "purpose": "test requested indices",
+                    },
+                    {
+                        "id": "p2",
+                        "tool": "atbash_transform",
+                        "arguments": {"text": "Svool"},
+                        "purpose": "test the explicit alphabet mapping",
+                    },
+                ],
             })
         return super().complete(messages)
 
@@ -168,6 +176,7 @@ class ComplexGraphTests(unittest.TestCase):
         verify_prompt = provider.messages[-1][0]["content"]
         self.assertIn("all_elements_consumed", verify_prompt)
         self.assertIn("independent_derivation", verify_prompt)
+        self.assertIn("open question", verify_prompt)
 
     def test_call_budget_stops_graph_without_overrun(self):
         provider = ScriptedStageProvider()
@@ -218,6 +227,40 @@ class ComplexGraphTests(unittest.TestCase):
         self.assertEqual(extractions[0]["output"], "AR")
         self.assertEqual(extractions[0]["arguments"]["indices"], [1, 2])
         self.assertEqual(extractions[0]["evidence_id"], evidence[0]["id"])
+        self.assertEqual(
+            [item["output"] for item in result["extractions"] if item.get("tool") == "atbash_transform"],
+            ["Hello"],
+        )
+
+    def test_evaluation_memory_is_visible_to_terminal_verification(self):
+        class MemoryProvider(ScriptedStageProvider):
+            def complete(self, messages):
+                marker = messages[0]["content"].split("PUZZLE_STAGE: ", 1)[1].splitlines()[0]
+                if marker == "EVALUATE_EVIDENCE":
+                    self.stages.append(marker)
+                    self.messages.append(messages)
+                    return json.dumps({
+                        "decision": "verify",
+                        "evidence_assessment": [{"hypothesis_id": "h1", "effect": "supports"}],
+                        "intermediate_answers": [{"value": "URYYB", "role": "carrier"}],
+                        "open_questions": ["Does the title confirm ROT13?"],
+                        "unused_elements": ["title"],
+                        "answer_candidates": [],
+                    })
+                return super().complete(messages)
+
+        provider = MemoryProvider()
+        result = build_puzzle_graph(provider).invoke(
+            new_puzzle_state(PuzzleInput(title="Shift", content="uryyb"), max_calls=6)
+        )
+        verification_state = json.loads(provider.messages[-1][1]["content"])
+        self.assertEqual(verification_state["intermediate_answers"][0]["role"], "carrier")
+        self.assertEqual(verification_state["open_questions"], ["Does the title confirm ROT13?"])
+        self.assertEqual(verification_state["unused_elements"], ["title"])
+        self.assertIn("extractions", verification_state)
+        self.assertEqual(result["open_questions"], ["Does the title confirm ROT13?"])
+        self.assertEqual(result["status"], "NEEDS_REVIEW")
+        self.assertIn("Open questions or unused clue elements remain", result["blockers"])
 
     def test_verify_rejects_missing_coverage_checks(self):
         class IncompleteVerifyProvider(ScriptedStageProvider):

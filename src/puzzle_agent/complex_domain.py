@@ -34,6 +34,7 @@ def new_puzzle_state(
         "extractions": [],
         "answer_candidates": [],
         "open_questions": [],
+        "unused_elements": [],
         "blockers": [],
         "budget": {"max_calls": max_calls, "calls_used": 0},
         "last_node": None,

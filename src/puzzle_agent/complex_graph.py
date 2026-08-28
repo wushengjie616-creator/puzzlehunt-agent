@@ -34,6 +34,7 @@ class PuzzleGraphState(TypedDict, total=False):
     extractions: list[dict[str, Any]]
     answer_candidates: list[dict[str, Any]]
     open_questions: list[str]
+    unused_elements: list[str]
     blockers: list[str]
     budget: dict[str, int]
     last_node: str | None
@@ -66,6 +67,8 @@ _STAGE_INSTRUCTIONS = {
     "EVALUATE_EVIDENCE": (
         'Output {"decision":"verify|replan","evidence_assessment":['
         '{"hypothesis_id":"...","effect":"supports|weakens|rejects"}],'
+        '"intermediate_answers":[{"value":"...","role":"carrier|candidate","evidence_ids":["..."]}],'
+        '"open_questions":["..."],"unused_elements":["..."],'
         '"answer_candidates":[{"answer":"...","confidence":"low|medium|high","evidence_ids":["..."]}]}. '
         "Evaluate new tool or human evidence; explicitly reject failed attempts and do not invent tool results. "
         "Audit clue coverage, unused elements, uniqueness/ambiguity, cross-solution invariants, and whether the "
@@ -77,6 +80,7 @@ _STAGE_INSTRUCTIONS = {
         '"checks":{"format":true,"evidence":true,"flavor_callback":true,"clue_coverage":true,'
         '"all_elements_consumed":true,"independent_derivation":true}}. '
         "Verify a supported candidate against format, clue coverage, title/flavor callback, and meta constraints. "
+        "Any unresolved open question or unused clue element makes the corresponding checks false. "
         "Use null when evidence is insufficient."
     ),
 }
@@ -98,7 +102,12 @@ def _messages(stage: str, state: PuzzleGraphState) -> list[dict[str, str]]:
         "plan": state.get("plan", []),
         "attempts": state.get("attempts", []),
         "evidence": state.get("evidence", []),
+        "intermediate_answers": state.get("intermediate_answers", []),
+        "extractions": state.get("extractions", []),
         "answer_candidates": state.get("answer_candidates", []),
+        "open_questions": state.get("open_questions", []),
+        "unused_elements": state.get("unused_elements", []),
+        "blockers": state.get("blockers", []),
     }
     return [
         {"role": "system", "content": system},
@@ -135,6 +144,13 @@ def _array(data: dict[str, Any], name: str) -> list[dict[str, Any]]:
     value = data.get(name, [])
     if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
         raise ValueError(f"{name} must be an array of objects")
+    return value
+
+
+def _string_array(data: dict[str, Any], name: str) -> list[str]:
+    value = data.get(name, [])
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise ValueError(f"{name} must be an array of strings")
     return value
 
 
@@ -274,6 +290,8 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
                 "repair_mojibake", "common_symbol_intersection", "grid_transform",
                 "phone_keypad_decode", "braille_decode", "playfair_codec",
                 "decode_token_morse", "solution_position_analysis", "palindrome_mismatch",
+                "caesar_shift", "atbash_transform", "base_decode", "morse_decode",
+                "vigenere_decode", "rail_fence_decode",
             }:
                 extractions.append({
                     "tool": tool,
@@ -313,8 +331,23 @@ def _evaluate(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphSt
     remaining = budget["max_calls"] - budget["calls_used"]
     if decision == "replan" and remaining < 3:
         decision = "verify"
+    intermediate_answers = (
+        _array(data, "intermediate_answers")
+        if "intermediate_answers" in data else list(state.get("intermediate_answers", []))
+    )
+    open_questions = (
+        _string_array(data, "open_questions")
+        if "open_questions" in data else list(state.get("open_questions", []))
+    )
+    unused_elements = (
+        _string_array(data, "unused_elements")
+        if "unused_elements" in data else list(state.get("unused_elements", []))
+    )
     return {
         "evidence": evidence,
+        "intermediate_answers": intermediate_answers,
+        "open_questions": open_questions,
+        "unused_elements": unused_elements,
         "answer_candidates": _array(data, "answer_candidates"),
         "budget": budget,
         "evaluation_decision": decision,
@@ -353,12 +386,16 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         item.get("outcome") in {"completed", "candidates_found"} for item in attempts
     )
     failed_tool_gate = tool_required and not tool_succeeded
+    unresolved_memory_gate = bool(
+        state.get("open_questions", []) or state.get("unused_elements", [])
+    )
     solved = (
         bool(answer)
         and confidence in {"medium", "high"}
         and bool(checks)
         and all(checks.values())
         and not failed_tool_gate
+        and not unresolved_memory_gate
     )
     return {
         "budget": budget,
@@ -367,10 +404,9 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         "last_node": "verify_answer",
         "next_node": None,
         "final_answer": answer if solved else None,
-        "blockers": (
-            ["All planned deterministic experiments failed"]
-            if failed_tool_gate else state.get("blockers", [])
-        ),
+        "blockers": list(state.get("blockers", []))
+        + (["All planned deterministic experiments failed"] if failed_tool_gate else [])
+        + (["Open questions or unused clue elements remain"] if unresolved_memory_gate else []),
     }
 
 

@@ -68,6 +68,7 @@ related_commits: []
 - Cycle 3 失败证据：参数名已解决，但 10 次调用违反容器/枚举/前置条件；case 01 五次 Caesar 成功却漏最终 extraction，case 04 replan 采用 shotgun 且 grid 形状无效。详见该批 `failure-analysis.md`。
 - Cycle 3 后 RED/GREEN：ToolSpec 同注册点加入紧凑 precondition contract；planning 明确通常 1–4 个带预测的调用、禁止无关 shotgun，并要求覆盖 final extraction。focused graph/tool 15/15 GREEN。
 - Cycle 3 后工具覆盖审计：发现 simple CipherWorkbench 的 Atbash/Base/标准 Morse/已知-key Vigenère/已知-rails Rail Fence 没进入 complex Agent 行动空间；新增五个有界 strict wrapper。2 个聚焦测试先 RED 后 GREEN，禁止工具自行猜 key/栏数。
+- Cycle 3 后 memory 审计：预留的 intermediate/extraction/open-question 字段没有完整进入后续 prompt。新增 `unused_elements`，评价节点写回四类阶段账本，所有后续节点可见；open questions 或 unused clues 非空时机器门拒绝 solved。聚焦测试先证明 KeyError/遗漏 extraction，再转绿。
 
 ## 后续 todo
 

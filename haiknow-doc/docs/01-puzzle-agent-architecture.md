@@ -109,6 +109,8 @@ INTAKE
 
 规划 prompt 的工具签名由 `inspect.signature()` 对 ToolRegistry 当前 callable 生成，例如 `a1z26_decode(values)`、`grid_trace(grid, start, directions)`。ToolSpec 在同一注册点补充紧凑前置条件，例如 0-based 坐标、`N|E|S|W`、等长字符串和 constraint object shape。只列工具名已被 cycle 2 证伪；只有签名又在 cycle 3 暴露类型/前置条件错误，因此两者都属于执行契约。
 
+阶段 memory 不是对话历史，而是结构化状态：`observations` 与 `flavor_associations` 保存题面事实和可检验联想，`attempts/evidence/extractions` 保存机械实验账本，`intermediate_answers` 标记仍是 carrier 的中间词，`open_questions` 与 `unused_elements` 保存尚未闭合的推理债务。这些字段显式进入后续节点输入；只要后两项非空，机器终局门就不能接受 `SOLVED`。
+
 ## 7. 模块责任
 
 | 模块 | 责任 |

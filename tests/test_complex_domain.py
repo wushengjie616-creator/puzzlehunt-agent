@@ -28,6 +28,9 @@ class ComplexStateTests(unittest.TestCase):
             "evidence",
             "extractions",
             "answer_candidates",
+            "intermediate_answers",
+            "open_questions",
+            "unused_elements",
         ):
             self.assertEqual(state.get(collection), [])
         json.dumps(state, ensure_ascii=False)
