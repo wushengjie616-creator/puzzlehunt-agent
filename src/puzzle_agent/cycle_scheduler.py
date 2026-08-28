@@ -19,8 +19,6 @@ def build_cycle_schedule(
     *,
     interval_hours: float = 3,
     duration_hours: float = 24,
-    expected_case_count: int = 5,
-    human_reports_root: str | Path | None = None,
 ) -> list[datetime]:
     if start.tzinfo is None or start.utcoffset() is None:
         raise ValueError("start must be timezone-aware")
@@ -75,6 +73,8 @@ def run_cycle_scheduler(
     timeout_seconds: float = 3600,
     interval_hours: float = 3,
     duration_hours: float = 24,
+    expected_case_count: int = 5,
+    human_reports_root: str | Path | None = None,
 ) -> dict[str, Any]:
     repository = Path(repository).resolve()
     runtime = repository / ".puzzle-agent" / "automation"

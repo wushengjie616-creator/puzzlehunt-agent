@@ -24,6 +24,16 @@ HAS_COMPLEX = module_available("langgraph.graph") and module_available("langgrap
 
 
 class CliTests(unittest.TestCase):
+    def test_cycle_run_accepts_text_suite_case_count_and_report_path(self):
+        args = _parser().parse_args([
+            "cycle", "run",
+            "--suite", "text",
+            "--expected-case-count", "10",
+            "--human-report", "reports/manual.md",
+        ])
+        self.assertEqual(args.expected_case_count, 10)
+        self.assertEqual(args.human_report, Path("reports/manual.md"))
+
     def test_cycle_schedule_accepts_an_explicit_benchmark_suite(self):
         args = _parser().parse_args([
             "cycle", "schedule", "--start-at", "2026-08-28T12:00:00+08:00",

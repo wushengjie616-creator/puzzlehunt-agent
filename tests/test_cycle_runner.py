@@ -1,5 +1,6 @@
 import json
 import importlib.util
+import inspect
 from pathlib import Path
 import sys
 import tempfile
@@ -16,7 +17,7 @@ from puzzle_agent.cycle_runner import (
     run_cycle,
 )
 from puzzle_agent.complex_offline import OfflineStageProvider
-from puzzle_agent.cycle_scheduler import build_cycle_schedule
+from puzzle_agent.cycle_scheduler import build_cycle_schedule, run_cycle_scheduler
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +29,11 @@ HAS_COMPLEX = (
 
 
 class CycleCaseContractTests(unittest.TestCase):
+    def test_scheduler_accepts_case_count_and_public_report_root(self):
+        parameters = inspect.signature(run_cycle_scheduler).parameters
+        self.assertIn("expected_case_count", parameters)
+        self.assertIn("human_reports_root", parameters)
+
     def test_human_cycle_report_has_timestamp_failures_and_optimization_hypothesis(self):
         report = format_human_cycle_report({
             "cycle_id": "hour-1",

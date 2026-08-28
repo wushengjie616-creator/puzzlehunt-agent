@@ -105,6 +105,8 @@ def _parser() -> argparse.ArgumentParser:
     cycle_run.add_argument("--max-calls", type=int, default=8)
     cycle_run.add_argument("--timeout", type=float, default=3600)
     cycle_run.add_argument("--cycle-id")
+    cycle_run.add_argument("--expected-case-count", type=int, default=5)
+    cycle_run.add_argument("--human-report", type=Path)
     hard_once = cycle_commands.add_parser("hard-once")
     hard_once.add_argument("--repository", type=Path, default=Path("."))
     hard_once.add_argument(
@@ -217,7 +219,7 @@ def main(argv: list[str] | None = None) -> int:
                     max_calls=args.max_calls,
                 ))
                 return 0
-            _print_json(run_cycle(
+            manifest = run_cycle(
                 args.repository,
                 cases_root=args.cases_root,
                 runs_root=args.runs_root,
@@ -227,7 +229,21 @@ def main(argv: list[str] | None = None) -> int:
                 max_calls=args.max_calls,
                 timeout_seconds=args.timeout,
                 cycle_id=args.cycle_id,
-            ))
+                expected_case_count=args.expected_case_count,
+            )
+            if args.human_report is not None:
+                from .cycle_runner import format_human_cycle_report
+                report_path = args.human_report
+                if not report_path.is_absolute():
+                    report_path = args.repository.resolve() / report_path
+                report_path.parent.mkdir(parents=True, exist_ok=True)
+                temporary = report_path.with_suffix(report_path.suffix + ".tmp")
+                temporary.write_text(
+                    format_human_cycle_report(manifest), encoding="utf-8"
+                )
+                temporary.replace(report_path)
+                manifest["human_report_path"] = str(report_path)
+            _print_json(manifest)
             return 0
 
         if args.command == "automation":
