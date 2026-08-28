@@ -84,7 +84,7 @@ def _verified_surface_transcription(
         raise ValueError(f"invalid surface transcription for puzzle {puzzle_id}")
 
     surface = "\n".join(
-        str(payload.get(field) or "") for field in ("html", "content", "extend_content")
+        str(payload.get(field) or "") for field in ("html", "content")
     )
     expected_urls = set(_IMAGE_SRC.findall(surface))
     image = payload.get("image")

@@ -165,7 +165,9 @@ def convert_official_payload(payload: dict[str, Any], source_url: str) -> dict[s
     answer = payload.get("answer")
     if not isinstance(answer, str) or not answer.strip():
         raise ValueError("official payload has no usable answer")
-    surface_fields = (payload.get("html"), payload.get("content"), payload.get("extend_content"))
+    # `extend_content` is revealed after a successful answer and is therefore
+    # neither part of the worker's initial surface nor an input artifact.
+    surface_fields = (payload.get("html"), payload.get("content"))
     details = [_html_details(value) for value in surface_fields]
     content_parts = [text for text, *_flags in details]
     image = payload.get("image")

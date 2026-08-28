@@ -93,6 +93,22 @@ class HardRunnerContractTests(unittest.TestCase):
             ["source-document", "source-fragments"],
         )
 
+    def test_converter_excludes_post_solve_extend_content(self):
+        payload = {
+            "answer_type": 0,
+            "title": "Initial surface",
+            "content": "CLUES AVAILABLE BEFORE SOLVING",
+            "extend_content": (
+                "<p>Congratulations, here is a feeder fragment.</p>"
+                "<img src='https://static.example/post-solve.webp'>"
+            ),
+            "answer": "RESULT",
+        }
+        converted = convert_official_payload(payload, "https://example.test/1.json")
+        self.assertIn("CLUES AVAILABLE BEFORE SOLVING", converted["input"]["content"])
+        self.assertNotIn("Congratulations", converted["input"]["content"])
+        self.assertNotIn("required_artifacts", converted["input"])
+
     def test_once_only_run_redacts_report_and_removes_transient_source(self):
         payload = {
             "pid": 1,
