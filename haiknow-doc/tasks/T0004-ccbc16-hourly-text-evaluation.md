@@ -27,3 +27,4 @@ related_commits: []
 - 2026-08-28 14:16 +08：自动 emphasis 提取仅覆盖 1/10，未冒充完整 oracle；加入 ignored human-reviewed override 后 10/10 具备 checkpoint，共 35 个。
 - 2026-08-28 14:17 +08：新增 `VERIFY_INTERMEDIATES` 与 evidence-reference machine gate；normal=6 calls、one replan=8 calls。最终与中间 evaluator 分离。
 - 2026-08-28 14:18 +08：小时报告 formatter 与 scheduler 接线完成；报告含时间戳、逐题耗时、双评分、节点问题、失败分析和下一轮优化假设。
+- 2026-08-28 14:27–14:29 +08：冻结 commit `cf0155d`，通过 CLI 对 10 道 strict-text 题完成一次真实 DeepSeek 端到端基线。10/10 生成 state 与 node analysis，0 timeout；最终答案 0/10、中间验证 0/10、推理通过 0/10；`ccbc16-010` 因首节点非法 JSON 为 ERROR，其余 9 题到达最终验证后为 NEEDS_REVIEW。公开报告：`benchmarks/cycles/hourly-reports/manual-20260828-142757.md`。
