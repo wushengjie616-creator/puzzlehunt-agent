@@ -36,9 +36,9 @@ class HardRunnerContractTests(unittest.TestCase):
         self.assertFalse(any(left & right for i, left in enumerate(partitions) for right in partitions[i + 1:]))
         self.assertEqual(
             {item["puzzle_id"] for item in audit["reviewed_transcriptions"]},
-            {4, 9, 14, 15, 22, 28, 29, 31, 37, 38, 52, 53, 54},
+            {4, 9, 14, 15, 22, 23, 28, 29, 31, 37, 38, 52, 53, 54},
         )
-        self.assertEqual(audit["counts"]["runnable_text_suite"], 23)
+        self.assertEqual(audit["counts"]["runnable_text_suite"], 24)
 
     def test_converter_strips_oracle_and_solution_from_worker_input(self):
         payload = {

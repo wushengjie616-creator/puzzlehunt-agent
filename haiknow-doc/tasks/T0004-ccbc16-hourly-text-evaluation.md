@@ -1,8 +1,9 @@
 ---
 id: T0004
 title: CCBC16 文本题八小时循环评测
-status: in_progress
+status: completed
 created_at: 2026-08-28
+plan_completed_at: 2026-08-28
 paired_plan: P0005
 related_commits: []
 ---
@@ -60,3 +61,23 @@ related_commits: []
 - 2026-08-28 19:45–19:47 +08：#30 官方 PDF 取证确认 10 页、每页单一 1275×1650 栅格、无可提取文字层；前九页为异构逻辑题，第十页大面积墨迹遮挡。已无损抽取十页供 source-only 转写，确认准入必须同时保留规则、网格/字符和墨迹遮挡 mask，不能把普通 OCR 当作完成。
 - 2026-08-28 20:00–20:08 +08：正式小时周期冻结 commit `cf7bc32`，23 题中 20 题安全到达 `NEEDS_REVIEW`、3 题 ERROR、0 timeout；最终/整题中间/推理均 0/23。#3 命中 6/9 evaluator checkpoints；#18 为 OBSERVE 非法 JSON，#53 为恢复轮结果引用未知 subproblem，#22 为计划项缺 signal。公开报告：`benchmarks/cycles/hourly-reports/cycle-20260828T120000Z.md`。
 - 2026-08-28 20:09–20:14 +08：把上述三类真实失败逐一固化为 RED，再实现保守总化：非法 JSON/非对象输出记录长度与 hash 后安全终止；未知 subproblem result 和无 signal/缺契约计划项被丢弃并写 blocker；任何 blocker 都禁止终局 `SOLVED`。trace 新增 `PROTOCOL_NORMALIZATION:*`，节点报告聚合对应问题。聚焦测试、worker 集成与全量 128/128 均 GREEN。
+- 2026-08-28 20:21–20:28 +08：按用户要求冻结框架并执行完整流程验收。真实 DeepSeek 单题从 checkpoint 三次恢复，但均在 `ASSOCIATE_THEME` 遭 read timeout；同一会话保留 calls=1、14 条观察与 4 个张力。随后 v19/24 题离线 cycle 全部经过 intake 至 verify-answer，0 error/timeout，并生成 24 份 checkpoint/events/trace/node analysis 与汇总报告。该证据证明控制流，不冒充复杂题正确率。
+- 2026-08-28 20:37 +08：用户确认 24 题已足够作为第一阶段测试集，不再强求 #30/#36 准入。21:00/22:00 scheduler 优雅停止且未产生批次；阶段总结转入 D0001 与 24 题标准解法文档。第一阶段以“测试集与评测基础设施完成、真实 final accuracy 仍为 0”收口。
+- 2026-08-28 阶段复盘：逐题对照官方解答时修正两处历史转录——#9 evaluator 填字三角的“发”改为符合官方图与“岌岌可危”的“岌”；#53 上游已解网格 R6C1 按官方像素色由 `CS/BLUE` 改为 `CS/PURPLE`。随后从空输出目录重建 v19，避免旧 case 残留。
+
+## 与计划的偏差
+
+- P0005 的原始完成证据要求覆盖八个小时锚点；用户在 20:37 主动收敛第一阶段范围，因此 21:00、22:00 未运行，明确记录为 scope closure，不补造报告。
+- 原目标倾向继续扩展所有可文本化题；实际以 24 题冻结，#30 的十页异构纸笔题和 #36 音频不再是第一阶段 todo。
+- 24 题中的第 24 题 #23 只完成 case validation 与离线 cycle；最后一轮真实 DeepSeek 报告仍是 23 题。二者在总结中分开陈述。
+
+## 测试 / 验证
+
+- `24/24 validate_case`；oracle 与 runtime 输入隔离。
+- v19/24 题 offline cycle：0 error、0 timeout，所有声明节点有机械执行证据。
+- 当前实现全量测试：128/128 GREEN（20:00 报告驱动修改后）。
+- 正式公开报告：14:29 基线以及 15:00–20:00 六个小时锚点。
+
+## 后续 todo
+
+- 下一阶段以 24 题标准解题轨迹为训练/诊断基准，重点提升主题联想、局部 clue solving 与中间载体继续提取；不再以增加题数为默认目标。

@@ -47,6 +47,26 @@
   ],
   "reviewed_transcriptions": [
     {
+      "puzzle_id": 23,
+      "adapter": "deterministic-plus-human-reviewed-static-artifact",
+      "required_channels": [
+        "isometric visible-face polygons",
+        "face color",
+        "view direction and expression labels",
+        "occlusion boundaries and T-junctions"
+      ],
+      "source_sha256": [
+        "4b858e77da29e4b9b1489dcab99efb75bea6cea3af8abaa73571ad1caeac3797",
+        "5a841d929b4b596411cc8730f1b944854d819352d86457b99048f98fdf2d5205",
+        "0aa06550407492fbd393b106daf8e47145e5519095e9ea1cda9f5edda9bbbc39"
+      ],
+      "unrepresented_channels": [],
+      "fidelity_notes": [
+        "Source-only exact-color segmentation preserves 24 yellow, 9 green and 10 black maximal visible main-city regions as contour rings; the decorative logo is excluded.",
+        "The example and all eight direction/expression labels are transcribed separately. Hidden blocks and heights remain unknown; solution-derived geometry is evaluator-only."
+      ]
+    },
+    {
       "puzzle_id": 4,
       "adapter": "human-reviewed-static-artifact",
       "required_channels": [
@@ -194,7 +214,10 @@
         "f8437f280f7853066ed7b288636d7765999b5071b09780f0143aaed48c04047a",
         "984b0b12bcd27095f24721a110424ff99fe0dfb2a99d98830f40a3ea703388b1"
       ],
-      "unrepresented_channels": []
+      "unrepresented_channels": [],
+      "fidelity_notes": [
+        "Stage-1 retrospective rechecked the upstream solved-meta raster: R6C1 is lavender/purple RGB (142,124,195), not blue; the runtime transcription now records CS/PURPLE and preserves the official extraction T."
+      ]
     },
     {
       "puzzle_id": 54,
@@ -250,7 +273,8 @@
       "unrepresented_channels": [],
       "fidelity_notes": [
         "Independent source-only review rechecked the official 1080x1080 raster, UTF-8 note/prefills, 28 nodes, 43 confirmed edges, 46 visible paths, and both unresolved shared-terminal groups.",
-        "Each nonstandard glyph's bbox, GRAY8 row RLE, RGB/gray hashes, and preview reconstruct the official crop byte-for-byte; no solution or solved fill was used in the runtime transcription."
+        "Each nonstandard glyph's bbox, GRAY8 row RLE, RGB/gray hashes, and preview reconstruct the official crop byte-for-byte; no solution or solved fill was used in the runtime transcription.",
+        "Stage-1 retrospective corrected the evaluator-only solved triangle from 发 to 岌, matching the official solution image and the phrase 岌岌可危; runtime clue data was not changed by this oracle correction."
       ]
     },
     {
@@ -277,25 +301,6 @@
     }
   ],
   "static_transcription_queue": [
-    {
-      "puzzle_id": 23,
-      "required_channels": [
-        "isometric faces",
-        "occlusion",
-        "face color",
-        "view direction"
-      ],
-      "source_sha256": [
-        "4b858e77da29e4b9b1489dcab99efb75bea6cea3af8abaa73571ad1caeac3797",
-        "5a841d929b4b596411cc8730f1b944854d819352d86457b99048f98fdf2d5205",
-        "0aa06550407492fbd393b106daf8e47145e5519095e9ea1cda9f5edda9bbbc39"
-      ],
-      "fidelity_notes": [
-        "The two official 1536x2800 raster copies are pixel-equivalent. A source-only connected-region inventory finds 43 visible main-city face regions (24 top/yellow, 9 left/green, 10 right/black) and 75 pairwise boundary-contact candidates, but the current candidate records none of their polygons, local z-order, T-junctions, or occlusion relations.",
-        "The fourth main-view arrow labeled 6 points southwest; the current candidate's southeast label is a known transcription error and must be corrected before review.",
-        "A faithful schema must preserve only visible polygons and local partial-order/occlusion facts, keep hidden extents unknown, and separately record the example, gray divider, decorative CCBC logo, and the centered placement of the downward (9) extraction arrow."
-      ]
-    },
     {
       "puzzle_id": 30,
       "required_channels": [
@@ -433,11 +438,11 @@
   ],
   "counts": {
     "direct_text": 10,
-    "reviewed_transcriptions": 13,
-    "static_transcription_queue": 3,
+    "reviewed_transcriptions": 14,
+    "static_transcription_queue": 2,
     "pending_artifact_audit": 0,
     "not_text_faithful": 23,
-    "runnable_text_suite": 23,
+    "runnable_text_suite": 24,
     "total": 49
   }
 }
