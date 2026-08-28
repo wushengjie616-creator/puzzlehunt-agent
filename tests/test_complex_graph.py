@@ -283,8 +283,109 @@ class DuplicateToolReplanningProvider(ScriptedStageProvider):
         return super().complete(messages)
 
 
+class SemanticRecoveryProvider(ScriptedStageProvider):
+    def __init__(self, *, initial_anchor=True):
+        super().__init__()
+        self.initial_anchor = initial_anchor
+        self.materialization_calls = 0
+        self.validation_calls = 0
+
+    def complete(self, messages):
+        marker = messages[0]["content"].split("PUZZLE_STAGE: ", 1)[1].splitlines()[0]
+        if marker == "MATERIALIZE_SUBPROBLEMS":
+            self.materialization_calls += 1
+            self.stages.append(marker)
+            self.messages.append(messages)
+            recovered = self.materialization_calls == 2
+            return json.dumps({
+                "structure_model": {
+                    "kind": "list", "unit_count": 3,
+                    "grouping_rule": "three semantic clues", "dependencies": [],
+                },
+                "subproblems": [
+                    {"id": f"sp{i}", "input_excerpt": f"clue {i}", "signal_ids": ["o1"],
+                     "group": "clues", "depends_on": [], "predicted_product": "word", "status": "open"}
+                    for i in range(2 if recovered and self.initial_anchor else 1, 4)
+                ],
+                "subproblem_results": [
+                    *([{"id": "sr1", "subproblem_id": "sp1", "value": "WRONG" if recovered and self.initial_anchor else "ALPHA",
+                        "status": "candidate", "signal_ids": ["o1"], "confidence": 0.9}]
+                      if recovered or self.initial_anchor else []),
+                    *([{"id": "sr2", "subproblem_id": "sp2", "value": "BRAVO",
+                        "status": "candidate", "signal_ids": ["o1"], "confidence": 0.7},
+                       {"id": "sr3", "subproblem_id": "sp3", "value": "CHARLIE",
+                        "status": "candidate", "signal_ids": ["o1"], "confidence": 0.7}]
+                      if recovered else []),
+                ],
+            })
+        if marker == "VALIDATE_SUBPROBLEMS":
+            self.validation_calls += 1
+            self.stages.append(marker)
+            self.messages.append(messages)
+            recovered = self.validation_calls == 2
+            values = [("sr1", "sp1", "ALPHA")] if self.initial_anchor else []
+            if recovered:
+                values = [("sr1", "sp1", "ALPHA"), ("sr2", "sp2", "BRAVO"), ("sr3", "sp3", "CHARLIE")]
+            return json.dumps({
+                "validated_results": [
+                    {"result_id": rid, "subproblem_id": sid, "value": value,
+                     "validation_kind": "semantic_derivation", "signal_ids": ["o1"],
+                     "prediction": value, "falsifier": "the exact clue names another word",
+                     "justification": "the exact clue supports this value"}
+                    for rid, sid, value in values
+                ],
+                "contradicted_result_ids": [], "needs_test_result_ids": [],
+                "unresolved_subproblem_ids": [] if recovered else ["sp2", "sp3"],
+                "issues": [],
+            })
+        return super().complete(messages)
+
+
 @unittest.skipUnless(HAS_LANGGRAPH, "complex extra is not installed")
 class ComplexGraphTests(unittest.TestCase):
+    def test_empty_first_pass_gets_one_bounded_semantic_recovery(self):
+        provider = SemanticRecoveryProvider(initial_anchor=False)
+        result = build_puzzle_graph(provider, checkpointer=InMemorySaver()).invoke(
+            new_puzzle_state(PuzzleInput(content="three semantic clues"), max_calls=10),
+            {"configurable": {"thread_id": "empty-semantic-recovery"}},
+        )
+
+        self.assertEqual(provider.materialization_calls, 2)
+        self.assertEqual(provider.validation_calls, 2)
+        self.assertEqual(result["semantic_refinement_used"], 1)
+        self.assertEqual(len(result["validated_subproblem_results"]), 3)
+        self.assertEqual(provider.stages.count("HYPOTHESIZE_PLAN"), 1)
+        self.assertEqual(provider.stages.count("EVALUATE_EVIDENCE"), 1)
+
+    def test_low_semantic_coverage_gets_one_pre_plan_recovery_pass(self):
+        provider = SemanticRecoveryProvider()
+        graph = build_puzzle_graph(provider, checkpointer=InMemorySaver())
+        result = graph.invoke(
+            new_puzzle_state(PuzzleInput(content="three semantic clues"), max_calls=10),
+            {"configurable": {"thread_id": "semantic-recovery"}},
+        )
+
+        self.assertEqual(provider.materialization_calls, 2)
+        self.assertEqual(provider.validation_calls, 2)
+        self.assertEqual(result["semantic_refinement_used"], 1)
+        self.assertEqual(
+            {item["value"] for item in result["validated_subproblem_results"]},
+            {"ALPHA", "BRAVO", "CHARLIE"},
+        )
+        self.assertEqual(result["subproblem_validation"]["unresolved_subproblem_ids"], [])
+        self.assertEqual(
+            next(item for item in result["subproblem_results"] if item["id"] == "sr1")["value"],
+            "ALPHA",
+        )
+        self.assertEqual(
+            sum(item.get("id") == "semantic-sr1" for item in result["evidence"]), 1
+        )
+        self.assertEqual(result["budget"]["calls_used"], 10)
+        self.assertEqual(provider.stages.count("HYPOTHESIZE_PLAN"), 1)
+        self.assertEqual(provider.stages.count("EVALUATE_EVIDENCE"), 1)
+        refinement_prompt = provider.messages[4][0]["content"]
+        self.assertIn("SEMANTIC_REFINEMENT", refinement_prompt)
+
     def test_graph_uses_ordered_independent_reasoning_calls(self):
         provider = ScriptedStageProvider()
         graph = build_puzzle_graph(provider, checkpointer=InMemorySaver())

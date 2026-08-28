@@ -1,8 +1,13 @@
 import json
+from http.client import IncompleteRead
 import unittest
 from urllib.error import HTTPError
 
-from puzzle_agent.providers.deepseek import DeepSeekConfig, DeepSeekProvider
+from puzzle_agent.providers.deepseek import (
+    DeepSeekConfig,
+    DeepSeekProvider,
+    DeepSeekTransportError,
+)
 
 
 class FakeResponse:
@@ -31,6 +36,11 @@ class TruncatedContentResponse(FakeResponse):
                 "message": {"content": '{"association_candidates":['},
             }]
         }).encode()
+
+
+class IncompleteResponse(FakeResponse):
+    def read(self):
+        raise IncompleteRead(b"")
 
 
 class RecordingOpener:
@@ -96,6 +106,14 @@ class DeepSeekContractTests(unittest.TestCase):
             opener=RecordingOpener(TruncatedContentResponse()),
         )
         with self.assertRaisesRegex(RuntimeError, "truncated content.*length"):
+            provider.complete([{"role": "user", "content": "hello"}])
+
+    def test_incomplete_http_body_is_classified_as_retryable_transport(self):
+        provider = DeepSeekProvider(
+            DeepSeekConfig(api_key="secret"),
+            opener=RecordingOpener(IncompleteResponse()),
+        )
+        with self.assertRaises(DeepSeekTransportError):
             provider.complete([{"role": "user", "content": "hello"}])
 
 

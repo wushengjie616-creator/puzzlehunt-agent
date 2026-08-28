@@ -34,6 +34,10 @@ INTAKE
   → ASSOCIATE_THEME               # LLM call 2：ontology beam、bridge、预测与反证
   → MATERIALIZE_SUBPROBLEMS       # LLM call 3：显式子题、分组、依赖与候选载体
   → VALIDATE_SUBPROBLEMS          # LLM call 4：局部答案的语义/转录证据门
+      ├─ semantic coverage < 50%、未恢复且剩余预算 ≥ 6
+      │    → PREPARE_SEMANTIC_REFINEMENT   # zero LLM calls
+      │    → MATERIALIZE_SUBPROBLEMS → VALIDATE_SUBPROBLEMS（至多一次）
+      └─ otherwise
   → HYPOTHESIZE_PLAN              # LLM call 5：机制承诺与有界实验
   → TOOL_DISPATCH                 # zero LLM calls
   → EVALUATE_EVIDENCE             # LLM call 6
@@ -42,13 +46,14 @@ INTAKE
   → SOLVED | NEEDS_REVIEW | EXHAUSTED
 ```
 
-八个 LLM node 都调用同一个 `DeepSeekProvider.complete()`，每次是 stateless single-turn Chat Completions 请求。本地 state 被裁剪成当前节点所需 JSON 后注入下一次请求，不依赖 DeepSeek 服务端会话。正常路径八次调用；一次 evidence-driven replan 使用十次。
+八类 LLM node 都调用同一个 `DeepSeekProvider.complete()`，每次是 stateless single-turn Chat Completions 请求。本地 state 被裁剪成当前节点所需 JSON 后注入下一次请求，不依赖 DeepSeek 服务端会话。正常路径八次调用；一次 evidence-driven replan 或一次 pre-plan semantic refinement 使用十次，二者不会在同一运行中叠加。
 
 ### 强制阶段纪律
 
 - 观察轮只能写事实、异常和有触发词的风味联想，不提交答案。
 - 子问题物化轮先把列表、网格、阶段题和 meta 拆成可单独检查的工作单元；大题保留总数、分组和依赖，并选择代表性单元，不把 100+ 条线索压成一段摘要。
 - 子问题验证轮把每个非空局部答案精确分入 supported、contradicted 或 needs-test；只有值不漂移、引用真实 signal 且给出 prediction/falsifier 的 supported 结果才能进入 evidence，无支持结果的子题必须显式 unresolved。
+- 首轮局部语义覆盖不足一半时，框架可在计划前做一次恢复轮：已验证结果视为不可变锚点，未解单元重新物化；完全没有锚点时只生成 1–3 个题面可落地的高杠杆候选。恢复后禁止再进入工具重规划，保证总预算仍有界。
 - 计划轮至少保留两个 competing hypotheses，并选择可判别实验。
 - 每个工具计划必须引用可见 signal，给出具体 prediction 与 falsifier；空计划保持为空，不再暗中回退到通用密码 shotgun。
 - 工具轮只运行白名单确定性工具，结果带 provenance 写入 evidence。
@@ -56,6 +61,7 @@ INTAKE
 - 中间验证轮只接受已存在且引用真实 evidence ID 的 carrier/instruction/ordering/parameter；原始中间猜测不能直接通过。
 - 验证轮检查格式、证据、风味/标题回扣；不足时返回 null/`NEEDS_REVIEW`。
 - 预算耗尽返回 `EXHAUSTED`，不继续调用或编造结果。
+- DeepSeek 的显式网络传输失败可从同一 checkpoint 重试同一节点一次；JSON、schema 和业务协议错误不重试，避免把非幂等状态或错误输出静默吞掉。
 
 ## 4. PuzzleState
 
@@ -66,7 +72,7 @@ INTAKE
 - `hypotheses`、`plan`、`attempts`、`evidence`
 - `intermediate_answers`、`validated_intermediate_answers`、`intermediate_validation`、`extractions`、`answer_candidates`
 - `open_questions`、`missing_artifacts`、`blockers`
-- `budget`、`stage`、`status`、`last_node`、`next_node`
+- `budget`、`semantic_refinement_used`、`stage`、`status`、`last_node`、`next_node`
 - `final_answer`
 
 系统不保存私有思维链；只保存可协作的结论、证据、实验、失败记录和简洁推理摘要。

@@ -1,6 +1,12 @@
 from dataclasses import dataclass
+from http.client import IncompleteRead
 import json
+import ssl
 from urllib import error, request
+
+
+class DeepSeekTransportError(RuntimeError):
+    """A transient transport failure that is safe to retry from a checkpoint."""
 
 
 @dataclass(frozen=True)
@@ -62,6 +68,12 @@ class DeepSeekProvider:
         except error.HTTPError as exc:
             raise RuntimeError(f"DeepSeek API returned HTTP {exc.code}") from exc
         except error.URLError as exc:
-            raise RuntimeError(f"DeepSeek API network error: {exc.reason}") from exc
+            raise DeepSeekTransportError(
+                f"DeepSeek API network error: {exc.reason}"
+            ) from exc
+        except (IncompleteRead, TimeoutError, ConnectionError, ssl.SSLError) as exc:
+            raise DeepSeekTransportError(
+                f"DeepSeek API network error: {type(exc).__name__}: {exc}"
+            ) from exc
         except (json.JSONDecodeError, KeyError, IndexError, TypeError) as exc:
             raise RuntimeError("DeepSeek API returned an invalid response") from exc

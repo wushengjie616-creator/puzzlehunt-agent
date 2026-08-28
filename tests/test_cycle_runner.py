@@ -1,6 +1,7 @@
 import json
 import importlib.util
 import inspect
+from http.client import IncompleteRead
 from pathlib import Path
 import sys
 import tempfile
@@ -197,6 +198,51 @@ class CycleCaseContractTests(unittest.TestCase):
         self.assertEqual(persisted["error_type"], "RuntimeError")
 
     @unittest.skipUnless(HAS_COMPLEX, "complex extra is not installed")
+    def test_worker_resumes_the_same_checkpoint_once_after_transport_failure(self):
+        class FlakyTransportProvider:
+            def __init__(self):
+                self.failed = False
+                self.fallback = OfflineStageProvider()
+
+            def complete(self, messages):
+                if not self.failed:
+                    self.failed = True
+                    raise IncompleteRead(b"")
+                return self.fallback.complete(messages)
+
+        case = discover_cases(CYCLE_CASES, "v1")[0]
+        with tempfile.TemporaryDirectory() as directory:
+            result = run_case_worker(
+                case, Path(directory), provider=FlakyTransportProvider(), max_calls=10
+            )
+
+        self.assertNotEqual(result["status"], "ERROR")
+        self.assertEqual(result["calls_attempted"], result["calls_used"] + 1)
+        self.assertEqual(result["trace"][2]["node"], "observe_classify")
+        self.assertEqual(result["trace"][2]["outcome"], "retryable_failure")
+        self.assertEqual(result["trace"][3]["node"], "observe_classify")
+        self.assertEqual(result["trace"][3]["outcome"], "completed")
+
+    @unittest.skipUnless(HAS_COMPLEX, "complex extra is not installed")
+    def test_worker_stops_after_one_transport_retry_for_the_same_node(self):
+        class BrokenTransportProvider:
+            def complete(self, _messages):
+                raise IncompleteRead(b"")
+
+        case = discover_cases(CYCLE_CASES, "v1")[0]
+        with tempfile.TemporaryDirectory() as directory:
+            result = run_case_worker(
+                case, Path(directory), provider=BrokenTransportProvider(), max_calls=10
+            )
+
+        self.assertEqual(result["status"], "ERROR")
+        self.assertEqual(result["calls_attempted"], 2)
+        self.assertEqual(
+            [item["outcome"] for item in result["trace"][-2:]],
+            ["retryable_failure", "failed"],
+        )
+
+    @unittest.skipUnless(HAS_COMPLEX, "complex extra is not installed")
     def test_offline_cycle_runs_five_isolated_workers_and_writes_reports(self):
         with tempfile.TemporaryDirectory() as directory:
             result = run_cycle(
@@ -229,10 +275,11 @@ class CycleCaseContractTests(unittest.TestCase):
         self.assertIn("intermediate_pass", result["summary"])
         self.assertNotIn("oracle", manifest.casefold())
         self.assertNotIn("expected_answer", manifest.casefold())
-        self.assertEqual(len(node_summary), 12)
+        self.assertEqual(len(node_summary), 13)
         self.assertEqual({item["node"] for item in node_summary}, {
             "intake", "artifact_inventory", "human_interrupt", "observe_classify",
             "associate_theme", "materialize_subproblems", "validate_subproblems", "hypothesize_plan",
+            "prepare_semantic_refinement",
             "tool_dispatch", "evaluate_evidence",
             "verify_intermediates",
             "verify_answer",

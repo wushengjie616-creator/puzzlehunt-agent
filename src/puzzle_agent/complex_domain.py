@@ -32,6 +32,7 @@ def new_puzzle_state(
         "subproblem_results": [],
         "validated_subproblem_results": [],
         "subproblem_validation": {},
+        "semantic_refinement_used": 0,
         "structure_model": {},
         "hypotheses": [],
         "plan": [],

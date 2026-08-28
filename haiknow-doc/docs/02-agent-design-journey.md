@@ -300,3 +300,15 @@ CCBC16 多次把“不唯一”本身用作机制。如果 solver 只返回第�
 第一次从 evidence evaluation 后 checkpoint 建分支时，新 session 虽然带着全部 state，却从 `START` 重新执行，最终重复观察、联想和局部验证并耗尽预算。原因是旧 `branch` 只把 snapshot 写成 `initial_state`，没有在新 LangGraph thread 中重建游标。
 
 现在 branch 以原 snapshot 的 `last_node` 调用 `update_state`，并强制核对新旧 `next`。回归测试证明分支 provider 只收到 `VERIFY_INTERMEDIATES`、`VERIFY_ANSWER` 两次调用；真实 DeepSeek 分支也从 calls=6 继续到 calls=8，而不是重跑入口节点。
+
+## 第 37 站：结构化协议恢复后，失败重心才会显露
+
+18:00 批次把上一轮 8 个局部验证协议错误全部消除，17/20 题安全到达两层验证门；剩余 3 题分别在 observe、plan、evaluate 遭遇 TLS EOF 或响应体不完整。这说明 schema 容错已经生效，网络抖动也不应继续与推理失败混为一类。
+
+cycle worker 因此只对明确的 transport exception 做一次同 checkpoint、同节点重试，并在 trace 中记录 `PROVIDER_RETRY`。普通 `RuntimeError`、非法 JSON、schema 和协议错误仍立即失败。重试是可观察的恢复动作，不改变已提交 state，也不会扩成通用重试循环。
+
+## 第 38 站：工具重规划不能修复尚未形成的语义载体
+
+18:00 的 17 个安全完成题中，14 题进入旧的 evaluate→tool replan，14 题都没有形成 final candidate；其中 10 次第二轮工具实验没有增加任何 extraction。失败分组显示 11 题所有局部结果为空，另外 4 题只有零散 needs-test。此时增加密码工具或再规划工具调用，是在错误层级上优化。
+
+图中因此增加一次计划前 semantic refinement：首轮验证覆盖不足 50%、尚未恢复且至少剩余 6 次调用时，重新进入 materialize→validate。已有 supported 结果按 ID、subproblem 和 value 作为不可变锚点合并回来；零锚点时只提出 1–3 个由原文支撑的高杠杆候选。恢复轮用掉原先 replan 的两次预算，并禁止二者叠加，从而仍保持最多 10 个模型节点。它不是让模型“再想一次”，而是针对缺失语义载体的有界修复路径。

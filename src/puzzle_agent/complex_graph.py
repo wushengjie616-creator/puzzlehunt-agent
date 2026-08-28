@@ -32,6 +32,7 @@ class PuzzleGraphState(TypedDict, total=False):
     subproblem_results: list[dict[str, Any]]
     validated_subproblem_results: list[dict[str, Any]]
     subproblem_validation: dict[str, Any]
+    semantic_refinement_used: int
     structure_model: dict[str, Any]
     hypotheses: list[dict[str, Any]]
     plan: list[dict[str, Any]]
@@ -86,7 +87,10 @@ _STAGE_INSTRUCTIONS = {
         "partition by rule family or stage, and materialize at least three representative/high-leverage units "
         "without flattening away group or dependency structure. An atomic puzzle still has one subproblem. "
         "Candidate results are provisional semantic solves, not evidence or final answers. Cite only visible "
-        "signal IDs, preserve exact excerpts, and leave a value empty rather than inventing it. Do not select tools."
+        "signal IDs and preserve exact excerpts. For semantic clues, emit a low-confidence candidate when the "
+        "exact excerpt and current ontology support a concrete answer; uncertainty belongs in confidence and the "
+        "later validation gate. Leave a value empty only when no excerpt-grounded candidate can be named. "
+        "Do not select tools."
     ),
     "VALIDATE_SUBPROBLEMS": (
         'Output {"validated_results":[{"result_id":"...","subproblem_id":"...",'
@@ -189,6 +193,7 @@ def _messages(stage: str, state: PuzzleGraphState) -> list[dict[str, str]]:
         "subproblem_results": state.get("subproblem_results", []),
         "validated_subproblem_results": state.get("validated_subproblem_results", []),
         "subproblem_validation": state.get("subproblem_validation", {}),
+        "semantic_refinement_used": state.get("semantic_refinement_used", 0),
         "hypotheses": state.get("hypotheses", []),
         "plan": state.get("plan", []),
         "attempts": state.get("attempts", []),
@@ -202,6 +207,14 @@ def _messages(stage: str, state: PuzzleGraphState) -> list[dict[str, str]]:
         "unused_elements": state.get("unused_elements", []),
         "blockers": state.get("blockers", []),
     }
+    if stage == "MATERIALIZE_SUBPROBLEMS" and state.get("semantic_refinement_used", 0):
+        system += (
+            "\nSEMANTIC_REFINEMENT: This is the single pre-plan recovery pass. Preserve every previously "
+            "validated result_id, subproblem_id, and value exactly as an immutable anchor. Revisit only unresolved "
+            "or needs-test units. If there are no anchors, materialize concrete candidates for only 1-3 "
+            "high-leverage units using the association predictions and validation issues; do not return empty "
+            "placeholders merely because confidence is low. Merge with the prior structure; do not erase solved units."
+        )
     return [
         {"role": "system", "content": system},
         {"role": "user", "content": json.dumps(visible_state, ensure_ascii=False)},
@@ -344,6 +357,43 @@ def _materialize(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGrap
     if len(identifiers) != len(subproblems):
         raise ValueError("subproblems must have unique non-empty ids")
     results = _array(data, "subproblem_results")
+    if state.get("semantic_refinement_used", 0):
+        prior_subproblems = {
+            item.get("id"): item for item in state.get("subproblems", [])
+            if isinstance(item.get("id"), str)
+        }
+        prior_results = {
+            item.get("id"): item for item in state.get("subproblem_results", [])
+            if isinstance(item.get("id"), str)
+        }
+        accepted = {
+            item.get("result_id"): item
+            for item in state.get("validated_subproblem_results", [])
+            if isinstance(item.get("result_id"), str)
+        }
+        result_positions = {
+            item.get("id"): index for index, item in enumerate(results)
+            if isinstance(item.get("id"), str)
+        }
+        subproblem_ids = {item.get("id") for item in subproblems}
+        for result_id, validated in accepted.items():
+            prior = prior_results.get(result_id)
+            if prior is None:
+                continue
+            replacement_needed = (
+                result_id not in result_positions
+                or results[result_positions[result_id]].get("subproblem_id") != validated.get("subproblem_id")
+                or results[result_positions[result_id]].get("value") != validated.get("value")
+            )
+            if replacement_needed and result_id in result_positions:
+                results[result_positions[result_id]] = prior
+            elif replacement_needed:
+                results.append(prior)
+            subproblem_id = validated.get("subproblem_id")
+            if subproblem_id not in subproblem_ids and subproblem_id in prior_subproblems:
+                subproblems.append(prior_subproblems[subproblem_id])
+                subproblem_ids.add(subproblem_id)
+    identifiers = {item.get("id") for item in subproblems}
     if any(item.get("subproblem_id") not in identifiers for item in results):
         raise ValueError("subproblem_results must reference a known subproblem")
     return {
@@ -472,7 +522,10 @@ def _validate_subproblems(
         or set(supplied_unresolved) != set(unresolved)
     ):
         issues.append("AUTO_RECOMPUTED_UNRESOLVED_SUBPROBLEMS")
-    evidence = list(state.get("evidence", []))
+    semantic_ids = {f"semantic-{item['result_id']}" for item in validated}
+    evidence = [
+        item for item in state.get("evidence", []) if item.get("id") not in semantic_ids
+    ]
     evidence.extend({
         "id": f"semantic-{item['result_id']}",
         "kind": "validated_subproblem_result",
@@ -628,6 +681,8 @@ def _evaluate(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphSt
     # always reserve both intermediate and final verification calls.
     remaining = budget["max_calls"] - budget["calls_used"]
     if decision == "replan" and remaining < 4:
+        decision = "verify"
+    if decision == "replan" and state.get("semantic_refinement_used", 0):
         decision = "verify"
     intermediate_answers = (
         _array(data, "intermediate_answers")
@@ -854,6 +909,27 @@ def _continue_or_end(state: PuzzleGraphState) -> str:
     return "end" if state.get("status") == "EXHAUSTED" else "continue"
 
 
+def _prepare_semantic_refinement(state: PuzzleGraphState) -> PuzzleGraphState:
+    return {
+        "semantic_refinement_used": 1,
+        "stage": "MATERIALIZE_SUBPROBLEMS",
+        "last_node": "prepare_semantic_refinement",
+        "next_node": "materialize_subproblems",
+    }
+
+
+def _route_subproblem_validation(state: PuzzleGraphState) -> str:
+    if state.get("status") == "EXHAUSTED":
+        return "end"
+    subproblem_count = len(state.get("subproblems", []))
+    accepted = int(state.get("subproblem_validation", {}).get("accepted", 0))
+    remaining = state.get("budget", {}).get("max_calls", 0) - state.get("budget", {}).get("calls_used", 0)
+    low_coverage = bool(subproblem_count and accepted / subproblem_count < 0.5)
+    if not state.get("semantic_refinement_used", 0) and low_coverage and remaining >= 6:
+        return "refine"
+    return "plan"
+
+
 def _route_artifacts(state: PuzzleGraphState) -> str:
     return "blocked" if state.get("status") == "BLOCKED_INPUT" else "continue"
 
@@ -873,6 +949,7 @@ def build_puzzle_graph(provider: StageProvider, *, checkpointer=None, step_mode:
     builder.add_node("associate_theme", lambda state: _associate(provider, state))
     builder.add_node("materialize_subproblems", lambda state: _materialize(provider, state))
     builder.add_node("validate_subproblems", lambda state: _validate_subproblems(provider, state))
+    builder.add_node("prepare_semantic_refinement", _prepare_semantic_refinement)
     builder.add_node("hypothesize_plan", lambda state: _hypothesize(provider, state))
     builder.add_node("tool_dispatch", _tool_dispatch)
     builder.add_node("evaluate_evidence", lambda state: _evaluate(provider, state))
@@ -898,10 +975,12 @@ def build_puzzle_graph(provider: StageProvider, *, checkpointer=None, step_mode:
         "materialize_subproblems", _continue_or_end,
         {"continue": "validate_subproblems", "end": END}
     )
-    builder.add_conditional_edges(
-        "validate_subproblems", _continue_or_end,
-        {"continue": "hypothesize_plan", "end": END}
-    )
+    builder.add_conditional_edges("validate_subproblems", _route_subproblem_validation, {
+        "refine": "prepare_semantic_refinement",
+        "plan": "hypothesize_plan",
+        "end": END,
+    })
+    builder.add_edge("prepare_semantic_refinement", "materialize_subproblems")
     builder.add_conditional_edges(
         "hypothesize_plan", _continue_or_end, {"continue": "tool_dispatch", "end": END}
     )

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+from http.client import IncompleteRead
 import os
 from pathlib import Path
 import re
 import subprocess
 import sys
+import ssl
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -23,6 +25,7 @@ from .benchmark import (
     validate_case,
 )
 from .domain import PuzzleInput
+from .providers.deepseek import DeepSeekTransportError
 
 
 _GRAPH_NODES = (
@@ -33,12 +36,29 @@ _GRAPH_NODES = (
     "associate_theme",
     "materialize_subproblems",
     "validate_subproblems",
+    "prepare_semantic_refinement",
     "hypothesize_plan",
     "tool_dispatch",
     "evaluate_evidence",
     "verify_intermediates",
     "verify_answer",
 )
+
+
+def _is_retryable_transport_error(exc: BaseException) -> bool:
+    """Recognize only explicit transport failures, including wrapped causes."""
+
+    current: BaseException | None = exc
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, (
+            DeepSeekTransportError, IncompleteRead, TimeoutError,
+            ConnectionError, ssl.SSLError,
+        )):
+            return True
+        current = current.__cause__ or current.__context__
+    return False
 
 
 def _terminate_process_tree(process: subprocess.Popen[bytes]) -> None:
@@ -169,7 +189,7 @@ def analyze_node_effects(traces: list[dict[str, Any]], *, correct: bool) -> list
             issues.append("PROVIDER_ERROR")
         result.append({
             "node": node,
-            "expected_activation": node != "human_interrupt",
+            "expected_activation": node not in {"human_interrupt", "prepare_semantic_refinement"},
             "activated": activated,
             "activation_count": len(matching),
             "wall_time_ms": sum(int(item.get("wall_time_ms", 0)) for item in matching),
@@ -204,7 +224,7 @@ def aggregate_node_effects(reports: list[list[dict[str, Any]]]) -> list[dict[str
             label = str(item.get("usefulness", "UNASSESSABLE"))
             usefulness_counts[label] = usefulness_counts.get(label, 0) + 1
         issues = sorted({issue for item in entries for issue in item.get("issues", [])})
-        expected = node != "human_interrupt"
+        expected = node not in {"human_interrupt", "prepare_semantic_refinement"}
         if expected and activated_cases < total_cases:
             issues.append(f"NOT_ACTIVATED_IN_{total_cases - activated_cases}_CASES")
         if activated_cases and not written and not evidence:
@@ -269,6 +289,10 @@ def _observable_effects(
         effects.append(
             f"SUBPROBLEM_RESULTS_NEED_TEST:{len(validation.get('needs_test_result_ids', []))}"
         )
+    elif node == "prepare_semantic_refinement":
+        effects.append(
+            f"SEMANTIC_REFINEMENT_STARTED:{int(bool(after.get('semantic_refinement_used')))}"
+        )
     elif node == "hypothesize_plan":
         effects.append(f"HYPOTHESES_PRESERVED:{len(after.get('hypotheses', []))}")
         effects.append(f"PLAN_ITEMS:{len(after.get('plan', []))}")
@@ -326,6 +350,7 @@ def run_case_worker(
     state = manager.status(session_id)
     trace: list[dict[str, Any]] = []
     calls_attempted = 0
+    transport_retries: dict[str, int] = {}
     error_type: str | None = None
     error_summary: str | None = None
     model_nodes = {
@@ -346,6 +371,12 @@ def run_case_worker(
             calls_attempted += int(provider_attempted)
             error_type = type(exc).__name__
             error_summary = _stderr_summary(str(exc).encode("utf-8", errors="replace"))
+            retryable = bool(
+                provider_attempted
+                and attempted_node
+                and _is_retryable_transport_error(exc)
+                and transport_retries.get(attempted_node, 0) < 1
+            )
             trace.append({
                 "node": attempted_node,
                 "stage": before.get("stage"),
@@ -354,10 +385,15 @@ def run_case_worker(
                 "new_evidence_ids": [],
                 "calls_used": before.get("budget", {}).get("calls_used", 0),
                 "provider_call_attempted": provider_attempted,
-                "outcome": "failed",
+                "outcome": "retryable_failure" if retryable else "failed",
                 "error_type": error_type,
-                "observed_effects": ["PROVIDER_ERROR"],
+                "observed_effects": ["PROVIDER_RETRY" if retryable else "PROVIDER_ERROR"],
             })
+            if retryable:
+                transport_retries[attempted_node] = transport_retries.get(attempted_node, 0) + 1
+                error_type = None
+                error_summary = None
+                continue
             state = {
                 **before,
                 "status": "ERROR",

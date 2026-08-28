@@ -78,12 +78,17 @@ OBSERVE_CLASSIFY
   → ASSOCIATE_THEME
   → MATERIALIZE_SUBPROBLEMS
   → VALIDATE_SUBPROBLEMS
+      └─ semantic coverage < 50% and six calls remain
+         → PREPARE_SEMANTIC_REFINEMENT
+         → MATERIALIZE_SUBPROBLEMS → VALIDATE_SUBPROBLEMS  # at most once
   → HYPOTHESIZE_PLAN
   → deterministic tool dispatch
   → EVALUATE_EVIDENCE
   → VERIFY_INTERMEDIATES
   → VERIFY_ANSWER
 ```
+
+第一次局部验证覆盖不足一半时，complex mode 会在工具规划前使用唯一一次语义恢复轮：已有 supported 值是不可改写锚点；首轮全空时只补 1–3 个高杠杆候选。该路径固定占用十次模型节点，因此之后不再进入第二轮 tool replan。明确的 TLS、连接中断或不完整 HTTP body 会从同一 checkpoint 最多重试一次；JSON/schema 错误仍立即失败。
 
 也可以逐节点学习和调试：
 
