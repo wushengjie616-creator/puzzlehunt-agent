@@ -20,6 +20,20 @@ class HardRunnerContractTests(unittest.TestCase):
         self.assertEqual(len(entries), 49)
         self.assertEqual(ids, set(range(1, 56)) - {12, 25, 33, 44, 50, 55})
 
+    def test_text_surface_audit_partitions_every_non_meta_puzzle(self):
+        audit = json.loads(
+            (ROOT / "research/ccbc16/text-surface-audit.json").read_text(encoding="utf-8")
+        )
+        partitions = [
+            {item["puzzle_id"] for item in audit["direct_text"]},
+            {item["puzzle_id"] for item in audit["static_transcription_queue"]},
+            set(audit["pending_artifact_audit"]),
+            {item["puzzle_id"] for item in audit["not_text_faithful"]},
+        ]
+        self.assertEqual(sum(map(len, partitions)), 49)
+        self.assertEqual(len(set().union(*partitions)), 49)
+        self.assertFalse(any(left & right for i, left in enumerate(partitions) for right in partitions[i + 1:]))
+
     def test_converter_strips_oracle_and_solution_from_worker_input(self):
         payload = {
             "pid": 7,
