@@ -71,6 +71,8 @@ related_commits: []
 - Cycle 3 后 memory 审计：预留的 intermediate/extraction/open-question 字段没有完整进入后续 prompt。新增 `unused_elements`，评价节点写回四类阶段账本，所有后续节点可见；open questions 或 unused clues 非空时机器门拒绝 solved。聚焦测试先证明 KeyError/遗漏 extraction，再转绿。
 - Cycle 3 后 node-report 审计：保留错误题 `UNASSESSABLE` 的因果边界，同时为 trace 增加 observations/plan/tool success-failure/extraction/replan/memory debt/terminal status 等可观察效果；聚焦测试先 RED 后 GREEN，错误题也能报告 `FAILED_TOOL_CALLS` 而不声称节点有用或无用。
 - 为使 scheduler 父进程加载新版 cycle report 代码，12:17 做可恢复重启：旧 PID `23336` 正常停止，新 runtime PID `28164`；前三轮从相同 `start_at` 状态恢复且不会重跑，下一锚点仍为 15:00:29，最终锚点不变。
+- 用户于 12:39 否定 v1 难度与风味设计：复核确认五题均把关键 operator/顺序/提取直接写出，主要测 instruction following。12:40:15 正常停止 PID `28164`，15:00 旧批次取消；前三轮降级为 `v1-explicit-baseline`，不删除历史。纠偏设计见 `_drafts/P0004-human-association-benchmark-v2.md`。
+- 旧 subagent 事实：`ccbc_01_20_audit`、`ccbc_21_40_audit`、`ccbc_41_55_audit` 已完成 CCBC16 机制审计，但没有研究逐题 human association trace，不能作为新要求的完成证据。现已启动 CCBC16/15/12 三个独立 human-reasoning 研究流。
 
 ## 后续 todo
 
