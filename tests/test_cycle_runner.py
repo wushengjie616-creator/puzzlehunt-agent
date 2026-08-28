@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 
 from puzzle_agent.benchmark import discover_cases, load_runtime_input, validate_case
 from puzzle_agent.cycle_runner import (
+    _observable_effects,
     analyze_node_effects,
     execute_case_process,
     format_human_cycle_report,
@@ -30,6 +31,30 @@ HAS_COMPLEX = (
 
 
 class CycleCaseContractTests(unittest.TestCase):
+    def test_validation_normalizations_are_visible_in_node_analysis(self):
+        effects = _observable_effects("validate_subproblems", {}, {
+            "validated_subproblem_results": [],
+            "subproblem_validation": {
+                "contradicted_result_ids": [],
+                "needs_test_result_ids": [],
+                "issues": [
+                    "model prose is not a machine normalization",
+                    "AUTO_IGNORED_UNKNOWN_RESULT_IDS:2",
+                ],
+            },
+        })
+        report = analyze_node_effects([{
+            "node": "validate_subproblems",
+            "observed_effects": effects,
+        }], correct=False)
+        validation = next(item for item in report if item["node"] == "validate_subproblems")
+
+        self.assertIn(
+            "VALIDATION_NORMALIZATION:AUTO_IGNORED_UNKNOWN_RESULT_IDS:2",
+            validation["observed_effects"],
+        )
+        self.assertIn("VALIDATION_NORMALIZATION", validation["issues"])
+
     def test_scheduler_accepts_case_count_and_public_report_root(self):
         parameters = inspect.signature(run_cycle_scheduler).parameters
         self.assertIn("expected_case_count", parameters)

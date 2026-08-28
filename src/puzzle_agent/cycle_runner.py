@@ -187,6 +187,8 @@ def analyze_node_effects(traces: list[dict[str, Any]], *, correct: bool) -> list
             issues.append("EMPTY_PLAN")
         if "PROVIDER_ERROR" in observed_effects:
             issues.append("PROVIDER_ERROR")
+        if any(effect.startswith("VALIDATION_NORMALIZATION:") for effect in observed_effects):
+            issues.append("VALIDATION_NORMALIZATION")
         result.append({
             "node": node,
             "expected_activation": node not in {"human_interrupt", "prepare_semantic_refinement"},
@@ -288,6 +290,11 @@ def _observable_effects(
         )
         effects.append(
             f"SUBPROBLEM_RESULTS_NEED_TEST:{len(validation.get('needs_test_result_ids', []))}"
+        )
+        effects.extend(
+            f"VALIDATION_NORMALIZATION:{issue}"
+            for issue in validation.get("issues", [])
+            if isinstance(issue, str) and issue.startswith("AUTO_")
         )
     elif node == "prepare_semantic_refinement":
         effects.append(
