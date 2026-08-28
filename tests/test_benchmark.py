@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import tempfile
 import unittest
 
 from puzzle_agent.benchmark import (
@@ -47,6 +48,36 @@ class DerivedBenchmarkTests(unittest.TestCase):
         self.assertGreaterEqual(len(cases), 2)
         for case_dir in cases:
             self.assertEqual(validate_case(case_dir), [], case_dir.name)
+
+    def test_v2_reasoning_contract_rejects_flavor_leaks_and_missing_falsifiers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            case = Path(directory) / "v2" / "case"
+            case.mkdir(parents=True)
+            (case / "input.json").write_text(json.dumps({
+                "title": "Quiet room",
+                "flavor_text": "Use Caesar shift, then take the first letter.",
+                "content": "structured data",
+            }), encoding="utf-8")
+            (case / "oracle.json").write_text(json.dumps({"answer": "NORTH"}), encoding="utf-8")
+            (case / "rubric.json").write_text(json.dumps({
+                "milestones": ["orientation", "mechanism", "extraction"],
+                "required_signals": ["s1", "s2"],
+                "decoys": [{"hypothesis": "wrong", "falsifier": "fails s2"}],
+                "checkpoints": ["carrier"],
+                "coverage_ledger": ["s1", "s2"],
+                "flavor_leak_level": 4,
+                "flavor_only_solvable": True,
+                "shortcut_red_team": [{"shortcut": "acrostic", "result": "blocked"}],
+            }), encoding="utf-8")
+            (case / "provenance.json").write_text(json.dumps({
+                "source_urls": ["https://github.com/cipherpuzzles/CCBCArchive"],
+                "original_surface_and_data": True,
+            }), encoding="utf-8")
+
+            errors = validate_case(case)
+        self.assertTrue(any("flavor leaks" in error for error in errors))
+        self.assertTrue(any("two decoys" in error for error in errors))
+        self.assertTrue(any("flavor-only" in error for error in errors))
 
 
 if __name__ == "__main__":

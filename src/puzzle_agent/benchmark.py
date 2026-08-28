@@ -8,6 +8,10 @@ from typing import Any
 
 _REQUIRED_FILES = ("input.json", "oracle.json", "rubric.json", "provenance.json")
 _FORBIDDEN_INPUT_KEYS = {"answer", "solution", "oracle"}
+_V2_FLAVOR_LEAK = re.compile(
+    r"(?i)caesar|atbash|a1z26|morse|vigen[eè]re|rail\s*fence|reverse|interleave|"
+    r"凯撒|埃特巴什|摩斯|维吉尼亚|栅栏|倒序|反转|交错|取第|索引|首字|尾字|行号"
+)
 
 
 def discover_cases(root: str | Path, suite: str = "dev") -> list[Path]:
@@ -53,10 +57,57 @@ def validate_case(case_dir: str | Path) -> list[str]:
         errors.append("oracle answer leaks into runtime input")
     if not isinstance(rubric.get("milestones"), list) or not rubric["milestones"]:
         errors.append("rubric milestones must be a non-empty array")
-    if not str(provenance.get("source_url", "")).startswith("https://ccbc16.cipherpuzzles.com/"):
-        errors.append("provenance must cite the official CCBC16 site")
+    sources = provenance.get("source_urls")
+    if sources is None:
+        sources = [provenance.get("source_url", "")]
+    if not isinstance(sources, list) or not sources or not all(
+        isinstance(url, str) and (
+            url.startswith("https://ccbc16.cipherpuzzles.com/")
+            or url.startswith("https://github.com/cipherpuzzles/CCBCArchive")
+            or url.startswith("https://static.ccbcarchive.com/")
+        )
+        for url in sources
+    ):
+        errors.append("provenance must cite an official CCBC archive source")
     if provenance.get("original_surface_and_data") is not True:
         errors.append("case must attest original surface and data")
+    if case_dir.parent.name == "v2":
+        errors.extend(_validate_v2_reasoning_contract(runtime_input, rubric))
+    return errors
+
+
+def _validate_v2_reasoning_contract(
+    runtime_input: dict[str, Any], rubric: dict[str, Any]
+) -> list[str]:
+    errors: list[str] = []
+    flavor = str(runtime_input.get("flavor_text", ""))
+    leak_level = rubric.get("flavor_leak_level")
+    if not isinstance(leak_level, int) or isinstance(leak_level, bool) or leak_level not in {0, 1}:
+        errors.append("v2 flavor leaks beyond allowed L0-L1")
+    if _V2_FLAVOR_LEAK.search(flavor):
+        errors.append("v2 flavor leaks an operator, parameter, or extraction instruction")
+    if rubric.get("flavor_only_solvable") is not False:
+        errors.append("v2 flavor-only solvability must be false")
+    milestones = rubric.get("milestones", [])
+    if not isinstance(milestones, list) or len(milestones) < 3:
+        errors.append("v2 requires at least three reasoning milestones")
+    signals = rubric.get("required_signals", [])
+    if not isinstance(signals, list) or len(signals) < 2:
+        errors.append("v2 requires at least two independent signals")
+    decoys = rubric.get("decoys", [])
+    if not isinstance(decoys, list) or len(decoys) < 2 or not all(
+        isinstance(item, dict)
+        and isinstance(item.get("hypothesis"), str)
+        and isinstance(item.get("falsifier"), str)
+        and item["hypothesis"].strip()
+        and item["falsifier"].strip()
+        for item in decoys
+    ):
+        errors.append("v2 requires two decoys with explicit falsifiers")
+    for field in ("checkpoints", "coverage_ledger", "shortcut_red_team"):
+        value = rubric.get(field)
+        if not isinstance(value, list) or not value:
+            errors.append(f"v2 {field} must be a non-empty array")
     return errors
 
 
