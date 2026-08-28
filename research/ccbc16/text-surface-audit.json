@@ -15,6 +15,29 @@
     {"puzzle_id": 46, "adapter": "official-script-public-clues"},
     {"puzzle_id": 48, "adapter": "official-script-public-clues"}
   ],
+  "reviewed_transcriptions": [
+    {
+      "puzzle_id": 52,
+      "adapter": "human-reviewed-static-plus-upstream-state",
+      "required_channels": ["column order", "vertical position", "red outline style", "known printing-meta answer"],
+      "source_sha256": ["7d1a42d93281292d39815e1f1cce07dd576154adbfe7c0700189d0fc1c948047", "9b2bafaeb665dcaed38aa91ccc1201a2c8ffe4081d282da5e7bcfcbd3251e5c2"],
+      "unrepresented_channels": []
+    },
+    {
+      "puzzle_id": 53,
+      "adapter": "human-reviewed-static-plus-upstream-state",
+      "required_channels": ["8x4 cell coordinates", "three letters per cell", "independent 12-color sequence", "known gunpowder-meta answer", "known solved upstream 8x4 color grid"],
+      "source_sha256": ["e13dc8ca559f50355eed0e342a670a0259ca753825c0abc04ed14afe9f5e96fd", "f8437f280f7853066ed7b288636d7765999b5071b09780f0143aaed48c04047a", "984b0b12bcd27095f24721a110424ff99fe0dfb2a99d98830f40a3ea703388b1"],
+      "unrepresented_channels": []
+    },
+    {
+      "puzzle_id": 54,
+      "adapter": "human-reviewed-static-plus-upstream-state",
+      "required_channels": ["four exact English lines", "case and punctuation", "〔〕 outer scope", "known papermaking-meta answer", "known 〔〕 homophone operator"],
+      "source_sha256": ["b28bd34d8378f79599b0cd4281d8758d7a6c80de9af8b423a24ae32659fcebfb", "fce2f28cd82188ef60f19c250ae4209961db5ade21628d0362e2d832a01077b7"],
+      "unrepresented_channels": []
+    }
+  ],
   "static_transcription_queue": [
     {"puzzle_id": 4, "required_channels": ["glyph order", "bar count", "bar color", "arrow direction"]},
     {"puzzle_id": 9, "required_channels": ["node coordinates", "directed edges", "loops", "node color", "prefills"]},
@@ -96,10 +119,7 @@
         "https://static.cipherpuzzles.com/static/images/b668aafefdf9435cb4d68bc8128cb6ce.webp",
         "https://static.cipherpuzzles.com/static/images/cdd6d85fc71b40ae8bdff5ce2dd5c52c.webp"
       ]
-    },
-    {"puzzle_id": 52, "required_channels": ["column order", "vertical position", "red outline style"]},
-    {"puzzle_id": 53, "required_channels": ["2D cell coordinates", "four-corner letters", "independent color sequence"]},
-    {"puzzle_id": 54, "required_channels": ["four exact English lines", "case", "punctuation", "outer bracket scope"]}
+    }
   ],
   "pending_artifact_audit": [],
   "not_text_faithful": [
@@ -129,9 +149,11 @@
   ],
   "counts": {
     "direct_text": 10,
-    "static_transcription_queue": 16,
+    "reviewed_transcriptions": 3,
+    "static_transcription_queue": 13,
     "pending_artifact_audit": 0,
     "not_text_faithful": 23,
+    "runnable_text_suite": 13,
     "total": 49
   }
 }

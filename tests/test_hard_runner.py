@@ -26,6 +26,7 @@ class HardRunnerContractTests(unittest.TestCase):
         )
         partitions = [
             {item["puzzle_id"] for item in audit["direct_text"]},
+            {item["puzzle_id"] for item in audit["reviewed_transcriptions"]},
             {item["puzzle_id"] for item in audit["static_transcription_queue"]},
             set(audit["pending_artifact_audit"]),
             {item["puzzle_id"] for item in audit["not_text_faithful"]},
@@ -33,6 +34,11 @@ class HardRunnerContractTests(unittest.TestCase):
         self.assertEqual(sum(map(len, partitions)), 49)
         self.assertEqual(len(set().union(*partitions)), 49)
         self.assertFalse(any(left & right for i, left in enumerate(partitions) for right in partitions[i + 1:]))
+        self.assertEqual(
+            {item["puzzle_id"] for item in audit["reviewed_transcriptions"]},
+            {52, 53, 54},
+        )
+        self.assertEqual(audit["counts"]["runnable_text_suite"], 13)
 
     def test_converter_strips_oracle_and_solution_from_worker_input(self):
         payload = {

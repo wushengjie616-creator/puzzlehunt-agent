@@ -189,7 +189,7 @@ validator 递归拒绝 input 中的 `answer/solution/oracle` 字段，并检查�
 
 - DeepSeek API text-only；图片、音频、版式与交互必须先转写为 artifact。
 - 当前确定性 grid/CSP 能力是基础组件，不等于完整填字/数独/图像识别引擎。
-- 49 道 CCBC16 非 Meta 已完成表面分类：10 道直接文本、16 道理论上可保真静态转写、23 道无法仅用文本忠实表达；16 道队列尚未完成实际逐格/逐音频转写，因此当前可运行官方文本套件仍是 10 道。
+- 49 道 CCBC16 非 Meta 已完成表面分类：10 道直接文本、3 道 source-hashed 人工转写、13 道待转写、23 道无法仅用文本忠实表达；当前可运行官方文本套件为 13 道。转写 final feeders 时还必须带入人类在解锁该题时已经拥有的上游 Meta 答案、网格或操作符，不能只抄当前图片。
 - knowledge research subgraph 尚未接外部搜索 provider；没有可靠事实时保持 unknown。
 - offline provider 只验证系统流，不代表真实复杂解题能力。
 - 真实 DeepSeek benchmark 明确 opt-in，默认测试绝不计费。

@@ -256,3 +256,9 @@ CCBC16 多次把“不唯一”本身用作机制。如果 solver 只返回第�
 因此图中新增 `MATERIALIZE_SUBPROBLEMS`。它必须记录结构类型、总单元数、分组、依赖、原文 excerpt 和 representative results；20 个以内全部枚举，超过 20 个至少保留总数并物化三个高杠杆代表单元。候选局部解仍然不是 evidence，只有后续工具或证据评价能推动它通过中间验证。
 
 同一轮还移除了空计划自动调用 `cipher_workbench` 的隐藏 fallback。计划为空意味着“目前没有合适的确定性实验”，而不是授权密码 shotgun；计划中的每次工具调用必须引用 signal，并给出 prediction 与 falsifier。replan 的 tool+arguments fingerprint 若与历史相同则只记 `duplicate_skipped`。这让有限循环真正意味着新实验，而不是重复消耗模型和工具预算。
+
+## 第 28 站：完整题面包含解锁时已知状态，不只是当前网页
+
+人工转写 #52–#54 时发现，图片本身虽然可以无损变成文本，却仍不足以让独立 Agent 获得与现场玩家相同的信息。#52 明确消费印刷区 Meta 答案，#53 要把当前字母矩阵与已经解出的火药 Meta 颜色网格求交，#54 回调更早题目中 `〔〕` 的同音操作符。只转写当前图片会制造一种隐蔽的 missing-input benchmark，然后错误地把失败归因于推理能力。
+
+因此 suite 的“surface fidelity”升级为“unlock-state fidelity”：当前题面、静态 artifact、已知上游答案、已解出的上游结构和已学习操作符都要作为带 provenance 的运行时输入；当前题目的 solution 与 final answer 仍严格留在 evaluator 侧。#52–#54 由此成为首批 `human-reviewed-static-plus-upstream-state` case，均保存官方源 hash、零未表示通道和独立中间 checkpoint。
