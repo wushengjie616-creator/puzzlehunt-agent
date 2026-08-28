@@ -12,3 +12,5 @@
 - [T0003 · 24 小时执行记录](../tasks/T0003-24h-ccbc-learning-and-evaluation.md)
 - [TRACE-LIFT · CCBC16 蒸馏方法论](../../research/ccbc16/methodology.md)
 - [HA-BRIDGE · CCBC12/15/16 人类联想路径](../../research/human-association-reasoning.md)
+- [P0005 · CCBC16 文本题八小时循环评测](../plans/_drafts/P0005-ccbc16-hourly-text-evaluation.md)
+- [T0004 · 八小时执行记录](../tasks/T0004-ccbc16-hourly-text-evaluation.md)

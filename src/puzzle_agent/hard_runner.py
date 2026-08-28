@@ -22,14 +22,19 @@ class _TextConverter(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
+        self.has_image = False
+        self.has_script = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag in self._BREAK_TAGS:
             self.parts.append("\n")
         if tag == "img":
+            self.has_image = True
             values = dict(attrs)
             label = values.get("alt") or values.get("src") or "image"
             self.parts.append(f"[IMAGE: {label}]")
+        if tag == "script":
+            self.has_script = True
 
     def handle_endtag(self, tag: str) -> None:
         if tag in self._BREAK_TAGS or tag in {"td", "th"}:
@@ -43,13 +48,17 @@ class _TextConverter(HTMLParser):
         return "\n".join(line for line in lines if line).strip()
 
 
-def _html_to_text(value: Any) -> str:
+def _html_details(value: Any) -> tuple[str, bool, bool]:
     if not isinstance(value, str) or not value:
-        return ""
+        return "", False, False
     parser = _TextConverter()
     parser.feed(value)
     parser.close()
-    return parser.text()
+    return parser.text(), parser.has_image, parser.has_script
+
+
+def _html_to_text(value: Any) -> str:
+    return _html_details(value)[0]
 
 
 def load_nonmeta_manifest(path: str | Path) -> list[dict[str, Any]]:
@@ -79,10 +88,9 @@ def convert_official_payload(payload: dict[str, Any], source_url: str) -> dict[s
     answer = payload.get("answer")
     if not isinstance(answer, str) or not answer.strip():
         raise ValueError("official payload has no usable answer")
-    content_parts = [
-        _html_to_text(payload.get("content")),
-        _html_to_text(payload.get("extend_content")),
-    ]
+    surface_fields = (payload.get("html"), payload.get("content"), payload.get("extend_content"))
+    details = [_html_details(value) for value in surface_fields]
+    content_parts = [text for text, _has_image, _has_script in details]
     image = payload.get("image")
     if isinstance(image, str) and image.strip():
         content_parts.append(f"[SOURCE ARTIFACT: {image.strip()}]")
@@ -92,7 +100,11 @@ def convert_official_payload(payload: dict[str, Any], source_url: str) -> dict[s
     required_artifacts: list[str] = []
     if isinstance(image, str) and image.strip():
         required_artifacts.append("source-image")
-    if isinstance(payload.get("script"), str) and payload["script"].strip():
+    elif any(has_image for _text, has_image, _has_script in details):
+        required_artifacts.append("source-image")
+    if (
+        isinstance(payload.get("script"), str) and payload["script"].strip()
+    ) or any(has_script for _text, _has_image, has_script in details):
         required_artifacts.append("source-interaction")
     runtime_input: dict[str, Any] = {
         "title": _html_to_text(payload.get("title")),

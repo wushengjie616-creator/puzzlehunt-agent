@@ -41,6 +41,23 @@ class HardRunnerContractTests(unittest.TestCase):
         self.assertEqual(converted["input"]["required_artifacts"], ["source-image"])
         self.assertEqual(converted["oracle"]["answer"], "SECRET")
 
+    def test_converter_uses_official_html_surface_and_gates_inline_artifacts(self):
+        payload = {
+            "pid": 3,
+            "answer_type": 0,
+            "title": "HTML only",
+            "html": (
+                "<table><tr><td>FIRST CLUE</td><td>SECOND CLUE</td></tr></table>"
+                "<img src='/media/grid.png' alt='answer grid'>"
+            ),
+            "answer": "RESULT",
+        }
+        converted = convert_official_payload(payload, "https://example.test/3.json")
+        self.assertIn("FIRST CLUE", converted["input"]["content"])
+        self.assertIn("SECOND CLUE", converted["input"]["content"])
+        self.assertIn("[IMAGE: answer grid]", converted["input"]["content"])
+        self.assertEqual(converted["input"]["required_artifacts"], ["source-image"])
+
     def test_once_only_run_redacts_report_and_removes_transient_source(self):
         payload = {
             "pid": 1,
