@@ -320,3 +320,9 @@ cycle worker 因此只对明确的 transport exception 做一次同 checkpoint�
 19:00 批次中 16/21 题进入 semantic refinement。#10 的受验证局部结果从 0 增到 5，证明“先补语义载体再计划”至少能在真实题上改变证据状态；其余多数题仍是 0→0，说明一次恢复 prompt 不能替代实际的 clue solving。框架因此保留该路径，但不把激活次数当作效果。
 
 同批次还暴露两个可安全总化的协议缺口：#18/#22 的第二次 validator 附带未知 result ID，#29 的终局响应漏了 required checks。未知 ID 没有合法载体，本就不能进入 evidence；缺失 check 也只能解释为 false。运行时现在分别记录后忽略、补 false 并进入 `NEEDS_REVIEW`，避免用异常终止冒充严格验证。
+
+## 第 40 站：文本化视觉题要保存歧义，而不是替它做决定
+
+#9 的三角图不是把 28 个汉字抄下来就完成。source-only 复核把 43 条可独立确认的有向边、3 条额外可见但重数不确定的路径、两个 shared-terminal group、两条同点自环以及三个非标准字形分别编码。无法从像素证明的边重数保留为 `multiplicity_unresolved`，没有用题解反向修图。
+
+三个非标准字形使用源坐标 bbox、逐行 GRAY8 RLE、RGB/灰度 hash 和可读 preview，独立审查逐字节重建一致。只有通过这层复核后，#9 才从 queue 移入 reviewed；解后填字图与“三个角红框字”只进入 evaluator checkpoint。v17 因此扩为 22 题，而不是用摘要冒充完整题面。

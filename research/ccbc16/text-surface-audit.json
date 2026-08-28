@@ -232,28 +232,29 @@
         "Checked against the freshly downloaded official 3000x1680 pre-solve raster; occluded answer-card content remains explicitly unknown.",
         "The ink splatter's exact pixel contour is decorative/occlusive, not an independent clue channel; all numbered boxes, semantic occlusion, and visible boundary landmarks are represented."
       ]
-    }
-  ],
-  "static_transcription_queue": [
+    },
     {
       "puzzle_id": 9,
+      "adapter": "deterministic-plus-human-reviewed-static-artifact",
       "required_channels": [
-        "node coordinates",
-        "directed edges",
-        "loops",
-        "node color",
-        "prefills"
+        "28 node coordinates and triangular row geometry",
+        "43 confirmed directed edges and three unconfirmed visible paths",
+        "self-loop and shared-terminal multiplicity",
+        "node color and Unicode prefills",
+        "three source-bounded nonstandard glyph masks"
       ],
       "source_sha256": [
         "ef21c4b8df4cec2821755d1134141418fba613d561eb83e03539d8e1af55cb6e",
         "e177739fc51647ddd61f82740a277228495b2f251372afaf12fd7c78f99f716a"
       ],
+      "unrepresented_channels": [],
       "fidelity_notes": [
-        "The current candidate preserves 28 node coordinates, red endpoints, visible prefills, and triangular row geometry. Independent tracing against the official 1080x1080 raster established 43 directed edges: 19 ordinary one-way edges, 6 self-loops (including two distinct loops at R1C1), and 9 bidirectional pairs.",
-        "Two additional continuous paths from R5C5 and R6C6 merge before a shared terminal arrowhead at R4C5. The source cannot prove whether these are two independent edges, so a faithful transcription must retain a shared_terminal_group with multiplicity_unresolved=true instead of silently choosing a multiplicity.",
-        "The three nonstandard glyphs at R2C1, R4C5, and R6C3 must be represented by source-bounded raster masks/RLE plus readable previews; uncertain Unicode names are not lossless, and the visually similar lower glyphs must not be merged."
+        "Independent source-only review rechecked the official 1080x1080 raster, UTF-8 note/prefills, 28 nodes, 43 confirmed edges, 46 visible paths, and both unresolved shared-terminal groups.",
+        "Each nonstandard glyph's bbox, GRAY8 row RLE, RGB/gray hashes, and preview reconstruct the official crop byte-for-byte; no solution or solved fill was used in the runtime transcription."
       ]
-    },
+    }
+  ],
+  "static_transcription_queue": [
     {
       "puzzle_id": 23,
       "required_channels": [
@@ -431,11 +432,11 @@
   ],
   "counts": {
     "direct_text": 10,
-    "reviewed_transcriptions": 11,
-    "static_transcription_queue": 5,
+    "reviewed_transcriptions": 12,
+    "static_transcription_queue": 4,
     "pending_artifact_audit": 0,
     "not_text_faithful": 23,
-    "runnable_text_suite": 21,
+    "runnable_text_suite": 22,
     "total": 49
   }
 }
