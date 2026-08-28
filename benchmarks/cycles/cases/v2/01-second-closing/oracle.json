@@ -1,0 +1,14 @@
+{
+  "answer": "BLUEBIRD",
+  "derivation": [
+    "solve all sixteen exhibit clues and verify all eight existing object-association edges",
+    "select the Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, and Neptune endpoints, one from each edge",
+    "order those endpoints by increasing distance from the Sun",
+    "read the selected inventory letters as B L U E B I R D"
+  ],
+  "verified_intermediates": {
+    "selected_nodes_in_extraction_order": ["E", "M", "F", "B", "H", "K", "D", "J"],
+    "selected_entities": ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"],
+    "selected_letters": ["B", "L", "U", "E", "B", "I", "R", "D"]
+  }
+}

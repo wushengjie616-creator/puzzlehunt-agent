@@ -1,0 +1,106 @@
+{
+  "milestones": [
+    "recognize that every coordinate token has two table-dependent readings",
+    "allow empty/filled provenance to vary per token rather than per row",
+    "construct at least two locally plausible five-letter candidates for each clue",
+    "select ALPHA GAMMA DELTA THETA SIGMA OMEGA through a cross-row Greek-letter ontology",
+    "preserve the stamp path used to spell each kept word instead of retaining only plaintext",
+    "infer ○=0 and ●=1 from the lock examples and decode six five-bit values",
+    "audit that both local clue fit and global-set membership are necessary"
+  ],
+  "required_signals": [
+    {
+      "signal": "The two directories expose different letters at the same coordinates.",
+      "independence": "token ambiguity"
+    },
+    {
+      "signal": "Each local clue admits two coherent words obtainable through opposite token choices.",
+      "independence": "local semantic constraint"
+    },
+    {
+      "signal": "One candidate from every row belongs to the Greek alphabet while the alternatives share no ontology.",
+      "independence": "global semantic constraint"
+    },
+    {
+      "signal": "Every label has five tokens and the lock has five holes with A/Z examples.",
+      "independence": "branch-path extraction"
+    }
+  ],
+  "decoys": [
+    {
+      "hypothesis": "Choose one directory for an entire row or for the entire puzzle.",
+      "falsifier": "Uniform-table readings are mostly gibberish and cannot satisfy all six clues; the flavor says the stamp of each coordinate token was lost."
+    },
+    {
+      "hypothesis": "Keep the more literal ordinary candidates FIRST, XRAYS, COAST, ANGLE, TOTAL, FINAL.",
+      "falsifier": "Those words do not form a common standard set, and their complementary stamp paths produce values 29 and 27 on rows 1 and 4, outside A1Z26."
+    },
+    {
+      "hypothesis": "Treat a locally formed word such as the accidental all-filled GRAMS as sufficient.",
+      "falsifier": "GRAMS does not satisfy the radiation clue and cannot join the cross-row Greek-letter ontology."
+    }
+  ],
+  "checkpoints": [
+    {
+      "name": "local_candidate_pairs",
+      "expected": ["ALPHA/FIRST", "GAMMA/XRAYS", "DELTA/COAST", "THETA/ANGLE", "SIGMA/TOTAL", "OMEGA/FINAL"]
+    },
+    {
+      "name": "global_kept_set",
+      "expected": ["ALPHA", "GAMMA", "DELTA", "THETA", "SIGMA", "OMEGA"]
+    },
+    {
+      "name": "stamp_paths",
+      "expected": ["○○○●○", "●○○●○", "○●○○●", "○○●○○", "○○●●●", "○○●○●"]
+    },
+    {
+      "name": "binary_values",
+      "expected": [2, 18, 9, 4, 7, 5]
+    }
+  ],
+  "coverage_ledger": [
+    {"element": "two curators and two stamp shapes", "role": "define two coordinate lookup surfaces"},
+    {"element": "stamp color lost on the labels", "role": "require recovery of token-level branch provenance"},
+    {"element": "ambiguous five-letter descriptions", "role": "retain two local word hypotheses instead of committing early"},
+    {"element": "six Greek-letter candidates", "role": "provide the cross-row global intersection"},
+    {"element": "five tokens and five lock holes", "role": "turn decoder choices into five-bit payloads"},
+    {"element": "A and Z lock examples", "role": "fix ○=0, ●=1 and binary A1Z26 orientation"},
+    {"element": "six label rows", "role": "supply six output letters in visible order"},
+    {"element": "six-letter submission", "role": "final length checksum"}
+  ],
+  "flavor_leak_level": 1,
+  "flavor_only_solvable": false,
+  "flavor_leak_rationale": "The flavor establishes two possible token surfaces and a five-hole artifact but does not reveal either table, any candidate word, the Greek-letter ontology, the bit orientation, or the final values.",
+  "shortcut_red_team": [
+    {
+      "shortcut": "Decode every token with only one directory",
+      "result": "blocked",
+      "reason": "Uniform readings do not satisfy all local clues; token-level mixing is necessary."
+    },
+    {
+      "shortcut": "Guess the Greek words directly from the six clue descriptions",
+      "result": "insufficient",
+      "reason": "The final payload is the exact per-token stamp provenance and still requires all coordinate lookups."
+    },
+    {
+      "shortcut": "Choose the plain-English alternatives",
+      "result": "blocked",
+      "reason": "They lack a common ontology and their complement paths fail the 1-26 checksum on two rows."
+    },
+    {
+      "shortcut": "Invert empty and filled bits",
+      "result": "blocked",
+      "reason": "The A/Z examples fix orientation; inversion also creates out-of-range values."
+    },
+    {
+      "shortcut": "Read coordinates or grid rows as an acrostic",
+      "result": "blocked",
+      "reason": "Coordinates were deliberately permuted and yield no six-letter payload without branch provenance."
+    },
+    {
+      "shortcut": "Use a same-letter pair to choose either stamp without consequence",
+      "result": "blocked by construction",
+      "reason": "Every target/alternative letter pair differs at every position, so each retained letter uniquely records a stamp choice."
+    }
+  ]
+}

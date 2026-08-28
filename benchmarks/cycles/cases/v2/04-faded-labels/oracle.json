@@ -1,0 +1,36 @@
+{
+  "answer": "BRIDGE",
+  "derivation": [
+    {
+      "stage": "dual_lookup",
+      "rule": "Each coordinate has an empty-stamp and a filled-stamp reading; recover a stamp independently for every token."
+    },
+    {
+      "stage": "local_candidates",
+      "rows": [
+        {"row": 1, "candidates": ["ALPHA", "FIRST"], "kept": "ALPHA", "stamp_path": "○○○●○"},
+        {"row": 2, "candidates": ["GAMMA", "XRAYS"], "kept": "GAMMA", "stamp_path": "●○○●○"},
+        {"row": 3, "candidates": ["DELTA", "COAST"], "kept": "DELTA", "stamp_path": "○●○○●"},
+        {"row": 4, "candidates": ["THETA", "ANGLE"], "kept": "THETA", "stamp_path": "○○●○○"},
+        {"row": 5, "candidates": ["SIGMA", "TOTAL"], "kept": "SIGMA", "stamp_path": "○○●●●"},
+        {"row": 6, "candidates": ["OMEGA", "FINAL"], "kept": "OMEGA", "stamp_path": "○○●○●"}
+      ]
+    },
+    {
+      "stage": "global_intersection",
+      "rule": "ALPHA, GAMMA, DELTA, THETA, SIGMA, and OMEGA are all Greek-letter names; the competing ordinary words do not form a common standard set."
+    },
+    {
+      "stage": "path_extraction",
+      "rule": "The lock examples define ○=0 and ●=1; convert each five-stamp path as binary A1Z26.",
+      "values": [2, 18, 9, 4, 7, 5],
+      "letters": ["B", "R", "I", "D", "G", "E"]
+    }
+  ],
+  "verification": {
+    "target_alternative_letters_differ_at_every_position": true,
+    "kept_words_share_one_global_ontology": "Greek letters",
+    "all_kept_path_values_in_a1z26_range": true,
+    "complement_path_out_of_range_rows": [1, 4]
+  }
+}

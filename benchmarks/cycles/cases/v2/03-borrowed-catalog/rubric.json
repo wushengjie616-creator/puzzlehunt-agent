@@ -1,0 +1,95 @@
+{
+  "milestones": [
+    "recognize that each quotation is a distorted version of a canonical classical line",
+    "restore exactly one character on every card and preserve the borrowed/restored pair",
+    "identify the eight borrowed characters as the ordered prefix 子丑寅卯辰巳午未 of the Earthly Branches",
+    "use the Earthly Branch order instead of the visible card labels",
+    "interpret the one-cell A-Z catalog as the first Latin letter of each restored character's full pinyin",
+    "verify that every card, flavor phrase, and output slot is consumed"
+  ],
+  "required_signals": [
+    {
+      "signal": "Every quotation is almost canonical but contains one semantically and textually anomalous character.",
+      "independence": "source reconstruction"
+    },
+    {
+      "signal": "The anomalous characters collectively form 子丑寅卯辰巳午未.",
+      "independence": "global ordered ontology"
+    },
+    {
+      "signal": "The cards are explicitly out of order while each has one A-Z slot.",
+      "independence": "ordering and extraction format"
+    }
+  ],
+  "decoys": [
+    {
+      "hypothesis": "Read pinyin initials of the restored characters in visible 甲乙丙丁戊己庚辛 order.",
+      "falsifier": "This yields TSANRELN, leaves the stated disorder unexplained, and fails to consume the complete Earthly-Branch sequence."
+    },
+    {
+      "hypothesis": "Use the pinyin initials or stroke counts of the borrowed Earthly-Branch characters as payload.",
+      "falsifier": "The borrowed characters provide order but do not yield a word; this also contradicts the instruction that borrowed characters are returned and the restored characters enter the A-Z catalog."
+    },
+    {
+      "hypothesis": "Order the cards by poem author, dynasty, or visible card label.",
+      "falsifier": "No such order explains why the eight corruptions are exactly the first eight Earthly Branches, while Earthly-Branch order gives a clean eight-letter result."
+    }
+  ],
+  "checkpoints": [
+    {
+      "name": "restoration_table",
+      "expected": "甲天 乙山 丙岸 丁年 戊日 己鹅 庚楼 辛鸟"
+    },
+    {
+      "name": "borrowed_set",
+      "expected": "子丑寅卯辰巳午未 with no duplicates or omissions"
+    },
+    {
+      "name": "card_order",
+      "expected": "庚丙辛甲己戊丁乙"
+    },
+    {
+      "name": "ordered_pinyin_initials",
+      "expected": "L A N T E R N S"
+    }
+  ],
+  "coverage_ledger": [
+    {"element": "顺序全乱", "role": "reject visible card-label order"},
+    {"element": "canonical but distorted quotations", "role": "recover one source character per card"},
+    {"element": "子 through 未 corruptions", "role": "supply the unique global order"},
+    {"element": "借来的要按旧账归还", "role": "separate ordering carrier from restored payload"},
+    {"element": "现代 A-Z 目录", "role": "select pinyin Latin initials rather than strokes or Unicode"},
+    {"element": "one blank per card", "role": "require exactly one output letter from every restoration"},
+    {"element": "eight-letter submission", "role": "checksum for eight fully consumed cards"}
+  ],
+  "flavor_leak_level": 1,
+  "flavor_only_solvable": false,
+  "flavor_leak_rationale": "The flavor exposes only that an old ordering and one A-Z output per card exist; it names neither the Earthly Branches, the source lines, the restored characters, nor pinyin.",
+  "shortcut_red_team": [
+    {
+      "shortcut": "Search-engine autocorrection of the classical lines",
+      "result": "allowed but insufficient",
+      "reason": "It performs source reconstruction only; the solver must still discover the Earthly-Branch order and pinyin extraction."
+    },
+    {
+      "shortcut": "Use the visible card order",
+      "result": "blocked",
+      "reason": "It yields TSANRELN and violates the explicit disorder signal."
+    },
+    {
+      "shortcut": "Read the anomalous characters directly",
+      "result": "blocked",
+      "reason": "Their pinyin initials do not produce the answer and the restored source text is left unused."
+    },
+    {
+      "shortcut": "Guess from title or flavor semantics",
+      "result": "blocked",
+      "reason": "The surface contains no lighting, night, lamp, or answer-theme vocabulary."
+    },
+    {
+      "shortcut": "Exploit polyphonic pinyin",
+      "result": "blocked",
+      "reason": "楼、岸、鸟、天、鹅、日、年、山 have unambiguous initial Latin letters in context."
+    }
+  ]
+}

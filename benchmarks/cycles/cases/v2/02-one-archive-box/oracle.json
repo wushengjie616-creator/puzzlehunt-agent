@@ -1,0 +1,15 @@
+{
+  "answer": "NACRE",
+  "derivation": [
+    "trace the route, decode the signal groups, normalize the numeric marks, compare insertion pairs, and zip the staggered teeth",
+    "retain the five partial outputs MI_T, GR_VITY, LU_ASIAN, P_ISM, and APPL_ without guessing their gaps independently",
+    "use their joint biographical coverage to complete MINT, GRAVITY, LUCASIAN, PRISM, and APPLE as references to Isaac Newton",
+    "read the five jointly constrained missing letters in feeder order as N A C R E"
+  ],
+  "verified_intermediates": {
+    "partial_outputs": ["MI_T", "GR_VITY", "LU_ASIAN", "P_ISM", "APPL_"],
+    "completed_outputs": ["MINT", "GRAVITY", "LUCASIAN", "PRISM", "APPLE"],
+    "shared_subject": "Isaac Newton",
+    "missing_letters": ["N", "A", "C", "R", "E"]
+  }
+}

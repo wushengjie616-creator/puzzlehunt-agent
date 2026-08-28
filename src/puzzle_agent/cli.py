@@ -123,6 +123,7 @@ def _parser() -> argparse.ArgumentParser:
     schedule.add_argument("--cases-root", type=Path, default=Path("benchmarks/cycles/cases"))
     schedule.add_argument("--runs-root", type=Path, default=Path("benchmarks/cycles/runs"))
     schedule.add_argument("--start-at", required=True)
+    schedule.add_argument("--suite", default="v1")
     schedule.add_argument("--provider", choices=("offline", "deepseek"), default="deepseek")
     schedule.add_argument("--model", default=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro"))
     schedule.add_argument("--max-calls", type=int, default=8)
@@ -176,6 +177,7 @@ def main(argv: list[str] | None = None) -> int:
                     start=start,
                     cases_root=args.cases_root,
                     runs_root=args.runs_root,
+                    suite=args.suite,
                     provider_name=args.provider,
                     model=args.model,
                     max_calls=args.max_calls,

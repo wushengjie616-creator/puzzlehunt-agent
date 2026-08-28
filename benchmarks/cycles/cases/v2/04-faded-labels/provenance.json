@@ -1,0 +1,9 @@
+{
+  "source_urls": [
+    "https://github.com/cipherpuzzles/CCBCArchive/blob/main/public/ccbc12/problems/c/p1893.yaml",
+    "https://github.com/cipherpuzzles/CCBCArchive/blob/main/public/ccbc12/problems/c/p1909.yaml"
+  ],
+  "inspiration": "CCBC12 demonstrated local-category candidates constrained by a global vocabulary and cases where decoder-choice provenance becomes a second-layer carrier. This benchmark combines those abstract reasoning lessons using original coordinate tables, original clue pairs, and a branch-path extraction.",
+  "original_surface_and_data": true,
+  "originality_note": "The title, flavor, both 6x6 lookup tables, coordinate sequences, local clue ambiguities, Greek-letter intersection, stamp paths, final extraction, and answer were newly authored for this project. No CCBC symbol stream, word list, answer, or puzzle row is reused."
+}

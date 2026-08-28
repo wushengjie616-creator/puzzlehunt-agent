@@ -1,0 +1,9 @@
+{
+  "source_urls": [
+    "https://github.com/cipherpuzzles/CCBCArchive/blob/main/public/ccbc12/problems/e/p1992.yaml",
+    "https://github.com/cipherpuzzles/CCBCArchive/blob/main/public/ccbc12/problems/b/p1942.yaml"
+  ],
+  "inspiration": "CCBC12 demonstrated that a distorted known source can carry edit information and that linguistic anomalies can identify a hidden specialist structure. This case abstracts those human-reasoning lessons into source restoration, a separately discovered global ordering carrier, and a final catalog extraction.",
+  "original_surface_and_data": true,
+  "originality_note": "The benchmark title, flavor, card arrangement, selected public-domain quotations, deliberate substitutions, Earthly-Branch ordering construction, pinyin extraction, and final answer were newly authored for this project. No CCBC problem text, answer, or data row is reused."
+}

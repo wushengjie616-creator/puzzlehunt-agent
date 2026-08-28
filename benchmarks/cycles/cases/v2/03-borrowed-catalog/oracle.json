@@ -1,0 +1,36 @@
+{
+  "answer": "LANTERNS",
+  "derivation": [
+    {
+      "stage": "source_reconstruction",
+      "result": [
+        {"card": "甲", "borrowed": "卯", "restored": "天", "source_fragment": "海上生明月，天涯共此时"},
+        {"card": "乙", "borrowed": "未", "restored": "山", "source_fragment": "会当凌绝顶，一览众山小"},
+        {"card": "丙", "borrowed": "丑", "restored": "岸", "source_fragment": "两岸猿声啼不住，轻舟已过万重山"},
+        {"card": "丁", "borrowed": "午", "restored": "年", "source_fragment": "年年岁岁花相似，岁岁年年人不同"},
+        {"card": "戊", "borrowed": "巳", "restored": "日", "source_fragment": "白日依山尽，黄河入海流"},
+        {"card": "己", "borrowed": "辰", "restored": "鹅", "source_fragment": "鹅，鹅，鹅，曲项向天歌"},
+        {"card": "庚", "borrowed": "子", "restored": "楼", "source_fragment": "欲穷千里目，更上一层楼"},
+        {"card": "辛", "borrowed": "寅", "restored": "鸟", "source_fragment": "千山鸟飞绝，万径人踪灭"}
+      ]
+    },
+    {
+      "stage": "global_order",
+      "rule": "The borrowed characters are the first eight Earthly Branches, so order cards by 子丑寅卯辰巳午未.",
+      "card_order": ["庚", "丙", "辛", "甲", "己", "戊", "丁", "乙"]
+    },
+    {
+      "stage": "catalog_extraction",
+      "rule": "Put each restored character into the A-Z catalog using the first Latin letter of its full pinyin.",
+      "restored_characters": ["楼", "岸", "鸟", "天", "鹅", "日", "年", "山"],
+      "pinyin": ["lou", "an", "niao", "tian", "e", "ri", "nian", "shan"],
+      "letters": ["L", "A", "N", "T", "E", "R", "N", "S"]
+    }
+  ],
+  "verification": {
+    "one_corruption_per_card": true,
+    "borrowed_set": "子丑寅卯辰巳午未",
+    "ordered_output_length": 8,
+    "all_restored_pinyin_initials_unambiguous": true
+  }
+}

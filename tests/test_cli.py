@@ -7,6 +7,8 @@ import tempfile
 import unittest
 import importlib.util
 
+from puzzle_agent.cli import _parser
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -22,6 +24,13 @@ HAS_COMPLEX = module_available("langgraph.graph") and module_available("langgrap
 
 
 class CliTests(unittest.TestCase):
+    def test_cycle_schedule_accepts_an_explicit_benchmark_suite(self):
+        args = _parser().parse_args([
+            "cycle", "schedule", "--start-at", "2026-08-28T12:00:00+08:00",
+            "--suite", "v2",
+        ])
+        self.assertEqual(args.suite, "v2")
+
     def run_cli(self, *args, cwd=ROOT):
         env = os.environ.copy()
         env["PYTHONPATH"] = str(ROOT / "src")

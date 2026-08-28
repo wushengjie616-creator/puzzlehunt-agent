@@ -1,0 +1,9 @@
+{
+  "source_urls": [
+    "https://github.com/cipherpuzzles/CCBCArchive",
+    "https://ccbc16.cipherpuzzles.com/puzzle/2/13"
+  ],
+  "inspiration": "Official CCBC archives were studied for association-graph reasoning, anomaly selection, canonical ordering, and evidence-led extraction. No CCBC clue text, node data, answer, layout, or extraction path is reused.",
+  "original_surface_and_data": true,
+  "originality_note": "The sixteen exhibit clues, eight pairings, inventory carriers, planetary relation, final answer, and all benchmark data are original for this project."
+}

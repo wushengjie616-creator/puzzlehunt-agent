@@ -1,0 +1,10 @@
+{
+  "source_urls": [
+    "https://github.com/cipherpuzzles/CCBCArchive",
+    "https://ccbc16.cipherpuzzles.com/puzzle/2/18",
+    "https://ccbc16.cipherpuzzles.com/puzzle/3/27"
+  ],
+  "inspiration": "Official CCBC archives were studied for heterogeneous feeder DAGs, partial reconstruction, cross-feeder constraint propagation, and explicit uncertainty retention. No CCBC clue text, encoded data, answer, feeder output, or extraction is reused.",
+  "original_surface_and_data": true,
+  "originality_note": "All five panels, partial words, shared-person constraint, missing-letter answer, and benchmark metadata are original for this project."
+}

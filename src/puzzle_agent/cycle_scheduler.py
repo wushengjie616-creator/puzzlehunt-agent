@@ -66,6 +66,7 @@ def run_cycle_scheduler(
     start: datetime,
     cases_root: str | Path,
     runs_root: str | Path,
+    suite: str = "v1",
     provider_name: str = "deepseek",
     model: str = "deepseek-v4-pro",
     max_calls: int = 8,
@@ -96,6 +97,7 @@ def run_cycle_scheduler(
         "status": "running",
         "pid": os.getpid(),
         "start_at": start.isoformat(),
+        "suite": suite,
         "schedule": [item.isoformat() for item in schedule],
         "completed_cycles": [],
         "heartbeat_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -103,7 +105,10 @@ def run_cycle_scheduler(
     }
     if state_path.is_file():
         previous = json.loads(state_path.read_text(encoding="utf-8"))
-        if previous.get("start_at") == state["start_at"]:
+        if (
+            previous.get("start_at") == state["start_at"]
+            and previous.get("suite", "v1") == suite
+        ):
             state["completed_cycles"] = previous.get("completed_cycles", [])
     _write_state(state_path, state)
     project_python = repository / ".venv" / "Scripts" / "python.exe"
@@ -152,7 +157,7 @@ def run_cycle_scheduler(
                     repository,
                     cases_root=cases_root,
                     runs_root=runs_root,
-                    suite="v1",
+                    suite=suite,
                     provider_name=provider_name,
                     model=model,
                     max_calls=max_calls,

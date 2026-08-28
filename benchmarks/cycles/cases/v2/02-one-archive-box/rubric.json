@@ -1,0 +1,72 @@
+{
+  "milestones": [
+    "select and execute a different local mechanism for each of the five records",
+    "preserve five one-gap partial outputs instead of independently guessing the damaged symbols",
+    "identify Isaac Newton as the single subject explaining all five completed outputs",
+    "use the shared-subject hypothesis to disambiguate MINT and APPLE and extract the missing letters in record order"
+  ],
+  "required_signals": [
+    "the five panels use visibly different representational systems",
+    "every local result has exactly one unresolved position",
+    "MI_T and APPL_ each retain multiple ordinary dictionary completions before the meta constraint",
+    "LUCASIAN and MINT narrow generic physics to a specific biography",
+    "the five missing positions are the only uniform unconsumed carrier after the subject is verified"
+  ],
+  "decoys": [
+    {
+      "hypothesis": "complete each partial independently with the most common-looking word, such as MIST or APPLY",
+      "falsifier": "those completions do not allow all five records to describe one person, while MINT and APPLE join GRAVITY, LUCASIAN, and PRISM under Isaac Newton"
+    },
+    {
+      "hypothesis": "treat GRAVITY and PRISM as sufficient and answer with a generic domain such as PHYSICS or LIGHT",
+      "falsifier": "a generic domain does not explain the Lucasian chair, Royal Mint service, apple story, or the five still-unconsumed gaps"
+    },
+    {
+      "hypothesis": "identify a different Lucasian professor such as Hawking or Dirac",
+      "falsifier": "those candidates do not simultaneously explain the Royal Mint and apple records; Newton covers all five"
+    }
+  ],
+  "checkpoints": [
+    "route carrier MI_T",
+    "signal carrier GR_VITY",
+    "numeric carrier LU_ASIAN",
+    "insertion carrier P_ISM",
+    "staggered carrier APPL_",
+    "five-of-five Newton evidence table",
+    "ordered missing-letter carrier N-A-C-R-E"
+  ],
+  "coverage_ledger": [
+    "the marked start, all three moves, and all four visited route cells are consumed",
+    "all six visible signal groups decode and the damaged group remains an explicit unknown",
+    "all seven visible numeric expressions normalize to values from 1 through 26 and the third remains unknown",
+    "all four complete word pairs verify insertion without reordering and the torn pair contributes one unknown inserted letter",
+    "the stagger, three upper teeth, and two lower teeth determine a five-position alternating carrier",
+    "all five completed words independently support the same historical subject",
+    "all five gaps contribute exactly once to the final extraction and no damaged mark remains unresolved"
+  ],
+  "flavor_leak_level": 1,
+  "flavor_only_solvable": false,
+  "flavor_only_argument": "The flavor suggests only that heterogeneous records share a reason and that omissions matter. It supplies no local carriers, subject evidence, gap count, ordering, or answer letters and is compatible with arbitrary people and answers.",
+  "shortcut_red_team": [
+    {
+      "shortcut": "apply one global cipher or transform to all panels",
+      "result": "at most one panel becomes meaningful and the other four representation contracts remain unexplained"
+    },
+    {
+      "shortcut": "take panel-title initials, visible line initials, or partial-word initials",
+      "result": "the partial-word initials are MGLPA and no such reading yields the oracle"
+    },
+    {
+      "shortcut": "dictionary-complete every gap without a shared subject",
+      "result": "MI_T permits MINT, MIST, and MILT while APPL_ permits APPLE and APPLY, so the local surfaces alone are not unique"
+    },
+    {
+      "shortcut": "submit NEWTON after recognizing the subject",
+      "result": "the theme is only a cross-feeder constraint; it leaves five salient gaps unconsumed and is not the oracle"
+    },
+    {
+      "shortcut": "guess the final word from some missing letters",
+      "result": "must be scored as a lucky answer unless the trace records all five partials, the five-of-five Newton check, and both ambiguous completions"
+    }
+  ]
+}

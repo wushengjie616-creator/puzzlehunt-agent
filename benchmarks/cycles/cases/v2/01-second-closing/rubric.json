@@ -1,0 +1,69 @@
+{
+  "milestones": [
+    "resolve the sixteen cultural clues and explain every existing short-rope edge",
+    "notice that exactly one endpoint of each edge maps onto the eight-planet corpus",
+    "replace table and edge-list order with the canonical heliocentric order",
+    "extract the dark letters only from the selected endpoints and verify the resulting word"
+  ],
+  "required_signals": [
+    "all eight short ropes join a figure or entity to its attribute or manifestation",
+    "Mercury, Venus, Gaia or Earth, Mars, Jupiter, Saturn, Uranus, and Neptune cover one endpoint per pair",
+    "the table order and rope-list order both yield nonwords",
+    "planetary distance supplies a stable order that mythology genealogy does not",
+    "the dark letters appear on both candidate endpoints, so selection must precede extraction"
+  ],
+  "decoys": [
+    {
+      "hypothesis": "order the divine figures by genealogy or mythological age",
+      "falsifier": "the mixed Greek and Roman figures have no single uncontested order covering all eight, while the corresponding planets have a complete standard distance order"
+    },
+    {
+      "hypothesis": "read dark letters in table order or current rope-list order",
+      "falsifier": "the selected figure endpoints produce ERBUBDIL in table order and LBIBREDU in rope-list order, neither of which explains the larger shared picture"
+    },
+    {
+      "hypothesis": "choose the attribute endpoint of every pair",
+      "falsifier": "sickle, shell, trident, sandals, spear, sky, thunderbolt, and blue-marble imagery do not form a fixed eight-member ordered corpus"
+    }
+  ],
+  "checkpoints": [
+    "sixteen normalized clue answers",
+    "eight verified local association edges",
+    "one selected planet endpoint per edge",
+    "ordered node sequence E-M-F-B-H-K-D-J",
+    "eight-letter extraction carrier"
+  ],
+  "coverage_ledger": [
+    "16/16 exhibit clues are resolved to checkable entities or attributes",
+    "8/8 existing short-rope relations are explained",
+    "8/8 pairs contribute exactly one planetary endpoint; rejected endpoints act as explicit contrast controls",
+    "8/8 selected dark letters are consumed exactly once",
+    "table disorder, rope-list disorder, the second-relation flavor, and the larger-picture flavor are all explained",
+    "no salient color, typography, identifier, edge, or ordering clue remains unresolved"
+  ],
+  "flavor_leak_level": 1,
+  "flavor_only_solvable": false,
+  "flavor_only_argument": "The flavor states only that eight of sixteen objects share another system. It contains none of the objects, carrier letters, corpus identity, or ordering evidence and can support any arbitrary eight-letter answer after changing the unseen cards.",
+  "shortcut_red_team": [
+    {
+      "shortcut": "read every dark letter from A through P",
+      "result": "QENRBUJBMDIVLPCF, not the oracle"
+    },
+    {
+      "shortcut": "read selected divine endpoints by table order",
+      "result": "ERBUBDIL, not the oracle"
+    },
+    {
+      "shortcut": "read selected endpoints by listed rope order",
+      "result": "LBIBREDU, not the oracle"
+    },
+    {
+      "shortcut": "apply initials, finals, word lengths, reversal, or odd-even splitting to the inventory words",
+      "result": "none both covers one endpoint per pair and yields the verified planetary ordering"
+    },
+    {
+      "shortcut": "guess the oracle from an arbitrary eight-letter subset",
+      "result": "must be scored as a lucky answer unless the trace proves pair selection, the planet corpus, and heliocentric ordering"
+    }
+  ]
+}
