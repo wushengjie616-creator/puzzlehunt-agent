@@ -243,6 +243,14 @@
         "loops",
         "node color",
         "prefills"
+      ],
+      "source_sha256": [
+        "ef21c4b8df4cec2821755d1134141418fba613d561eb83e03539d8e1af55cb6e",
+        "e177739fc51647ddd61f82740a277228495b2f251372afaf12fd7c78f99f716a"
+      ],
+      "fidelity_notes": [
+        "The current candidate preserves 28 node coordinates, red endpoints, visible prefills, and triangular row geometry, but it deliberately omits the directed multigraph because several orange curves cross or share routes.",
+        "A reviewed transcription must pair every arrowhead with its origin, including self-loops, and preserve the three nonstandard glyph masks/orientations without forcing uncertain Unicode."
       ]
     },
     {
@@ -252,6 +260,15 @@
         "occlusion",
         "face color",
         "view direction"
+      ],
+      "source_sha256": [
+        "4b858e77da29e4b9b1489dcab99efb75bea6cea3af8abaa73571ad1caeac3797",
+        "5a841d929b4b596411cc8730f1b944854d819352d86457b99048f98fdf2d5205",
+        "0aa06550407492fbd393b106daf8e47145e5519095e9ea1cda9f5edda9bbbc39"
+      ],
+      "fidelity_notes": [
+        "The two official 1536x2800 raster copies are pixel-equivalent, but the current candidate omits the main city's face-by-face lattice geometry and exact occlusion topology.",
+        "The fourth main-view arrow labeled 6 points southwest; the current candidate's southeast label is a known transcription error and must be corrected before review."
       ]
     },
     {
