@@ -162,6 +162,31 @@ class DeterministicPuzzleToolTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "bounded"):
             unicode_inspect("x" * 10001)
 
+    def test_classic_cipher_workbench_is_exposed_to_the_complex_agent(self):
+        registry = ToolRegistry()
+        self.assertEqual(registry.execute("atbash_transform", {"text": "Svool"})["output"], "Hello")
+        self.assertEqual(registry.execute("base_decode", {"text": "SGVsbG8=", "base": 64})["output"], "Hello")
+        self.assertEqual(registry.execute("morse_decode", {"text": ".... . .-.. .-.. ---"})["output"], "HELLO")
+        self.assertEqual(
+            registry.execute("vigenere_decode", {"text": "LXFOPVEFRNHR", "key": "LEMON"})["output"],
+            "ATTACKATDAWN",
+        )
+        self.assertEqual(
+            registry.execute("rail_fence_decode", {"text": "WECRLTEERDSOEEFEAOCAIVDEN", "rails": 3})["output"],
+            "WEAREDISCOVEREDFLEEATONCE",
+        )
+
+    def test_classic_cipher_registry_rejects_guessing_or_invalid_encodings(self):
+        registry = ToolRegistry()
+        with self.assertRaisesRegex(ValueError, "base"):
+            registry.execute("base_decode", {"text": "SGVsbG8=", "base": 58})
+        with self.assertRaisesRegex(ValueError, "valid"):
+            registry.execute("morse_decode", {"text": "... ???"})
+        with self.assertRaisesRegex(ValueError, "key"):
+            registry.execute("vigenere_decode", {"text": "ABC", "key": ""})
+        with self.assertRaisesRegex(ValueError, "rails"):
+            registry.execute("rail_fence_decode", {"text": "ABC", "rails": 1})
+
 
 if __name__ == "__main__":
     unittest.main()

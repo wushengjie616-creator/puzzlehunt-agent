@@ -7,7 +7,57 @@ import inspect
 from typing import Any, Callable
 import unicodedata
 
-from .cipher_workbench import decode_morse
+from .cipher_workbench import (
+    atbash,
+    decode_base,
+    decode_morse,
+    rail_fence_decode as _rail_fence_decode,
+    vigenere_decode as _vigenere_decode,
+)
+
+
+_MAX_TOOL_TEXT = 10_000
+
+
+def _bounded_text(text: str) -> str:
+    if not isinstance(text, str) or not text or len(text) > _MAX_TOOL_TEXT:
+        raise ValueError(f"text must be a non-empty string bounded to {_MAX_TOOL_TEXT} characters")
+    return text
+
+
+def atbash_transform(text: str) -> str:
+    return atbash(_bounded_text(text))
+
+
+def base_decode(text: str, base: int) -> str:
+    _bounded_text(text)
+    if not isinstance(base, int) or isinstance(base, bool) or base not in {16, 32, 64}:
+        raise ValueError("base must be 16, 32, or 64")
+    output = decode_base(text, base)
+    if output is None:
+        raise ValueError(f"text is not valid Base{base} UTF-8 data")
+    return output
+
+
+def morse_decode(text: str) -> str:
+    output = decode_morse(_bounded_text(text))
+    if output is None:
+        raise ValueError("text is not valid dot/dash Morse")
+    return output
+
+
+def vigenere_decode(text: str, key: str) -> str:
+    _bounded_text(text)
+    if not isinstance(key, str) or not key or len(key) > 256:
+        raise ValueError("key must be an explicit non-empty string bounded to 256 characters")
+    return _vigenere_decode(text, key)
+
+
+def rail_fence_decode(text: str, rails: int) -> str:
+    _bounded_text(text)
+    if not isinstance(rails, int) or isinstance(rails, bool) or rails < 2 or rails > 100:
+        raise ValueError("rails must be an explicit integer in 2..100")
+    return _rail_fence_decode(text, rails)
 
 
 def extract_nth(lines: list[str], indices: list[int]) -> str:
@@ -496,6 +546,11 @@ class ToolRegistry:
                 ToolSpec("read_grid_path", read_grid_path, contract="grid is list[str]; path is adjacent 0-based [row,col] list"),
                 ToolSpec("dependency_order", dependency_order, contract="dependencies is node->list[prerequisite]; include leaf nodes with []"),
                 ToolSpec("caesar_shift", caesar_shift, contract="shift is explicit integer -25..25; negative decodes a forward shift"),
+                ToolSpec("atbash_transform", atbash_transform, contract="text is transformed with the self-inverse Latin alphabet mapping"),
+                ToolSpec("base_decode", base_decode, contract="base is explicit 16|32|64; decoded bytes must be valid UTF-8"),
+                ToolSpec("morse_decode", morse_decode, contract="text uses explicit dots/dashes; spaces separate letters and slash or double-space separates words"),
+                ToolSpec("vigenere_decode", vigenere_decode, contract="key is known and explicit; this tool does not guess keys"),
+                ToolSpec("rail_fence_decode", rail_fence_decode, contract="rails is known and explicit integer 2..100; this tool does not guess rail count"),
                 ToolSpec("a1z26_decode", a1z26_decode, contract="values is non-empty list[int] in 1..26"),
                 ToolSpec("interleave_sequences", interleave_sequences, contract="sequences is list of at least two equal-length strings"),
                 ToolSpec("grid_trace", grid_trace, contract="grid is list[str], start is 0-based [row,col], directions uses N|E|S|W"),

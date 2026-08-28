@@ -94,7 +94,9 @@ INTAKE
 | `anagram_delta` | multiset subset 校验，保留源顺序 |
 | `read_grid_path` | 矩形网格、坐标边界、四邻接校验 |
 | `dependency_order` | meta DAG 拓扑排序、未知依赖和循环检测 |
-| `caesar_shift` / `a1z26_decode` / `interleave_sequences` | 参数化基础转换，不从题面猜参数 |
+| `caesar_shift` / `atbash_transform` / `base_decode` / `morse_decode` | 显式编码约定的经典转换；无效编码失败 |
+| `vigenere_decode` / `rail_fence_decode` | key 或栏数必须已知，不在工具内猜测 |
+| `a1z26_decode` / `interleave_sequences` | 参数化基础恢复与提取，不从题面猜参数 |
 | `grid_trace` / `grid_transform` | 明确坐标、方向和变换，越界或非矩形失败 |
 | `constrained_order` | 最多 9 项的先后/紧邻/首尾约束，区分 SAT/UNSAT/AMBIGUOUS |
 | `decode_bit_patterns` / `repair_mojibake` | 位序显式；编码链必须 allowlist + strict round trip |

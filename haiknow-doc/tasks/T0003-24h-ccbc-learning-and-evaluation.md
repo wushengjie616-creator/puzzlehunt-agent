@@ -67,6 +67,7 @@ related_commits: []
 - 正式 cycle 3（12:00:29）：2 correct / 1 wrong / 2 unsolved / 0 error / 0 timeout，23.453–54.078 秒；30 次工具 attempt 中 20 成功，`unexpected keyword` 降至 0；所有预期节点 5/5 激活，一题走 replan。hard gate 未触发。
 - Cycle 3 失败证据：参数名已解决，但 10 次调用违反容器/枚举/前置条件；case 01 五次 Caesar 成功却漏最终 extraction，case 04 replan 采用 shotgun 且 grid 形状无效。详见该批 `failure-analysis.md`。
 - Cycle 3 后 RED/GREEN：ToolSpec 同注册点加入紧凑 precondition contract；planning 明确通常 1–4 个带预测的调用、禁止无关 shotgun，并要求覆盖 final extraction。focused graph/tool 15/15 GREEN。
+- Cycle 3 后工具覆盖审计：发现 simple CipherWorkbench 的 Atbash/Base/标准 Morse/已知-key Vigenère/已知-rails Rail Fence 没进入 complex Agent 行动空间；新增五个有界 strict wrapper。2 个聚焦测试先 RED 后 GREEN，禁止工具自行猜 key/栏数。
 
 ## 后续 todo
 

@@ -98,7 +98,7 @@ convention / coordinate_system / normalization
 
 ## 6. 当前工具 backlog
 
-已进入 ToolRegistry：二态样式转 bit、严格 mojibake 修复、Playfair、Braille、九键、自定义 token Morse、字符串公共符号、多解逐位差异、回文错位、Unicode 码位检查、网格变换，以及基础 Caesar/A1Z26/interleave/有限顺序约束。
+已进入 ToolRegistry：二态样式转 bit、严格 mojibake 修复、Playfair、Braille、九键、自定义 token Morse、字符串公共符号、多解逐位差异、回文错位、Unicode 码位检查、网格变换，以及 Caesar、Atbash、Base16/32/64、标准 Morse、已知 key Vigenère、已知栏数 Rail Fence、A1Z26、interleave 和有限顺序约束。
 
 下一批优先候选：旗语、猪圈规范 token、置换、吸收马尔可夫、扫雷全解枚举、拉丁方唯一性、拼音韵母/声调比较、HTML 括号语法树。
 
