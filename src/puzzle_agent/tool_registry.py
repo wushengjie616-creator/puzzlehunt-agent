@@ -3,6 +3,7 @@
 from collections import Counter
 from dataclasses import dataclass
 from itertools import permutations
+import inspect
 from typing import Any, Callable
 import unicodedata
 
@@ -515,6 +516,21 @@ class ToolRegistry:
     @property
     def names(self) -> tuple[str, ...]:
         return tuple(sorted(self._specs))
+
+    @property
+    def signatures(self) -> tuple[str, ...]:
+        result: list[str] = []
+        for name in sorted(self._specs):
+            parameters = [
+                parameter.name
+                for parameter in inspect.signature(self._specs[name].function).parameters.values()
+                if parameter.kind not in {
+                    inspect.Parameter.VAR_POSITIONAL,
+                    inspect.Parameter.VAR_KEYWORD,
+                }
+            ]
+            result.append(f"{name}({', '.join(parameters)})")
+        return tuple(result)
 
     def execute(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         spec = self._specs.get(name)

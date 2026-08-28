@@ -137,6 +137,7 @@ class CycleCaseContractTests(unittest.TestCase):
             analysis = (run_dir / "analysis.md").read_text(encoding="utf-8")
             node_summary = json.loads((run_dir / "node-summary.json").read_text(encoding="utf-8"))
         self.assertEqual(result["summary"]["total"], 5)
+        self.assertIn("unsolved", result["summary"])
         self.assertEqual(len(result["cases"]), 5)
         for item in result["cases"]:
             self.assertIn("started_at", item)

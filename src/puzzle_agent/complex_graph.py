@@ -42,7 +42,7 @@ class PuzzleGraphState(TypedDict, total=False):
     evaluation_decision: str
 
 
-_TOOL_CATALOG = ", ".join(("cipher_workbench", *ToolRegistry().names))
+_TOOL_CATALOG = ", ".join(("cipher_workbench()", *ToolRegistry().signatures))
 
 
 _STAGE_INSTRUCTIONS = {
@@ -58,7 +58,8 @@ _STAGE_INSTRUCTIONS = {
         '"plan":[{"id":"...","tool":"...","arguments":{},"purpose":"..."}]}. '
         "Preserve at least two competing, distinguishable hypotheses. Consider whether an intermediate answer "
         "is still a carrier and whether an inconsistency or multiple solutions are intentional information. "
-        "Choose bounded experiments with explicit arguments. Available deterministic tools: "
+        "Choose bounded experiments with explicit arguments. Use the exact parameter names in these "
+        "signatures; do not invent aliases. Available deterministic tools: "
         f"{_TOOL_CATALOG}."
     ),
     "EVALUATE_EVIDENCE": (

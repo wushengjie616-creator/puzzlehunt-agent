@@ -478,6 +478,9 @@ def run_cycle(
             "timeout": sum(item["status"] == "TIMEOUT" for item in case_results),
             "error": sum(item["status"] == "ERROR" for item in case_results),
         }
+        summary["unsolved"] = summary["total"] - sum(
+            summary[name] for name in ("correct", "wrong", "timeout", "error")
+        )
         node_summary = aggregate_node_effects(node_reports)
         manifest = {
             "schema_version": 1,
