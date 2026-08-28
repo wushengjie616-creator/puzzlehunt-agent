@@ -167,7 +167,11 @@ def run_cycle_scheduler(
                     scheduled_at=due.isoformat(),
                 )
                 attempt["summary"] = manifest["summary"]
-                if manifest["summary"]["correct"] == manifest["summary"]["total"]:
+                if (
+                    suite == "v2"
+                    and manifest["summary"]["correct"] == manifest["summary"]["total"]
+                    and manifest["summary"]["reasoning_pass"] == manifest["summary"]["total"]
+                ):
                     from .hard_runner import run_hard_once
                     try:
                         hard = run_hard_once(

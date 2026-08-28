@@ -1,0 +1,9 @@
+{
+  "source_urls": [
+    "https://github.com/cipherpuzzles/CCBCArchive/blob/main/public/ccbc15/problems/6/53.yaml",
+    "https://github.com/cipherpuzzles/CCBCArchive/blob/main/public/ccbc15/problems/4/29.yaml"
+  ],
+  "inspiration": "仅吸收 CCBC15 公开题目中“从多个独立信号识别隐藏本体”“以动态观测寻找稳定规则”“将坐标或结构映射为可验证中间物”的抽象设计经验。本题使用全新的舞台表层、三快照棋子移动、全局配额消歧、底线重排和胸牌索引链。",
+  "original_surface_and_data": true,
+  "originality_note": "标题、风味文本、演员名、全部坐标、移动轨迹、胸牌字符串、答案及推导均为原创；未复用来源题目的题面数据、答案、词表、排列或提取结果。"
+}

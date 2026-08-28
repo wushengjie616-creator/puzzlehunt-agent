@@ -43,6 +43,7 @@ class PuzzleGraphState(TypedDict, total=False):
     next_node: str | None
     final_answer: str | None
     evaluation_decision: str
+    verification_checks: dict[str, bool]
 
 
 _TOOL_CATALOG = ", ".join(("cipher_workbench()", *ToolRegistry().signatures))
@@ -72,7 +73,9 @@ _STAGE_INSTRUCTIONS = {
         '"plan":[{"id":"...","tool":"...","arguments":{},"purpose":"...","prediction":"..."}]}. '
         "Preserve at least two competing, distinguishable hypotheses. Consider whether an intermediate answer "
         "is still a carrier and whether an inconsistency or multiple solutions are intentional information. "
-        "Choose the smallest discriminating plan, normally 1-4 calls, and cover the final extraction, "
+        "Choose the smallest discriminating plan, normally 1-4 calls, and cover the final extraction. "
+        "Return an empty plan when no registered deterministic tool can discriminate the hypotheses; "
+        "do not force an irrelevant transform. "
         "not only the first transform. Every call needs a prediction; do not shotgun unrelated tools. "
         "Use exact parameter names and satisfy the input contracts; do not invent aliases. Tools: "
         f"{_TOOL_CATALOG}."
@@ -83,7 +86,7 @@ _STAGE_INSTRUCTIONS = {
         '"intermediate_answers":[{"value":"...","role":"carrier|candidate","evidence_ids":["..."]}],'
         '"open_questions":["..."],"unused_elements":["..."],'
         '"answer_candidates":[{"answer":"...","confidence":"low|medium|high","evidence_ids":["..."]}]}. '
-        "Evaluate new tool or human evidence; explicitly reject failed attempts and do not invent tool results. "
+        "Evaluate puzzle, association, tool, or human evidence; explicitly reject failed attempts and do not invent tool results. "
         "Audit clue coverage, unused elements, uniqueness/ambiguity, cross-solution invariants, and whether the "
         "extraction is reproducible before promoting an answer candidate. Choose replan only when current "
         "evidence falsifies the plan and a materially different bounded experiment is available."
@@ -436,6 +439,7 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         "last_node": "verify_answer",
         "next_node": None,
         "final_answer": answer if solved else None,
+        "verification_checks": checks,
         "blockers": list(state.get("blockers", []))
         + (["All planned deterministic experiments failed"] if failed_tool_gate else [])
         + (["Open questions or unused clue elements remain"] if unresolved_memory_gate else []),

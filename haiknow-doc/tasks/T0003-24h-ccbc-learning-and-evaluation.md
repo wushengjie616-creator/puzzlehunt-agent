@@ -75,6 +75,10 @@ related_commits: []
 - 旧 subagent 事实：`ccbc_01_20_audit`、`ccbc_21_40_audit`、`ccbc_41_55_audit` 已完成 CCBC16 机制审计，但没有研究逐题 human association trace，不能作为新要求的完成证据。现已启动 CCBC16/15/12 三个独立 human-reasoning 研究流。
 - 新研究流已完成：CCBC16 13 题、CCBC15 11 题、CCBC12 13 题，共 37 道代表性非-meta；逐题包含 observable、弱/强提示边界、背景联想、两条错路/falsifier、aha 与中间验证。综合文档为 `research/human-association-reasoning.md`。
 - HA-BRIDGE RED/GREEN：新增独立 `ASSOCIATE_THEME` 节点与 tensions/association_candidates memory；要求 3–5 个 ontology、bridge、prediction、falsifier，且该阶段看不到工具目录。默认 max_calls 由 6 调整为 8；正常路径五次、一次 replan 七次。
+- v2 题集完成：三路 subagent 各自提出原创候选，主 Agent 选出五题并落盘；每题均通过 flavor ablation、oracle isolation、两错路 falsifier、coverage 与 shortcut contract。它们测试的是本体切换和全局约束，而非把密码名写进风味。
+- reasoning rubric RED/GREEN：新增独立过程评分，要求 association beam、可证伪 bridge、竞争假设、实验/证据、阶段性中间答案、零遗留线索与终局 checks；exact answer 与 reasoning pass 分列，hard gate 要求 v2 双 5/5。
+- scheduler 新增显式 `--suite v2`，恢复状态同时校验 suite，防止从 v1 历史状态误跳批次；15:00 之后只运行冻结 v2。
+- v2 冻结前 fresh suite：74/74 GREEN。
 
 ## 后续 todo
 

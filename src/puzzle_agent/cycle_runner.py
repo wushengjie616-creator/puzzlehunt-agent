@@ -14,7 +14,13 @@ from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from typing import Any, Sequence
 
-from .benchmark import discover_cases, evaluate_case, load_runtime_input, validate_case
+from .benchmark import (
+    discover_cases,
+    evaluate_case,
+    evaluate_reasoning_state,
+    load_runtime_input,
+    validate_case,
+)
 from .domain import PuzzleInput
 
 
@@ -481,6 +487,12 @@ def run_cycle(
             if worker:
                 score = evaluate_case(case, {"final_answer": worker.get("final_answer")})
                 correct = score["correct"]
+                state_path = run_dir / "cases" / case.name / worker.get("state_path", "state.json")
+                worker_state = (
+                    json.loads(state_path.read_text(encoding="utf-8"))
+                    if state_path.is_file() else {}
+                )
+                reasoning = evaluate_reasoning_state(worker_state)
                 status = "SOLVED" if correct else (
                     "WRONG" if worker.get("final_answer") else worker.get("status", "ERROR")
                 )
@@ -490,6 +502,7 @@ def run_cycle(
                 calls_succeeded = worker.get("calls_used", 0)
             else:
                 correct = False
+                reasoning = evaluate_reasoning_state({})
                 status = process_result["status"]
                 trace = []
                 normalized_answer = None
@@ -522,6 +535,9 @@ def run_cycle(
                 "normalized_answer": normalized_answer,
                 "correct": correct,
                 "rubric_score": 1.0 if correct else 0.0,
+                "reasoning_pass": reasoning["reasoning_pass"],
+                "reasoning_score": reasoning["score"],
+                "reasoning_checks": reasoning["checks"],
                 "llm_calls": calls_used,
                 "llm_calls_succeeded": calls_succeeded,
                 "error_summary": (
@@ -535,6 +551,7 @@ def run_cycle(
         summary = {
             "total": len(case_results),
             "correct": sum(item["correct"] for item in case_results),
+            "reasoning_pass": sum(item["reasoning_pass"] for item in case_results),
             "wrong": sum(item["status"] == "WRONG" for item in case_results),
             "timeout": sum(item["status"] == "TIMEOUT" for item in case_results),
             "error": sum(item["status"] == "ERROR" for item in case_results),
@@ -579,13 +596,14 @@ def _write_cycle_analysis(path: Path, manifest: dict[str, Any]) -> None:
         f"- Provider: `{manifest['provider']['name']}` / `{manifest['provider']['model']}`",
         f"- Result: {manifest['summary']['correct']}/{manifest['summary']['total']}",
         "",
-        "| Case | Status | Time (ms) | Calls | Correct |",
-        "|---|---:|---:|---:|---:|",
+        "| Case | Status | Time (ms) | Calls | Correct | Reasoning |",
+        "|---|---:|---:|---:|---:|---:|",
     ]
     for item in manifest["cases"]:
         lines.append(
             f"| {item['case_id']} | {item['status']} | {item['duration_ms']} | "
-            f"{item['llm_calls']} | {str(item['correct']).lower()} |"
+            f"{item['llm_calls']} | {str(item['correct']).lower()} | "
+            f"{str(item['reasoning_pass']).lower()} ({item['reasoning_score']:.2f}) |"
         )
     lines.extend([
         "",

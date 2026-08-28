@@ -1,6 +1,6 @@
 # P0004 · 人类联想路径研究与复杂评测集 v2
 
-状态：执行中（用户于 2026-08-28 明确要求纠正）
+状态：v2 已通过冻结门，等待首次 blind cycle（用户于 2026-08-28 明确要求纠正）
 
 ## 问题
 
@@ -42,3 +42,12 @@
 ## 失败策略
 
 若 v2 未能在下一锚点前通过验收，不为赶时间恢复旧题；记录错过的锚点与原因，在下一个三小时边界运行。不得把作者知道答案的 walkthrough 当 blind difficulty 证据。
+
+## 冻结结果（2026-08-28 13:07 +08）
+
+- 三个 human-reasoning subagent 均已交付：`/root/ccbc16_human_reasoning`、`/root/ccbc15_human_reasoning`、`/root/ccbc12_human_reasoning`。旧三路机制审计不冒充本轮人类联想研究。
+- 代表样本共 37 道：CCBC16 13、CCBC15 11、CCBC12 13；合并为 `research/human-association-reasoning.md`。
+- v2 五题冻结在 `benchmarks/cycles/cases/v2`：文化关系图、异构 feeder 人物约束、原典修复与隐含排序、token 双读法与 ontology 竞争、动态空间状态到棋类本体。
+- validator 强制 flavor L0–L1、flavor-only 不可解、至少三阶段、两条独立 signal、两条带 falsifier 的 decoy、coverage ledger 与 shortcut red-team。
+- cycle report 把 exact answer 与 reasoning pass 分开；幸运猜中但缺少 association beam、竞争假设、证伪证据、中间产物或覆盖审计时不得触发 hard gate。
+- 完整 fresh suite：74/74 GREEN。

@@ -38,6 +38,48 @@ def evaluate_case(case_dir: str | Path, result: dict[str, Any]) -> dict[str, Any
     return {"correct": correct, "score": 1.0 if correct else 0.0}
 
 
+def evaluate_reasoning_state(state: dict[str, Any]) -> dict[str, Any]:
+    """Score auditable process evidence separately from the submitted answer."""
+
+    associations = state.get("association_candidates", [])
+    hypotheses = state.get("hypotheses", [])
+    checks = state.get("verification_checks", {})
+    criteria = {
+        "association_beam": isinstance(associations, list) and len(associations) >= 3,
+        "falsifiable_bridges": isinstance(associations, list) and len(associations) >= 3
+        and all(
+            isinstance(item, dict)
+            and len(item.get("signal_ids", [])) >= 2
+            and bool(item.get("prediction"))
+            and bool(item.get("falsifier"))
+            for item in associations
+        ),
+        "competing_hypotheses": isinstance(hypotheses, list) and len(hypotheses) >= 2
+        and all(
+            isinstance(item, dict)
+            and bool(item.get("prediction"))
+            and bool(item.get("falsifier"))
+            for item in hypotheses
+        ),
+        "experiment_and_evidence": (
+            bool(state.get("attempts")) or state.get("plan") == []
+        ) and bool(state.get("evidence")),
+        "intermediate_materialized": bool(state.get("intermediate_answers")),
+        "coverage_audited": state.get("unused_elements") == []
+        and isinstance(checks, dict)
+        and bool(checks)
+        and all(checks.values()),
+    }
+    passed = sum(criteria.values())
+    return {
+        "reasoning_pass": passed == len(criteria),
+        "score": passed / len(criteria),
+        "passed_checks": passed,
+        "total_checks": len(criteria),
+        "checks": criteria,
+    }
+
+
 def validate_case(case_dir: str | Path) -> list[str]:
     case_dir = Path(case_dir)
     errors = [f"missing {name}" for name in _REQUIRED_FILES if not (case_dir / name).is_file()]

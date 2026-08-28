@@ -6,6 +6,7 @@ import unittest
 from puzzle_agent.benchmark import (
     discover_cases,
     evaluate_case,
+    evaluate_reasoning_state,
     load_runtime_input,
     validate_case,
 )
@@ -78,6 +79,34 @@ class DerivedBenchmarkTests(unittest.TestCase):
         self.assertTrue(any("flavor leaks" in error for error in errors))
         self.assertTrue(any("two decoys" in error for error in errors))
         self.assertTrue(any("flavor-only" in error for error in errors))
+
+    def test_reasoning_evaluator_rejects_a_lucky_answer_without_a_reasoning_trace(self):
+        lucky = evaluate_reasoning_state({"final_answer": "RIGHT"})
+        self.assertFalse(lucky["reasoning_pass"])
+        self.assertEqual(lucky["passed_checks"], 0)
+
+        traced = evaluate_reasoning_state({
+            "association_candidates": [
+                {"signal_ids": ["a", "b"], "prediction": "p", "falsifier": "f"},
+                {"signal_ids": ["a", "c"], "prediction": "p", "falsifier": "f"},
+                {"signal_ids": ["b", "c"], "prediction": "p", "falsifier": "f"},
+            ],
+            "hypotheses": [
+                {"prediction": "p1", "falsifier": "f1"},
+                {"prediction": "p2", "falsifier": "f2"},
+            ],
+            "attempts": [{"id": "try"}],
+            "evidence": [{"id": "e"}],
+            "intermediate_answers": [{"value": "carrier"}],
+            "unused_elements": [],
+            "verification_checks": {
+                "format": True, "evidence": True, "flavor_callback": True,
+                "clue_coverage": True, "all_elements_consumed": True,
+                "independent_derivation": True,
+            },
+        })
+        self.assertTrue(traced["reasoning_pass"])
+        self.assertEqual(traced["passed_checks"], traced["total_checks"])
 
 
 if __name__ == "__main__":

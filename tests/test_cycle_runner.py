@@ -43,6 +43,16 @@ class CycleCaseContractTests(unittest.TestCase):
             oracle = json.loads((case / "oracle.json").read_text(encoding="utf-8"))
             self.assertNotIn(oracle["answer"].casefold(), runtime)
 
+    def test_v2_contains_five_human_association_cases(self):
+        cases = discover_cases(CYCLE_CASES, "v2")
+        self.assertEqual(len(cases), 5)
+        for case in cases:
+            self.assertEqual(validate_case(case), [], case.name)
+            rubric = json.loads((case / "rubric.json").read_text(encoding="utf-8"))
+            self.assertFalse(rubric["flavor_only_solvable"])
+            self.assertLessEqual(rubric["flavor_leak_level"], 1)
+            self.assertGreaterEqual(len(rubric["decoys"]), 2)
+
     def test_case_process_enforces_wall_clock_timeout(self):
         with tempfile.TemporaryDirectory() as directory:
             started = time.monotonic()
@@ -158,6 +168,9 @@ class CycleCaseContractTests(unittest.TestCase):
             self.assertIn("started_at", item)
             self.assertIn("deadline_at", item)
             self.assertIn("final_answer_frozen_at", item)
+            self.assertIn("reasoning_pass", item)
+            self.assertIn("reasoning_score", item)
+        self.assertIn("reasoning_pass", result["summary"])
         self.assertNotIn("oracle", manifest.casefold())
         self.assertNotIn("expected_answer", manifest.casefold())
         self.assertEqual(len(node_summary), 9)
