@@ -29,9 +29,11 @@ class CliTests(unittest.TestCase):
             "cycle", "schedule", "--start-at", "2026-08-28T12:00:00+08:00",
             "--suite", "v2",
             "--expected-case-count", "10",
+            "--human-reports-root", "benchmarks/cycles/hourly-reports",
         ])
         self.assertEqual(args.suite, "v2")
         self.assertEqual(args.expected_case_count, 10)
+        self.assertEqual(args.human_reports_root, Path("benchmarks/cycles/hourly-reports"))
 
     def run_cli(self, *args, cwd=ROOT):
         env = os.environ.copy()

@@ -131,6 +131,7 @@ def _parser() -> argparse.ArgumentParser:
     schedule.add_argument("--interval-hours", type=float, default=3)
     schedule.add_argument("--duration-hours", type=float, default=24)
     schedule.add_argument("--expected-case-count", type=int, default=5)
+    schedule.add_argument("--human-reports-root", type=Path)
     return parser
 
 
@@ -186,6 +187,7 @@ def main(argv: list[str] | None = None) -> int:
                     interval_hours=args.interval_hours,
                     duration_hours=args.duration_hours,
                     expected_case_count=args.expected_case_count,
+                    human_reports_root=args.human_reports_root,
                 ))
                 return 0
             if args.cycle_command == "worker":

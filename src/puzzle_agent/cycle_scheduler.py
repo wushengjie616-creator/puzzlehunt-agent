@@ -20,6 +20,7 @@ def build_cycle_schedule(
     interval_hours: float = 3,
     duration_hours: float = 24,
     expected_case_count: int = 5,
+    human_reports_root: str | Path | None = None,
 ) -> list[datetime]:
     if start.tzinfo is None or start.utcoffset() is None:
         raise ValueError("start must be timezone-aware")
@@ -174,6 +175,16 @@ def run_cycle_scheduler(
                 temporary_report = report_path.with_suffix(".tmp")
                 temporary_report.write_text(human_report, encoding="utf-8")
                 temporary_report.replace(report_path)
+                if human_reports_root is not None:
+                    public_root = Path(human_reports_root)
+                    if not public_root.is_absolute():
+                        public_root = repository / public_root
+                    public_root.mkdir(parents=True, exist_ok=True)
+                    public_report = public_root / f"{cycle_id}.md"
+                    public_temporary = public_report.with_suffix(".tmp")
+                    public_temporary.write_text(human_report, encoding="utf-8")
+                    public_temporary.replace(public_report)
+                    attempt["public_human_report_path"] = str(public_report)
                 print(human_report, flush=True)
                 attempt["human_report_path"] = str(report_path)
                 if (
