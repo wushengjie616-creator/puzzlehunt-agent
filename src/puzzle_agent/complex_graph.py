@@ -478,8 +478,6 @@ def _validate_subproblems(
     contradicted_ids = normalize_ids(_string_array(data, "contradicted_result_ids"))
     needs_test_ids = normalize_ids(_string_array(data, "needs_test_result_ids"))
     accepted_ids = set(validated_by_id)
-    if unknown_ids:
-        raise ValueError("subproblem result verdicts must reference existing candidates")
     conflicting_ids = (
         (accepted_ids & contradicted_ids)
         | (accepted_ids & needs_test_ids)
@@ -526,6 +524,8 @@ def _validate_subproblems(
         issues.append("AUTO_DEDUPLICATED_VERDICTS")
     if ignored_empty_ids:
         issues.append(f"AUTO_IGNORED_EMPTY_RESULT_IDS:{len(ignored_empty_ids)}")
+    if unknown_ids:
+        issues.append(f"AUTO_IGNORED_UNKNOWN_RESULT_IDS:{len(unknown_ids)}")
     if invalid_known_ids:
         issues.append(f"AUTO_DOWNGRADED_INVALID_VALIDATIONS:{len(invalid_known_ids)}")
     if conflicting_ids:
@@ -876,8 +876,9 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         "all_elements_consumed",
         "independent_derivation",
     }
-    if not required_checks.issubset(checks):
-        raise ValueError("required verification checks are missing")
+    missing_checks = required_checks - set(checks)
+    for name in missing_checks:
+        checks[name] = False
     attempts = state.get("attempts", [])
     tool_required = bool(state.get("plan"))
     tool_succeeded = any(
@@ -906,6 +907,7 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         "final_answer": answer if solved else None,
         "verification_checks": checks,
         "blockers": list(state.get("blockers", []))
+        + (["Missing verification checks were treated as false"] if missing_checks else [])
         + (["All planned deterministic experiments failed"] if failed_tool_gate else [])
         + (["Open questions or unused clue elements remain"] if unresolved_memory_gate else [])
         + (["No evidence-backed intermediate was validated"] if intermediate_gate else []),

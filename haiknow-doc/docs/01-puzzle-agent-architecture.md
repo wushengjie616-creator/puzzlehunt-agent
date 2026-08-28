@@ -60,6 +60,7 @@ INTAKE
 - 评价轮必须消费工具或人工产生的新 evidence。
 - 中间验证轮只接受已存在且引用真实 evidence ID 的 carrier/instruction/ordering/parameter；原始中间猜测不能直接通过。
 - 验证轮检查格式、证据、风味/标题回扣；不足时返回 null/`NEEDS_REVIEW`。
+- 验证响应中的未知局部 result ID 被忽略且不产生 evidence；终局漏填的 required check 由机器补为 `false`。两者都会留下问题标记并安全停在 `NEEDS_REVIEW`，不会因保守总化而提升答案。
 - 预算耗尽返回 `EXHAUSTED`，不继续调用或编造结果。
 - DeepSeek 的显式网络传输失败可从同一 checkpoint 重试同一节点一次；JSON、schema 和业务协议错误不重试，避免把非幂等状态或错误输出静默吞掉。
 

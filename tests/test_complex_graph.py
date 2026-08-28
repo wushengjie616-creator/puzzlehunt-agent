@@ -613,7 +613,7 @@ class ComplexGraphTests(unittest.TestCase):
                         "AUTO_DOWNGRADED_CONFLICTING_RESULTS:1", validation["issues"]
                     )
 
-    def test_subproblem_validation_rejects_a_hallucinated_result_id(self):
+    def test_subproblem_validation_ignores_a_hallucinated_result_id_without_promoting_it(self):
         response = {
             "validated_results": [],
             "contradicted_result_ids": ["not-a-result"],
@@ -622,12 +622,14 @@ class ComplexGraphTests(unittest.TestCase):
             "issues": [],
         }
 
-        with self.assertRaisesRegex(
-            ValueError, "subproblem result verdicts must reference existing candidates"
-        ):
-            build_puzzle_graph(ValidationContractProvider(response)).invoke(
-                new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=10)
-            )
+        result = build_puzzle_graph(ValidationContractProvider(response)).invoke(
+            new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=10)
+        )
+
+        validation = result["subproblem_validation"]
+        self.assertEqual(result["validated_subproblem_results"], [])
+        self.assertNotIn("not-a-result", validation["contradicted_result_ids"])
+        self.assertIn("AUTO_IGNORED_UNKNOWN_RESULT_IDS:1", validation["issues"])
 
     def test_subproblem_validation_ignores_verdicts_for_empty_results(self):
         materialization = {
@@ -888,7 +890,7 @@ class ComplexGraphTests(unittest.TestCase):
         self.assertEqual(result["status"], "NEEDS_REVIEW")
         self.assertIn("Open questions or unused clue elements remain", result["blockers"])
 
-    def test_verify_rejects_missing_coverage_checks(self):
+    def test_verify_totalizes_missing_coverage_checks_to_false(self):
         class IncompleteVerifyProvider(ScriptedStageProvider):
             def complete(self, messages):
                 marker = messages[0]["content"].split("PUZZLE_STAGE: ", 1)[1].splitlines()[0]
@@ -900,10 +902,14 @@ class ComplexGraphTests(unittest.TestCase):
                     })
                 return super().complete(messages)
 
-        with self.assertRaisesRegex(ValueError, "required verification checks"):
-            build_puzzle_graph(IncompleteVerifyProvider()).invoke(
-                new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=8)
-            )
+        result = build_puzzle_graph(IncompleteVerifyProvider()).invoke(
+            new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=8)
+        )
+
+        self.assertEqual(result["status"], "NEEDS_REVIEW")
+        self.assertIsNone(result["final_answer"])
+        self.assertFalse(result["verification_checks"]["clue_coverage"])
+        self.assertIn("Missing verification checks were treated as false", result["blockers"])
 
     def test_verify_does_not_solve_when_every_planned_tool_failed(self):
         class FailedToolProvider(ScriptedStageProvider):

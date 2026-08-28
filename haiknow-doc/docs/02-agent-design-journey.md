@@ -312,3 +312,11 @@ cycle worker 因此只对明确的 transport exception 做一次同 checkpoint�
 18:00 的 17 个安全完成题中，14 题进入旧的 evaluate→tool replan，14 题都没有形成 final candidate；其中 10 次第二轮工具实验没有增加任何 extraction。失败分组显示 11 题所有局部结果为空，另外 4 题只有零散 needs-test。此时增加密码工具或再规划工具调用，是在错误层级上优化。
 
 图中因此增加一次计划前 semantic refinement：首轮验证覆盖不足 50%、尚未恢复且至少剩余 6 次调用时，重新进入 materialize→validate。已有 supported 结果按 ID、subproblem 和 value 作为不可变锚点合并回来；零锚点时只提出 1–3 个由原文支撑的高杠杆候选。恢复轮用掉原先 replan 的两次预算，并禁止二者叠加，从而仍保持最多 10 个模型节点。它不是让模型“再想一次”，而是针对缺失语义载体的有界修复路径。
+
+独立反例审查又证明，仅在 materialize 阶段合并锚点仍不够：第二次 validator 若漏报旧锚点，会让 accepted state 撤销、旧 evidence 却残留。运行时现在把 prior accepted 作为机器不可撤销基线，第二轮全量重建 semantic evidence；覆盖率也按唯一 subproblem ID 而不是结果条数计算，防止同一子题多个候选虚增覆盖。
+
+## 第 39 站：恢复轮的第一份实证既不是成功，也不是零作用
+
+19:00 批次中 16/21 题进入 semantic refinement。#10 的受验证局部结果从 0 增到 5，证明“先补语义载体再计划”至少能在真实题上改变证据状态；其余多数题仍是 0→0，说明一次恢复 prompt 不能替代实际的 clue solving。框架因此保留该路径，但不把激活次数当作效果。
+
+同批次还暴露两个可安全总化的协议缺口：#18/#22 的第二次 validator 附带未知 result ID，#29 的终局响应漏了 required checks。未知 ID 没有合法载体，本就不能进入 evidence；缺失 check 也只能解释为 false。运行时现在分别记录后忽略、补 false 并进入 `NEEDS_REVIEW`，避免用异常终止冒充严格验证。
