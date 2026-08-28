@@ -27,6 +27,25 @@ class OfflineStageProvider:
                     {"id": "a-language", "ontology": "wordplay", "bridge": [], "signal_ids": ["o-content"], "prediction": "surface wording has systematic ambiguity", "falsifier": "wording is literal", "confidence": 0.2},
                 ],
             }
+        elif stage == "MATERIALIZE_SUBPROBLEMS":
+            response = {
+                "structure_model": {
+                    "kind": "atomic",
+                    "unit_count": 1,
+                    "grouping_rule": "the complete content is one encoded carrier",
+                    "dependencies": [],
+                },
+                "subproblems": [{
+                    "id": "sp-content",
+                    "input_excerpt": puzzle.get("content", ""),
+                    "signal_ids": ["o-content"],
+                    "group": "content",
+                    "depends_on": [],
+                    "predicted_product": "a decoded word or instruction",
+                    "status": "open",
+                }],
+                "subproblem_results": [],
+            }
         elif stage == "HYPOTHESIZE_PLAN":
             response = {
                 "hypotheses": [
@@ -36,8 +55,11 @@ class OfflineStageProvider:
                 "plan": [{
                     "id": "plan-cipher",
                     "tool": "cipher_workbench",
+                    "arguments": {},
+                    "signal_ids": ["o-content"],
                     "purpose": "test deterministic common transforms",
                     "prediction": "one bounded transform yields language",
+                    "falsifier": "no bounded transform yields language",
                 }],
             }
         elif stage == "EVALUATE_EVIDENCE":

@@ -26,6 +26,12 @@ from puzzle_agent.tool_registry import (
 
 
 class DeterministicPuzzleToolTests(unittest.TestCase):
+    def execute_registered_tool(self, name, arguments):
+        try:
+            return ToolRegistry().execute(name, arguments)
+        except ValueError as exc:
+            self.fail(f"{name} should accept the known vector: {exc}")
+
     def test_extraction_anagram_grid_and_meta_known_vectors(self):
         self.assertEqual(extract_nth(["ALPHA", "BRAVO"], [1, 2]), "AR")
         self.assertEqual(anagram_delta("LISTENX", "SILENT"), "X")
@@ -161,6 +167,84 @@ class DeterministicPuzzleToolTests(unittest.TestCase):
             solution_position_analysis(["AB", "A"])
         with self.assertRaisesRegex(ValueError, "bounded"):
             unicode_inspect("x" * 10001)
+
+    def test_bounded_mojibake_scan_returns_unscored_reversible_paths(self):
+        result = self.execute_registered_tool("bounded_mojibake_scan", {"text": "浣犲ソ"})
+
+        self.assertIn(
+            {
+                "text": "你好",
+                "path": ["encode:gb18030", "decode:utf-8"],
+                "round_trip": True,
+            },
+            result["candidates"],
+        )
+        self.assertFalse(result["scored"])
+        self.assertLessEqual(result["attempted_paths"], 100)
+
+        double_encoded = "\u00e6\u00b5\u00a3\u00e7\u008a\u00b2\u00e3\u0082\u00bd"
+        two_step = self.execute_registered_tool(
+            "bounded_mojibake_scan", {"text": double_encoded}
+        )
+        self.assertIn(
+            {
+                "text": "你好",
+                "path": [
+                    "encode:latin-1",
+                    "decode:utf-8",
+                    "encode:gb18030",
+                    "decode:utf-8",
+                ],
+                "round_trip": True,
+            },
+            two_step["candidates"],
+        )
+
+    def test_bounded_mojibake_scan_rejects_unbounded_or_implicit_input(self):
+        registry = ToolRegistry()
+        with self.assertRaisesRegex(ValueError, "non-empty"):
+            registry.execute("bounded_mojibake_scan", {"text": ""})
+        with self.assertRaisesRegex(ValueError, "4096"):
+            registry.execute("bounded_mojibake_scan", {"text": "x" * 4097})
+        with self.assertRaisesRegex(ValueError, "max_depth"):
+            registry.execute("bounded_mojibake_scan", {"text": "abc", "max_depth": 3})
+
+    def test_minesweeper_propagate_chains_only_deterministic_deductions(self):
+        result = self.execute_registered_tool(
+            "minesweeper_propagate",
+            {"grid": ["1?0", "??0"]},
+        )
+
+        self.assertEqual(result["output"], ["1.0", "*.0"])
+        self.assertEqual(result["safe"], [[0, 1], [1, 1]])
+        self.assertEqual(result["mines"], [[1, 0]])
+        self.assertEqual(result["known_mines"], [])
+        self.assertEqual(result["remaining_unknown"], 0)
+        self.assertFalse(result["stalled"])
+        self.assertEqual(result["iterations"], 2)
+
+        with_known_mine = self.execute_registered_tool(
+            "minesweeper_propagate",
+            {"grid": ["1*1", "???"]},
+        )
+        self.assertEqual(with_known_mine["output"], ["1*1", "..."])
+        self.assertEqual(with_known_mine["safe"], [[1, 0], [1, 1], [1, 2]])
+        self.assertEqual(with_known_mine["known_mines"], [[0, 1]])
+        self.assertEqual(with_known_mine["mines"], [])
+
+    def test_minesweeper_propagate_reports_stall_and_rejects_invalid_grids(self):
+        registry = ToolRegistry()
+        stalled = self.execute_registered_tool("minesweeper_propagate", {"grid": ["??"]})
+        self.assertTrue(stalled["stalled"])
+        self.assertEqual(stalled["remaining_unknown"], 2)
+        self.assertEqual(stalled["iterations"], 0)
+
+        with self.assertRaisesRegex(ValueError, "rectangular"):
+            registry.execute("minesweeper_propagate", {"grid": ["1?", "?"]})
+        with self.assertRaisesRegex(ValueError, "0-8"):
+            registry.execute("minesweeper_propagate", {"grid": ["1X"]})
+        with self.assertRaisesRegex(ValueError, "inconsistent"):
+            registry.execute("minesweeper_propagate", {"grid": ["0*"]})
 
     def test_classic_cipher_workbench_is_exposed_to_the_complex_agent(self):
         registry = ToolRegistry()

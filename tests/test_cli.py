@@ -150,7 +150,7 @@ class CliTests(unittest.TestCase):
 
             created = self.run_cli(
                 "session", "init", "--file", str(puzzle),
-                "--sessions-root", str(sessions), "--max-calls", "6",
+                "--sessions-root", str(sessions), "--max-calls", "7",
             )
             self.assertEqual(created.returncode, 0, created.stderr)
             session_id = json.loads(created.stdout)["session_id"]
@@ -190,7 +190,7 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "SOLVED")
         self.assertEqual(result["final_answer"].lower(), "hello")
-        self.assertEqual(result["budget"]["calls_used"], 6)
+        self.assertEqual(result["budget"]["calls_used"], 7)
         self.assertEqual(persisted["final_answer"].lower(), "hello")
         self.assertNotEqual(branched_id, session_id)
         self.assertEqual(final["answer"].lower(), "hello")

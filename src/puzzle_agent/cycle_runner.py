@@ -31,6 +31,7 @@ _GRAPH_NODES = (
     "human_interrupt",
     "observe_classify",
     "associate_theme",
+    "materialize_subproblems",
     "hypothesize_plan",
     "tool_dispatch",
     "evaluate_evidence",
@@ -253,6 +254,9 @@ def _observable_effects(
     elif node == "associate_theme":
         effects.append(f"ASSOCIATION_CANDIDATES:{len(after.get('association_candidates', []))}")
         effects.append(f"FLAVOR_ASSOCIATIONS:{len(after.get('flavor_associations', []))}")
+    elif node == "materialize_subproblems":
+        effects.append(f"SUBPROBLEMS_MATERIALIZED:{len(after.get('subproblems', []))}")
+        effects.append(f"SUBPROBLEM_RESULTS:{len(after.get('subproblem_results', []))}")
     elif node == "hypothesize_plan":
         effects.append(f"HYPOTHESES_PRESERVED:{len(after.get('hypotheses', []))}")
         effects.append(f"PLAN_ITEMS:{len(after.get('plan', []))}")
@@ -313,7 +317,8 @@ def run_case_worker(
     error_type: str | None = None
     error_summary: str | None = None
     model_nodes = {
-        "observe_classify", "associate_theme", "hypothesize_plan", "evaluate_evidence",
+        "observe_classify", "associate_theme", "materialize_subproblems",
+        "hypothesize_plan", "evaluate_evidence",
         "verify_intermediates", "verify_answer"
     }
     terminal = {"SOLVED", "UNSOLVED", "EXHAUSTED", "BLOCKED_INPUT"}

@@ -32,20 +32,23 @@ INTAKE
       └─ ready
   → OBSERVE_CLASSIFY              # LLM call 1：事实与 surface tension
   → ASSOCIATE_THEME               # LLM call 2：ontology beam、bridge、预测与反证
-  → HYPOTHESIZE_PLAN              # LLM call 3：机制承诺与有界实验
+  → MATERIALIZE_SUBPROBLEMS       # LLM call 3：显式子题、分组、依赖与候选载体
+  → HYPOTHESIZE_PLAN              # LLM call 4：机制承诺与有界实验
   → TOOL_DISPATCH                 # zero LLM calls
-  → EVALUATE_EVIDENCE             # LLM call 4
-  → VERIFY_INTERMEDIATES          # LLM call 5：中间载体证据门
-  → VERIFY_ANSWER                 # LLM call 6
+  → EVALUATE_EVIDENCE             # LLM call 5
+  → VERIFY_INTERMEDIATES          # LLM call 6：中间载体证据门
+  → VERIFY_ANSWER                 # LLM call 7
   → SOLVED | NEEDS_REVIEW | EXHAUSTED
 ```
 
-六个 LLM node 都调用同一个 `DeepSeekProvider.complete()`，每次是 stateless single-turn Chat Completions 请求。本地 state 被裁剪成当前节点所需 JSON 后注入下一次请求，不依赖 DeepSeek 服务端会话。正常路径六次调用；一次 evidence-driven replan 使用八次。
+七个 LLM node 都调用同一个 `DeepSeekProvider.complete()`，每次是 stateless single-turn Chat Completions 请求。本地 state 被裁剪成当前节点所需 JSON 后注入下一次请求，不依赖 DeepSeek 服务端会话。正常路径七次调用；一次 evidence-driven replan 使用九次。
 
 ### 强制阶段纪律
 
 - 观察轮只能写事实、异常和有触发词的风味联想，不提交答案。
+- 子问题物化轮先把列表、网格、阶段题和 meta 拆成可单独检查的工作单元；大题保留总数、分组和依赖，并选择代表性单元，不把 100+ 条线索压成一段摘要。
 - 计划轮至少保留两个 competing hypotheses，并选择可判别实验。
+- 每个工具计划必须引用可见 signal，给出具体 prediction 与 falsifier；空计划保持为空，不再暗中回退到通用密码 shotgun。
 - 工具轮只运行白名单确定性工具，结果带 provenance 写入 evidence。
 - 评价轮必须消费工具或人工产生的新 evidence。
 - 中间验证轮只接受已存在且引用真实 evidence ID 的 carrier/instruction/ordering/parameter；原始中间猜测不能直接通过。
@@ -57,7 +60,7 @@ INTAKE
 框架中立 state 是 JSON 兼容映射，主要分区为：
 
 - immutable `puzzle`、`artifacts`、`required_artifacts`
-- `observations` 与 `flavor_associations`
+- `observations`、`flavor_associations`、`structure_model`、`subproblems` 与 `subproblem_results`
 - `hypotheses`、`plan`、`attempts`、`evidence`
 - `intermediate_answers`、`validated_intermediate_answers`、`intermediate_validation`、`extractions`、`answer_candidates`
 - `open_questions`、`missing_artifacts`、`blockers`
@@ -103,12 +106,14 @@ INTAKE
 | `grid_trace` / `grid_transform` | 明确坐标、方向和变换，越界或非矩形失败 |
 | `constrained_order` | 最多 9 项的先后/紧邻/首尾约束，区分 SAT/UNSAT/AMBIGUOUS |
 | `decode_bit_patterns` / `repair_mojibake` | 位序显式；编码链必须 allowlist + strict round trip |
+| `bounded_mojibake_scan` | 最多两层、固定编码对、严格 round trip；返回无评分候选和完整 codec path |
+| `minesweeper_propagate` | 有界矩形雷区，只应用确定性八邻域传播；停滞时不猜测或回溯 |
 | `common_symbol_intersection` | 共有符号及各字符串位置，可要求唯一 |
 | `phone_keypad_decode` / `braille_decode` / `playfair_codec` | 固定约定的常见密码，非法或歧义输入不猜 |
 | `decode_token_morse` / `solution_position_analysis` | 显式点划 token；比较多解的逐位不变量与差异，不只返回第一个解 |
 | `palindrome_mismatch` / `unicode_inspect` | 回文镜像错位载体；保留易混 Unicode 字符的码位、名称和类别 |
 
-每次调用用 tool+arguments fingerprint 去重。未知工具或参数错误形成 failed attempt，不进入成功 evidence。
+每次调用用 tool+arguments fingerprint 去重，replan 中相同调用记录为 `duplicate_skipped` 而不再次执行。未知工具或参数错误形成 failed attempt，不进入成功 evidence。
 
 规划 prompt 的工具签名由 `inspect.signature()` 对 ToolRegistry 当前 callable 生成，例如 `a1z26_decode(values)`、`grid_trace(grid, start, directions)`。ToolSpec 在同一注册点补充紧凑前置条件，例如 0-based 坐标、`N|E|S|W`、等长字符串和 constraint object shape。只列工具名已被 cycle 2 证伪；只有签名又在 cycle 3 暴露类型/前置条件错误，因此两者都属于执行契约。
 
@@ -144,9 +149,11 @@ watcher 每轮先对 allowlisted 工作树内容做 fingerprint，运行完整�
 
 节点报告只依据可观察数据。正确证据链中的写入节点可标 `HELPFUL/ESSENTIAL`；错误答案时保持 `UNASSESSABLE`，避免从失败运行反推虚假的节点因果作用。每轮还生成 `node-summary.json` 和 analysis 中的全节点聚合表，列出跨题激活数、总次数、耗时、写入字段、evidence 数、作用标签计数与未激活/无可观察效果问题。
 
-证据评估默认进入中间验证，再进入终局验证；若它显式给出 `decision=replan` 且剩余预算至少能容纳“新规划 + 新评估 + 中间验证 + 最终验证”，则回到 `hypothesize_plan`。第二轮能读取上一轮 attempts/evidence，工具和 assessment ID 跨轮次保持唯一。默认 `max_calls=8`；正常路径使用六次，单次 replan 路径使用八次，不形成无限 ReAct loop。
+证据评估默认进入中间验证，再进入终局验证；若它显式给出 `decision=replan` 且剩余预算至少能容纳“新规划 + 新评估 + 中间验证 + 最终验证”，则回到 `hypothesize_plan`。第二轮能读取上一轮 attempts/evidence，工具和 assessment ID 跨轮次保持唯一。默认 `max_calls=9`；正常路径使用七次，单次 replan 路径使用九次，不形成无限 ReAct loop。
 
 `ASSOCIATE_THEME` 是独立发现阶段：输入观察、surface tensions、题面与既有 memory，输出 3–5 个 ontology candidates、bridge、association role、holdout prediction 和 falsifier。它不能看到 ToolRegistry；只有 `HYPOTHESIZE_PLAN` 才接收工具签名与契约，防止工具名反向泄露机制。
+
+`MATERIALIZE_SUBPROBLEMS` 位于 ontology discovery 与工具规划之间。它把题面结构写成 `structure_model`，把可独立求解单元写成 `subproblems`，并把尚未成为证据的语义候选写进 `subproblem_results`。这些 provisional result 不会绕过 evidence gate；它们的作用是让后续计划面向具体 clue unit，而不是对整页内容盲试转换。
 
 终局还有一个机器门：若当前计划要求确定性工具，但所有相关 attempt 都失败，则即使模型返回全真 checks，也只能进入 `NEEDS_REVIEW`。这防止 cycle 2 中“工具全失败却把猜测标为 evidence-backed”的错误。
 
@@ -182,6 +189,7 @@ validator 递归拒绝 input 中的 `answer/solution/oracle` 字段，并检查�
 
 - DeepSeek API text-only；图片、音频、版式与交互必须先转写为 artifact。
 - 当前确定性 grid/CSP 能力是基础组件，不等于完整填字/数独/图像识别引擎。
+- 49 道 CCBC16 非 Meta 已完成表面分类：10 道直接文本、16 道理论上可保真静态转写、23 道无法仅用文本忠实表达；16 道队列尚未完成实际逐格/逐音频转写，因此当前可运行官方文本套件仍是 10 道。
 - knowledge research subgraph 尚未接外部搜索 provider；没有可靠事实时保持 unknown。
 - offline provider 只验证系统流，不代表真实复杂解题能力。
 - 真实 DeepSeek benchmark 明确 opt-in，默认测试绝不计费。

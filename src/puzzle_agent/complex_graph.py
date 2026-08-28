@@ -28,6 +28,9 @@ class PuzzleGraphState(TypedDict, total=False):
     tensions: list[dict[str, Any]]
     flavor_associations: list[dict[str, Any]]
     association_candidates: list[dict[str, Any]]
+    subproblems: list[dict[str, Any]]
+    subproblem_results: list[dict[str, Any]]
+    structure_model: dict[str, Any]
     hypotheses: list[dict[str, Any]]
     plan: list[dict[str, Any]]
     attempts: list[dict[str, Any]]
@@ -69,16 +72,33 @@ _STAGE_INSTRUCTIONS = {
         "signals and predict one untreated holdout. Distinguish a flavor association from proven evidence. "
         "Do not name or select tools and do not propose a final answer."
     ),
+    "MATERIALIZE_SUBPROBLEMS": (
+        'Output {"structure_model":{"kind":"atomic|list|grid|staged|meta|hybrid",'
+        '"unit_count":1,"grouping_rule":"...","dependencies":[["id","id"]]},'
+        '"subproblems":[{"id":"...","input_excerpt":"...","signal_ids":["..."],'
+        '"group":"...","depends_on":[],"predicted_product":"...","status":"open|candidate"}],'
+        '"subproblem_results":[{"id":"...","subproblem_id":"...","value":"...",'
+        '"status":"candidate","signal_ids":["..."],"confidence":0.0}]}. '
+        "Turn the visible surface into explicit, independently checkable work units before choosing tools. "
+        "For 20 or fewer clue units, enumerate every unit. For larger puzzles, preserve the total unit count, "
+        "partition by rule family or stage, and materialize at least three representative/high-leverage units "
+        "without flattening away group or dependency structure. An atomic puzzle still has one subproblem. "
+        "Candidate results are provisional semantic solves, not evidence or final answers. Cite only visible "
+        "signal IDs, preserve exact excerpts, and leave a value empty rather than inventing it. Do not select tools."
+    ),
     "HYPOTHESIZE_PLAN": (
         'Output {"hypotheses":[{"id":"...","mechanism":"...","association_id":"...",'
         '"prediction":"...","falsifier":"...","confidence":0.0}],'
-        '"plan":[{"id":"...","tool":"...","arguments":{},"purpose":"...","prediction":"..."}]}. '
+        '"plan":[{"id":"...","tool":"...","arguments":{},"signal_ids":["..."],'
+        '"purpose":"...","prediction":"...","falsifier":"..."}]}. '
         "Preserve at least two competing, distinguishable hypotheses. Consider whether an intermediate answer "
         "is still a carrier and whether an inconsistency or multiple solutions are intentional information. "
         "Choose the smallest discriminating plan, normally 1-4 calls, and cover the final extraction. "
         "Return an empty plan when no registered deterministic tool can discriminate the hypotheses; "
         "do not force an irrelevant transform. "
-        "not only the first transform. Every call needs a prediction; do not shotgun unrelated tools. "
+        "not only the first transform. Every call needs an observed signal, a concrete predicted output shape, "
+        "and a falsifier; do not shotgun unrelated tools. Never repeat a prior tool with the same arguments. "
+        "Do not use a generic cipher tool unless the observations contain a specific encoding signal. "
         "Use exact parameter names and satisfy the input contracts; do not invent aliases. Tools: "
         f"{_TOOL_CATALOG}."
     ),
@@ -126,6 +146,9 @@ def _messages(stage: str, state: PuzzleGraphState) -> list[dict[str, str]]:
         "tensions": state.get("tensions", []),
         "flavor_associations": state.get("flavor_associations", []),
         "association_candidates": state.get("association_candidates", []),
+        "structure_model": state.get("structure_model", {}),
+        "subproblems": state.get("subproblems", []),
+        "subproblem_results": state.get("subproblem_results", []),
         "hypotheses": state.get("hypotheses", []),
         "plan": state.get("plan", []),
         "attempts": state.get("attempts", []),
@@ -258,8 +281,38 @@ def _associate(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphS
         "flavor_associations": _array(data, "flavor_associations"),
         "association_candidates": candidates,
         "budget": budget,
-        "stage": "HYPOTHESIZE_PLAN",
+        "stage": "MATERIALIZE_SUBPROBLEMS",
         "last_node": "associate_theme",
+        "next_node": "materialize_subproblems",
+    }
+
+
+def _materialize(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphState:
+    data, budget = _call_stage(provider, "MATERIALIZE_SUBPROBLEMS", state)
+    if data is None:
+        return _exhausted("materialize_subproblems", budget)
+    structure_model = data.get("structure_model", {})
+    if not isinstance(structure_model, dict):
+        raise ValueError("structure_model must be an object")
+    subproblems = _array(data, "subproblems")
+    if not subproblems:
+        raise ValueError("MATERIALIZE_SUBPROBLEMS must produce at least one subproblem")
+    raw_identifiers = [item.get("id") for item in subproblems]
+    if not all(isinstance(value, str) and value.strip() for value in raw_identifiers):
+        raise ValueError("subproblems must have unique non-empty ids")
+    identifiers = set(raw_identifiers)
+    if len(identifiers) != len(subproblems):
+        raise ValueError("subproblems must have unique non-empty ids")
+    results = _array(data, "subproblem_results")
+    if any(item.get("subproblem_id") not in identifiers for item in results):
+        raise ValueError("subproblem_results must reference a known subproblem")
+    return {
+        "structure_model": structure_model,
+        "subproblems": subproblems,
+        "subproblem_results": results,
+        "budget": budget,
+        "stage": "HYPOTHESIZE_PLAN",
+        "last_node": "materialize_subproblems",
         "next_node": "hypothesize_plan",
     }
 
@@ -271,9 +324,23 @@ def _hypothesize(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGrap
     hypotheses = _array(data, "hypotheses")
     if len(hypotheses) < 2:
         raise ValueError("HYPOTHESIZE_PLAN must preserve at least two competing hypotheses")
+    plan = _array(data, "plan")
+    for item in plan:
+        arguments = item.get("arguments", {})
+        signal_ids = item.get("signal_ids")
+        if not isinstance(arguments, dict):
+            raise ValueError("plan arguments must be an object")
+        if not isinstance(signal_ids, list) or not signal_ids or not all(
+            isinstance(value, str) and value for value in signal_ids
+        ):
+            raise ValueError("every planned tool call must cite signal_ids")
+        if not all(isinstance(item.get(name), str) and item[name].strip() for name in (
+            "tool", "purpose", "prediction", "falsifier"
+        )):
+            raise ValueError("every planned tool call needs tool, purpose, prediction, and falsifier")
     return {
         "hypotheses": hypotheses,
-        "plan": _array(data, "plan"),
+        "plan": plan,
         "budget": budget,
         "stage": "TOOL_DISPATCH",
         "last_node": "hypothesize_plan",
@@ -287,7 +354,7 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
     extractions = list(state.get("extractions", []))
     previous_fingerprints = {item.get("fingerprint") for item in attempts}
     registry = ToolRegistry()
-    plans = state.get("plan", []) or [{"tool": "cipher_workbench", "arguments": {}}]
+    plans = state.get("plan", [])
     attempt_base = len(attempts)
     for plan_index, plan in enumerate(plans, start=1):
         plan_serial = attempt_base + plan_index
@@ -339,6 +406,7 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
                 "decode_token_morse", "solution_position_analysis", "palindrome_mismatch",
                 "caesar_shift", "atbash_transform", "base_decode", "morse_decode",
                 "vigenere_decode", "rail_fence_decode",
+                "bounded_mojibake_scan", "minesweeper_propagate",
             }:
                 extractions.append({
                     "tool": tool,
@@ -543,6 +611,7 @@ def build_puzzle_graph(provider: StageProvider, *, checkpointer=None, step_mode:
     builder.add_node("human_interrupt", _human_interrupt)
     builder.add_node("observe_classify", lambda state: _observe(provider, state))
     builder.add_node("associate_theme", lambda state: _associate(provider, state))
+    builder.add_node("materialize_subproblems", lambda state: _materialize(provider, state))
     builder.add_node("hypothesize_plan", lambda state: _hypothesize(provider, state))
     builder.add_node("tool_dispatch", _tool_dispatch)
     builder.add_node("evaluate_evidence", lambda state: _evaluate(provider, state))
@@ -561,7 +630,12 @@ def build_puzzle_graph(provider: StageProvider, *, checkpointer=None, step_mode:
         "observe_classify", _continue_or_end, {"continue": "associate_theme", "end": END}
     )
     builder.add_conditional_edges(
-        "associate_theme", _continue_or_end, {"continue": "hypothesize_plan", "end": END}
+        "associate_theme", _continue_or_end,
+        {"continue": "materialize_subproblems", "end": END}
+    )
+    builder.add_conditional_edges(
+        "materialize_subproblems", _continue_or_end,
+        {"continue": "hypothesize_plan", "end": END}
     )
     builder.add_conditional_edges(
         "hypothesize_plan", _continue_or_end, {"continue": "tool_dispatch", "end": END}

@@ -248,3 +248,11 @@ CCBC16 多次把“不唯一”本身用作机制。如果 solver 只返回第�
 ## 第 26 站：官方题面转换必须读取玩家真正看到的 HTML
 
 旧 hard converter 只读取 `content/extend_content`，但 CCBC16 一些纯文本题（例如 #3）的主体只在 `html`，导致旧“28 道文本题”统计把空题面也算可运行。转换器现在读取 `html + content + extend_content`，并扫描内联图片、脚本及空 surface。按可直接运行的严格门，49 道非 Meta 当前有 10 道无需图片/交互；其余题保持 excluded reason，等待保真 artifact 转写，URL placeholder 不冒充文本题面。
+
+## 第 27 站：先把子题变成对象，再谈机制与工具
+
+15:00 的 10 道真实题评测把同一种失败暴露得很清楚：面对 35 个词条、127 条阶段线索或 192 条分组线索时，模型仍把整页内容当作一个字符串，然后在 Unicode、Base、Caesar 等通用工具间游走。`ASSOCIATE_THEME` 能提出本体，却没有强迫 Agent 把题面变成可跟踪的工作单元。
+
+因此图中新增 `MATERIALIZE_SUBPROBLEMS`。它必须记录结构类型、总单元数、分组、依赖、原文 excerpt 和 representative results；20 个以内全部枚举，超过 20 个至少保留总数并物化三个高杠杆代表单元。候选局部解仍然不是 evidence，只有后续工具或证据评价能推动它通过中间验证。
+
+同一轮还移除了空计划自动调用 `cipher_workbench` 的隐藏 fallback。计划为空意味着“目前没有合适的确定性实验”，而不是授权密码 shotgun；计划中的每次工具调用必须引用 signal，并给出 prediction 与 falsifier。replan 的 tool+arguments fingerprint 若与历史相同则只记 `duplicate_skipped`。这让有限循环真正意味着新实验，而不是重复消耗模型和工具预算。

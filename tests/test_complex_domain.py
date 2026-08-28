@@ -24,6 +24,8 @@ class ComplexStateTests(unittest.TestCase):
             "flavor_associations",
             "tensions",
             "association_candidates",
+            "subproblems",
+            "subproblem_results",
             "hypotheses",
             "plan",
             "attempts",
@@ -43,7 +45,9 @@ class ComplexStateTests(unittest.TestCase):
 
     def test_default_budget_covers_association_and_one_bounded_replan(self):
         state = new_puzzle_state(PuzzleInput(content="x"))
-        self.assertEqual(state["budget"], {"max_calls": 8, "calls_used": 0})
+        # Seven calls cover the normal path after subproblem materialization;
+        # a bounded hypothesis/evaluation replan needs two more calls.
+        self.assertEqual(state["budget"], {"max_calls": 9, "calls_used": 0})
 
 
 if __name__ == "__main__":

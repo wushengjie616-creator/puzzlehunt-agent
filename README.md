@@ -62,7 +62,7 @@ shell 环境变量优先于 `.env.local`。只允许上述三个 `DEEPSEEK_*` �
 ```powershell
 $pa = ".\.venv\Scripts\puzzle-agent.exe"
 
-& $pa session init --file puzzle.json --max-calls 8
+& $pa session init --file puzzle.json --max-calls 9
 & $pa session run <session-id> --offline
 & $pa session status <session-id>
 & $pa session history <session-id>
@@ -76,9 +76,11 @@ complex mode 的非阻塞流程至少包含四个独立推理节点：
 ```text
 OBSERVE_CLASSIFY
   → ASSOCIATE_THEME
+  → MATERIALIZE_SUBPROBLEMS
   → HYPOTHESIZE_PLAN
   → deterministic tool dispatch
   → EVALUATE_EVIDENCE
+  → VERIFY_INTERMEDIATES
   → VERIFY_ANSWER
 ```
 
@@ -133,6 +135,8 @@ complex tool registry 还包括：
 - `a1z26_decode`、`interleave_sequences`：显式参数的基础恢复与提取
 - `grid_trace`、`grid_transform`、`constrained_order`：方向路径、版式变换和有限排序约束
 - `decode_bit_patterns`、`repair_mojibake`、`common_symbol_intersection`：表面二态、严格可逆编码修复和不变量
+- `bounded_mojibake_scan`：固定编码对、最多两层、严格 round-trip 的无评分乱码修复候选
+- `minesweeper_propagate`：只做确定性八邻域传播的有界扫雷推理，不猜测或回溯
 - `phone_keypad_decode`、`braille_decode`、`playfair_codec`：九键、六点盲文和 5×5 双字母密码
 - `decode_token_morse`、`solution_position_analysis`：自定义视觉 token 摩斯与多解逐位差异/不变量
 - `palindrome_mismatch`、`unicode_inspect`：回文错位提取与易混 Unicode 码位审计
@@ -164,7 +168,7 @@ CCBC16 只作为离线方法学习来源，不会把官方题面或题解交给 
 真实 DeepSeek benchmark 可能产生多次计费请求，只有手动指定时才运行：
 
 ```powershell
-& $pa benchmark run --suite blind --provider deepseek --max-calls 8
+& $pa benchmark run --suite blind --provider deepseek --max-calls 9
 ```
 
 ## 24 小时周期评测

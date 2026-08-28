@@ -36,12 +36,26 @@ class ScriptedProvider:
                     {"id": "a3", "ontology": "reversal", "prediction": "language", "falsifier": "noise"},
                 ],
             },
+            "MATERIALIZE_SUBPROBLEMS": {
+                "structure_model": {"kind": "atomic", "unit_count": 1},
+                "subproblems": [{
+                    "id": "sp1", "input_excerpt": "uryyb", "signal_ids": ["o1"],
+                    "group": "content", "depends_on": [],
+                    "predicted_product": "decoded word", "status": "open",
+                }],
+                "subproblem_results": [],
+            },
             "HYPOTHESIZE_PLAN": {
                 "hypotheses": [
                     {"id": "h1", "mechanism": "ROT13"},
                     {"id": "h2", "mechanism": "other Caesar shift"},
                 ],
-                "plan": [{"id": "p1", "tool": "cipher_workbench"}],
+                "plan": [{
+                    "id": "p1", "tool": "cipher_workbench", "arguments": {},
+                    "signal_ids": ["o1"], "purpose": "test the explicit shift signal",
+                    "prediction": "ROT13 yields an English word",
+                    "falsifier": "ROT13 does not yield an English word",
+                }],
             },
             "EVALUATE_EVIDENCE": {
                 "evidence_assessment": [{"hypothesis_id": "h1", "effect": "supports"}],
@@ -83,7 +97,7 @@ class PersistentSessionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             manager = SessionManager(root)
-            session_id = manager.create(PuzzleInput(content="uryyb"), max_calls=6)
+            session_id = manager.create(PuzzleInput(content="uryyb"), max_calls=7)
             result = manager.run(session_id, ScriptedProvider())
             reopened = SessionManager(root)
             status = reopened.status(session_id)
@@ -113,7 +127,7 @@ class PersistentSessionTests(unittest.TestCase):
             manager = SessionManager(Path(directory))
             session_id = manager.create(
                 PuzzleInput(content="uryyb"),
-                max_calls=6,
+                max_calls=7,
                 required_artifacts=("grid",),
             )
             provider = ScriptedProvider()
@@ -138,7 +152,7 @@ class PersistentSessionTests(unittest.TestCase):
         self.assertEqual(blocked.get("missing_artifacts"), ["grid"])
         self.assertEqual(resumed.get("status"), "SOLVED")
         self.assertEqual(resumed.get("artifacts", {}).get("grid"), "A B C")
-        self.assertEqual(len(provider.stages), 6)
+        self.assertEqual(len(provider.stages), 7)
         self.assertEqual(artifact_text, "A B C")
         self.assertIn("session_created", event_types)
         self.assertIn("artifact_resumed", event_types)
@@ -147,7 +161,7 @@ class PersistentSessionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             manager = SessionManager(root)
-            unsolved_id = manager.create(PuzzleInput(content="uryyb"), max_calls=6)
+            unsolved_id = manager.create(PuzzleInput(content="uryyb"), max_calls=7)
             with self.assertRaisesRegex(ValueError, "SOLVED"):
                 manager.finalize(unsolved_id)
 
@@ -169,7 +183,7 @@ class PersistentSessionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             manager = SessionManager(root)
-            session_id = manager.create(PuzzleInput(content="uryyb"), max_calls=6)
+            session_id = manager.create(PuzzleInput(content="uryyb"), max_calls=7)
             provider = ScriptedProvider()
             provider.api_key = "checkpoint-secret-sentinel"
             manager.run(session_id, provider)

@@ -9,7 +9,7 @@ from .domain import PuzzleInput
 def new_puzzle_state(
     puzzle: PuzzleInput,
     *,
-    max_calls: int = 8,
+    max_calls: int = 9,
     required_artifacts: tuple[str, ...] = (),
     artifacts: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -28,6 +28,9 @@ def new_puzzle_state(
         "tensions": [],
         "flavor_associations": [],
         "association_candidates": [],
+        "subproblems": [],
+        "subproblem_results": [],
+        "structure_model": {},
         "hypotheses": [],
         "plan": [],
         "attempts": [],

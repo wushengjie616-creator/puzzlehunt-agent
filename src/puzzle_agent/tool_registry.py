@@ -284,6 +284,71 @@ def repair_mojibake(text: str, *, current_codec: str, original_codec: str) -> di
     }
 
 
+_MOJIBAKE_REPAIR_PAIRS = (
+    ("latin-1", "utf-8"),
+    ("cp1252", "utf-8"),
+    ("gb18030", "utf-8"),
+    ("big5", "utf-8"),
+    ("shift_jis", "utf-8"),
+    ("latin-1", "gb18030"),
+    ("latin-1", "big5"),
+    ("latin-1", "shift_jis"),
+)
+_MAX_MOJIBAKE_SCAN_TEXT = 4_096
+_MAX_MOJIBAKE_CANDIDATES = 32
+
+
+def bounded_mojibake_scan(text: str, *, max_depth: int = 2) -> dict[str, Any]:
+    if not isinstance(text, str) or not text:
+        raise ValueError("text must be an explicit non-empty string")
+    if len(text) > _MAX_MOJIBAKE_SCAN_TEXT:
+        raise ValueError(f"text must be bounded to {_MAX_MOJIBAKE_SCAN_TEXT} characters")
+    if not isinstance(max_depth, int) or isinstance(max_depth, bool) or max_depth not in {1, 2}:
+        raise ValueError("max_depth must be 1 or 2")
+
+    candidates: list[dict[str, Any]] = []
+    seen = {text}
+    frontier = [(text, [])]
+    attempted_paths = 0
+    truncated = False
+    for _ in range(max_depth):
+        next_frontier: list[tuple[str, list[str]]] = []
+        for current, current_path in frontier:
+            for encoded_as, decoded_as in _MOJIBAKE_REPAIR_PAIRS:
+                attempted_paths += 1
+                try:
+                    repaired = current.encode(encoded_as, errors="strict").decode(
+                        decoded_as, errors="strict"
+                    )
+                    reversible = repaired.encode(decoded_as, errors="strict").decode(
+                        encoded_as, errors="strict"
+                    ) == current
+                except UnicodeError:
+                    continue
+                if not reversible or repaired in seen:
+                    continue
+                seen.add(repaired)
+                path = current_path + [f"encode:{encoded_as}", f"decode:{decoded_as}"]
+                candidates.append({"text": repaired, "path": path, "round_trip": True})
+                next_frontier.append((repaired, path))
+                if len(candidates) == _MAX_MOJIBAKE_CANDIDATES:
+                    truncated = True
+                    break
+            if truncated:
+                break
+        if truncated or not next_frontier:
+            break
+        frontier = next_frontier
+    return {
+        "output": candidates,
+        "candidates": candidates,
+        "attempted_paths": attempted_paths,
+        "max_depth": max_depth,
+        "truncated": truncated,
+        "scored": False,
+    }
+
+
 def common_symbol_intersection(
     values: list[str], *, exactly_one: bool = False, normalization: str = "none"
 ) -> dict[str, Any]:
@@ -529,6 +594,91 @@ def unicode_inspect(text: str) -> dict[str, Any]:
     } for index, character in enumerate(text)]}
 
 
+def minesweeper_propagate(grid: list[str]) -> dict[str, Any]:
+    if not isinstance(grid, list) or not grid or not all(isinstance(row, str) and row for row in grid):
+        raise ValueError("grid must be a non-empty rectangular list of strings")
+    width = len(grid[0])
+    if any(len(row) != width for row in grid):
+        raise ValueError("grid must be rectangular")
+    if len(grid) * width > 2_500:
+        raise ValueError("grid must be bounded to 2500 cells")
+    if any(character not in "012345678?*" for row in grid for character in row):
+        raise ValueError("grid cells must use digits 0-8, ? for unknown, or * for mine")
+
+    height = len(grid)
+    input_mines = {
+        (row, column)
+        for row, value in enumerate(grid)
+        for column, character in enumerate(value)
+        if character == "*"
+    }
+    unknown = {
+        (row, column)
+        for row, value in enumerate(grid)
+        for column, character in enumerate(value)
+        if character == "?"
+    }
+    inferred_safe: set[tuple[int, int]] = set()
+    inferred_mines: set[tuple[int, int]] = set()
+    iterations = 0
+
+    def neighbors(row: int, column: int) -> set[tuple[int, int]]:
+        return {
+            (near_row, near_column)
+            for near_row in range(max(0, row - 1), min(height, row + 2))
+            for near_column in range(max(0, column - 1), min(width, column + 2))
+            if (near_row, near_column) != (row, column)
+        }
+
+    while True:
+        known_mines = input_mines | inferred_mines
+        undecided = unknown - inferred_safe - inferred_mines
+        proposed_safe: set[tuple[int, int]] = set()
+        proposed_mines: set[tuple[int, int]] = set()
+        for row, value in enumerate(grid):
+            for column, character in enumerate(value):
+                if not character.isdigit():
+                    continue
+                adjacent = neighbors(row, column)
+                adjacent_mines = len(adjacent & known_mines)
+                adjacent_unknown = adjacent & undecided
+                clue = int(character)
+                if adjacent_mines > clue or adjacent_mines + len(adjacent_unknown) < clue:
+                    raise ValueError(f"grid is inconsistent at clue [{row}, {column}]")
+                remaining_mines = clue - adjacent_mines
+                if remaining_mines == 0:
+                    proposed_safe.update(adjacent_unknown)
+                elif remaining_mines == len(adjacent_unknown):
+                    proposed_mines.update(adjacent_unknown)
+        conflict = proposed_safe & proposed_mines
+        if conflict:
+            row, column = min(conflict)
+            raise ValueError(f"grid is inconsistent at cell [{row}, {column}]")
+        proposed_safe.difference_update(inferred_safe)
+        proposed_mines.difference_update(inferred_mines)
+        if not proposed_safe and not proposed_mines:
+            break
+        inferred_safe.update(proposed_safe)
+        inferred_mines.update(proposed_mines)
+        iterations += 1
+
+    remaining = unknown - inferred_safe - inferred_mines
+    rendered = [list(row) for row in grid]
+    for row, column in inferred_safe:
+        rendered[row][column] = "."
+    for row, column in inferred_mines:
+        rendered[row][column] = "*"
+    return {
+        "output": ["".join(row) for row in rendered],
+        "safe": [list(coordinate) for coordinate in sorted(inferred_safe)],
+        "mines": [list(coordinate) for coordinate in sorted(inferred_mines)],
+        "known_mines": [list(coordinate) for coordinate in sorted(input_mines)],
+        "remaining_unknown": len(remaining),
+        "stalled": bool(remaining),
+        "iterations": iterations,
+    }
+
+
 @dataclass(frozen=True)
 class ToolSpec:
     name: str
@@ -557,6 +707,7 @@ class ToolRegistry:
                 ToolSpec("constrained_order", constrained_order, contract="constraints objects use type before|immediately_before with left/right or start|end with item"),
                 ToolSpec("decode_bit_patterns", decode_bit_patterns, contract="patterns is equal-width bit-string list; bit_order is msb|lsb"),
                 ToolSpec("repair_mojibake", repair_mojibake, contract="current_codec/original_codec name the strict reversible encode/decode path"),
+                ToolSpec("bounded_mojibake_scan", bounded_mojibake_scan, contract="text is explicit and <=4096 chars; max_depth is 1|2; candidates are reversible and unscored"),
                 ToolSpec("common_symbol_intersection", common_symbol_intersection, contract="values has >=2 strings; normalization is none|NFC|NFKC"),
                 ToolSpec("grid_transform", grid_transform, contract="operation is transpose|rotate90|rotate180|rotate270|flip_h|flip_v"),
                 ToolSpec("phone_keypad_decode", phone_keypad_decode, contract="groups is repeated-digit multitap strings such as ['44','33']"),
@@ -566,6 +717,7 @@ class ToolRegistry:
                 ToolSpec("solution_position_analysis", solution_position_analysis, contract="solutions is 2..100 equal-length strings, not one candidate"),
                 ToolSpec("palindrome_mismatch", palindrome_mismatch, contract="text is compared at mirrored character positions"),
                 ToolSpec("unicode_inspect", unicode_inspect, contract="text returns codepoint/name/category records; it does not decode semantics"),
+                ToolSpec("minesweeper_propagate", minesweeper_propagate, contract="grid is <=2500 rectangular cells using 0-8|?|*; returns only deterministic 8-neighbor deductions"),
             )
         }
 
