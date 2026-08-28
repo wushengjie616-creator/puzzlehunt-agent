@@ -42,7 +42,7 @@ shell 环境变量优先于 `.env.local`。只允许上述三个 `DEEPSEEK_*` �
 - `POST https://api.deepseek.com/chat/completions`
 - thinking enabled，reasoning effort `high`
 - JSON Object 输出，非流式
-- 每个 graph LLM node 恰好一次独立请求，非法 JSON 不自动重试
+- 每个 graph LLM node 恰好一次独立请求；非法 JSON 不自动重试，也不猜补内容，而是带指纹安全终止为 `NEEDS_REVIEW`
 
 ## 复杂 Session 快速体验
 
@@ -88,7 +88,7 @@ OBSERVE_CLASSIFY
   → VERIFY_ANSWER
 ```
 
-第一次局部验证覆盖不足一半时，complex mode 会在工具规划前使用唯一一次语义恢复轮：已有 supported 值是不可改写锚点；首轮全空时只补 1–3 个高杠杆候选。该路径固定占用十次模型节点，因此之后不再进入第二轮 tool replan。明确的 TLS、连接中断或不完整 HTTP body 会从同一 checkpoint 最多重试一次；JSON/schema 错误仍立即失败。
+第一次局部验证覆盖不足一半时，complex mode 会在工具规划前使用唯一一次语义恢复轮：已有 supported 值是不可改写锚点；首轮全空时只补 1–3 个高杠杆候选。该路径固定占用十次模型节点，因此之后不再进入第二轮 tool replan。明确的 TLS、连接中断或不完整 HTTP body 会从同一 checkpoint 最多重试一次。非法 JSON/非对象响应不重试，记录长度与摘要指纹后安全终止；恢复轮中引用未知子题的结果会被丢弃，无 signal 或缺少执行契约的计划项也会被丢弃。所有这类机器归一化都会留下 blocker，禁止终局误报 `SOLVED`。
 
 也可以逐节点学习和调试：
 

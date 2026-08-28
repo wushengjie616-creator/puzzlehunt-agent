@@ -62,7 +62,7 @@ INTAKE
 - 验证轮检查格式、证据、风味/标题回扣；不足时返回 null/`NEEDS_REVIEW`。
 - 验证响应中的未知局部 result ID 被忽略且不产生 evidence；终局漏填的 required check 由机器补为 `false`。两者都会留下问题标记并安全停在 `NEEDS_REVIEW`，不会因保守总化而提升答案。
 - 预算耗尽返回 `EXHAUSTED`，不继续调用或编造结果。
-- DeepSeek 的显式网络传输失败可从同一 checkpoint 重试同一节点一次；JSON、schema 和业务协议错误不重试，避免把非幂等状态或错误输出静默吞掉。
+- DeepSeek 的显式网络传输失败可从同一 checkpoint 重试同一节点一次。非法 JSON/非对象输出不重试、不猜补，记录长度与摘要指纹后安全终止为 `NEEDS_REVIEW`；未知子题引用和无 signal/缺契约的计划项被保守丢弃并写入 blocker。其他尚未总化的 schema 错误仍显式失败，避免把错误输出静默吞掉。
 
 ## 4. PuzzleState
 
@@ -168,7 +168,7 @@ watcher 每轮先对 allowlisted 工作树内容做 fingerprint，运行完整�
 
 `VALIDATE_SUBPROBLEMS` 是独立的局部答案证据门。16:00 批次在 89 个局部单元里产生了 33 个非空结果，但零个被正式提升为 evidence；其中 #3 已接近解出 8/9 个 clue answer，晚期验证只保留 2 个。新节点因此要求三分覆盖、值不可变、signal provenance 与可证伪依据，并只把 supported 结果写入 `validated_subproblem_result` evidence。
 
-模型输出契约与运行时状态契约并不等价。17:00 批次中，模型漏掉某个 verdict、把同一候选放进多个 verdict，或给出漂移后的 accepted value 时，旧实现会抛异常并截断整条图。现在运行时对“已知候选的不完整/矛盾判断”做保守总化：遗漏、冲突和漂移值统一降级为 `needs_test`，空结果 verdict 被忽略，`unresolved_subproblem_ids` 由 accepted 结果重新计算；只有引用完全未知 result ID 的响应仍被硬拒绝。这个容错只保证流程继续，不会把不可靠结果提升为 evidence。
+模型输出契约与运行时状态契约并不等价。17:00 批次中，模型漏掉某个 verdict、把同一候选放进多个 verdict，或给出漂移后的 accepted value 时，旧实现会抛异常并截断整条图。现在运行时对“已知候选的不完整/矛盾判断”做保守总化：遗漏、冲突和漂移值统一降级为 `needs_test`，空结果 verdict 被忽略，`unresolved_subproblem_ids` 由 accepted 结果重新计算；引用完全未知 result ID 的判断也只记录并忽略。20:00 批次进一步证明恢复轮可能产生引用不存在子题的 candidate result，计划轮也可能漏掉 signal；两者现在分别丢弃并留下不可通过终局的 blocker。这个容错只保证流程继续，不会把不可靠结果提升为 evidence。
 
 `VERIFY_INTERMEDIATES` 同样执行状态一致性门：模型只能逐字复制 `intermediate_answers` 中已存在的 value，且 evidence IDs 必须是源中间项已有引用的非空子集。评分器的模糊包含匹配只用于至少两个归一化字符的值，避免单字符别名在无关长文本中产生假阳性。
 
@@ -210,7 +210,7 @@ validator 递归拒绝 input 中的 `answer/solution/oracle` 字段，并检查�
 
 - DeepSeek API text-only；图片、音频、版式与交互必须先转写为 artifact。
 - 当前确定性 grid/CSP 能力是基础组件，不等于完整填字/数独/图像识别引擎。
-- 49 道 CCBC16 非 Meta 已完成表面分类：10 道直接文本、13 道 source-hashed 人工转写、3 道待转写、23 道无法仅用文本忠实表达；当前可运行官方文本套件为 23 道。转写 final feeders 时还必须带入人类在解锁该题时已经拥有的上游 Meta 答案、网格或操作符，不能只抄当前图片。
+- 49 道 CCBC16 非 Meta 已完成表面分类：10 道直接文本、14 道 source-hashed 人工转写、2 道待转写、23 道无法仅用文本忠实表达；当前可运行官方文本套件为 24 道。待转写为十页栅格 PDF #30 与三段音频 #36。转写 final feeders 时还必须带入人类在解锁该题时已经拥有的上游 Meta 答案、网格或操作符，不能只抄当前图片。
 - knowledge research subgraph 尚未接外部搜索 provider；没有可靠事实时保持 unknown。
 - offline provider 只验证系统流，不代表真实复杂解题能力。
 - 真实 DeepSeek benchmark 明确 opt-in，默认测试绝不计费。

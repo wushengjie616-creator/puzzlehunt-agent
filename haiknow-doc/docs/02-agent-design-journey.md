@@ -332,3 +332,15 @@ cycle worker 因此只对明确的 transport exception 做一次同 checkpoint�
 #28 的题面不是字符矩阵，而是 54×70 坐标、十类灰度填充、2572 条单位边、92 个源单元值和一条官方删边勘误的组合。候选以逐行 fill RLE、横纵边区间和带 Unicode codepoint 的 glyph 表表达；PDF 与 Sheet 只用于离散通道交叉检查，不从解后颜色反推。
 
 主审查者独立重取 data/page/PDF 并匹配三份 hash，又从候选重新计算 54 行均为 70 格、fill 总数 3780、vertical=1357、horizontal=1215、visible glyph=91、U+3000=1，并确认 M14/M15 横边不存在。题解侧的“不分青红皂白”、逐行俗语、异字符分割线和最终提取指令另存为四个 evaluator checkpoint。通过这些重建证据后，v18 扩为 23 题。
+
+## 第 42 站：完整流程需要安全终态，不是把协议错误算成解题失败
+
+20:00 的 23 题正式批次中，20 题完整到达中间与终局验证，3 题分别因观察轮非法 JSON、恢复轮 candidate 引用不存在的 subproblem、计划项漏掉 signal 而成为 ERROR。0 timeout 证明进程和预算边界有效，但 3 个协议异常说明流程还不是 23/23 闭环。
+
+三个真实反例先固化为 RED：非法 JSON 记录长度/hash 后终止为 `NEEDS_REVIEW`；未知 subproblem result 被丢弃；无 signal 或缺执行契约的 plan item 被丢弃。后两类继续运行但写入不可消除的 blocker，终局即使收到全真 checks 也不能 `SOLVED`。节点报告把这些机器动作公开为 `PROTOCOL_NORMALIZATION:*`，不混入模型自由文本。全量 128/128 测试随后通过。
+
+## 第 43 站：等距城市的文本化应记录可见投影，不反推隐藏高度
+
+#23 的主图不能用“中央是一座城市”代替。source-only 过程从官方 1536×2800 raster 精确分离 #FFC500/#0D8C00/#000000 三个可见通道，排除白地中的装饰 logo，并得到 24 个黄色、9 个绿色、10 个黑色最大连通区域。每个区域保存 source-coordinate 外环/洞环多边形；标注 overlay 与原图逐区目检一致，共 43 区且 `unrepresented_channels=[]`。
+
+运行时只得到可见投影、示例、八个箭头表达式和答案长度，不得到题解的隐藏高度。7×7 结构、八个提取数与中间词只在 evaluator checkpoint。v19 因此扩为 24 题；剩余 queue 是十页栅格 PDF #30 和三段音频 #36。
