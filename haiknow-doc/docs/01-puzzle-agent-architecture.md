@@ -34,12 +34,13 @@ INTAKE
   → ASSOCIATE_THEME               # LLM call 2：ontology beam、bridge、预测与反证
   → HYPOTHESIZE_PLAN              # LLM call 3：机制承诺与有界实验
   → TOOL_DISPATCH                 # zero LLM calls
-  → EVALUATE_EVIDENCE             # LLM call 3
-  → VERIFY_ANSWER                 # LLM call 4
+  → EVALUATE_EVIDENCE             # LLM call 4
+  → VERIFY_INTERMEDIATES          # LLM call 5：中间载体证据门
+  → VERIFY_ANSWER                 # LLM call 6
   → SOLVED | NEEDS_REVIEW | EXHAUSTED
 ```
 
-四个 LLM node 都调用同一个 `DeepSeekProvider.complete()`，每次是 stateless single-turn Chat Completions 请求。本地 state 被裁剪成当前节点所需 JSON 后注入下一次请求，不依赖 DeepSeek 服务端会话。
+六个 LLM node 都调用同一个 `DeepSeekProvider.complete()`，每次是 stateless single-turn Chat Completions 请求。本地 state 被裁剪成当前节点所需 JSON 后注入下一次请求，不依赖 DeepSeek 服务端会话。正常路径六次调用；一次 evidence-driven replan 使用八次。
 
 ### 强制阶段纪律
 
@@ -47,6 +48,7 @@ INTAKE
 - 计划轮至少保留两个 competing hypotheses，并选择可判别实验。
 - 工具轮只运行白名单确定性工具，结果带 provenance 写入 evidence。
 - 评价轮必须消费工具或人工产生的新 evidence。
+- 中间验证轮只接受已存在且引用真实 evidence ID 的 carrier/instruction/ordering/parameter；原始中间猜测不能直接通过。
 - 验证轮检查格式、证据、风味/标题回扣；不足时返回 null/`NEEDS_REVIEW`。
 - 预算耗尽返回 `EXHAUSTED`，不继续调用或编造结果。
 
@@ -57,7 +59,7 @@ INTAKE
 - immutable `puzzle`、`artifacts`、`required_artifacts`
 - `observations` 与 `flavor_associations`
 - `hypotheses`、`plan`、`attempts`、`evidence`
-- `intermediate_answers`、`extractions`、`answer_candidates`
+- `intermediate_answers`、`validated_intermediate_answers`、`intermediate_validation`、`extractions`、`answer_candidates`
 - `open_questions`、`missing_artifacts`、`blockers`
 - `budget`、`stage`、`status`、`last_node`、`next_node`
 - `final_answer`
@@ -110,7 +112,7 @@ INTAKE
 
 规划 prompt 的工具签名由 `inspect.signature()` 对 ToolRegistry 当前 callable 生成，例如 `a1z26_decode(values)`、`grid_trace(grid, start, directions)`。ToolSpec 在同一注册点补充紧凑前置条件，例如 0-based 坐标、`N|E|S|W`、等长字符串和 constraint object shape。只列工具名已被 cycle 2 证伪；只有签名又在 cycle 3 暴露类型/前置条件错误，因此两者都属于执行契约。
 
-阶段 memory 不是对话历史，而是结构化状态：`observations` 与 `flavor_associations` 保存题面事实和可检验联想，`attempts/evidence/extractions` 保存机械实验账本，`intermediate_answers` 标记仍是 carrier 的中间词，`open_questions` 与 `unused_elements` 保存尚未闭合的推理债务。这些字段显式进入后续节点输入；只要后两项非空，机器终局门就不能接受 `SOLVED`。
+阶段 memory 不是对话历史，而是结构化状态：`observations` 与 `flavor_associations` 保存题面事实和可检验联想，`attempts/evidence/extractions` 保存机械实验账本，`intermediate_answers` 保存候选载体，`validated_intermediate_answers` 只保存通过独立证据门的中间结果，`open_questions` 与 `unused_elements` 保存尚未闭合的推理债务。没有验证过的中间结果、或后两项非空时，机器终局门都不能接受 `SOLVED`。
 
 周期报告不读取模型私有思维链。每个节点 trace 额外记录可观察效果：观察/联想数量、假设与计划数量、工具成功/失败和 extraction 增量、评价的 verify/replan 决策、阶段 memory 债务，以及终局是否接受答案。错误题的因果 usefulness 仍标 `UNASSESSABLE`，但报告会显示实际行为及 `FAILED_TOOL_CALLS`、`EMPTY_PLAN`、`PROVIDER_ERROR` 等问题，不再只给空泛激活率。
 
@@ -142,7 +144,7 @@ watcher 每轮先对 allowlisted 工作树内容做 fingerprint，运行完整�
 
 节点报告只依据可观察数据。正确证据链中的写入节点可标 `HELPFUL/ESSENTIAL`；错误答案时保持 `UNASSESSABLE`，避免从失败运行反推虚假的节点因果作用。每轮还生成 `node-summary.json` 和 analysis 中的全节点聚合表，列出跨题激活数、总次数、耗时、写入字段、evidence 数、作用标签计数与未激活/无可观察效果问题。
 
-证据评估默认进入终局验证；若它显式给出 `decision=replan` 且剩余预算至少能容纳“新规划 + 新评估 + 最终验证”三次调用，则回到 `hypothesize_plan`。第二轮能读取上一轮 attempts/evidence，工具和 assessment ID 跨轮次保持唯一。新增 association call 后默认 `max_calls=8`；正常路径使用五次，单次 replan 路径使用七次，不形成无限 ReAct loop。
+证据评估默认进入中间验证，再进入终局验证；若它显式给出 `decision=replan` 且剩余预算至少能容纳“新规划 + 新评估 + 中间验证 + 最终验证”，则回到 `hypothesize_plan`。第二轮能读取上一轮 attempts/evidence，工具和 assessment ID 跨轮次保持唯一。默认 `max_calls=8`；正常路径使用六次，单次 replan 路径使用八次，不形成无限 ReAct loop。
 
 `ASSOCIATE_THEME` 是独立发现阶段：输入观察、surface tensions、题面与既有 memory，输出 3–5 个 ontology candidates、bridge、association role、holdout prediction 和 falsifier。它不能看到 ToolRegistry；只有 `HYPOTHESIZE_PLAN` 才接收工具签名与契约，防止工具名反向泄露机制。
 

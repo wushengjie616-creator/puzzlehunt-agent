@@ -40,6 +40,9 @@ class CCBC16TextSuiteTests(unittest.TestCase):
                 manifest_path=manifest,
                 output_root=root / "suite",
                 fetch_json=fetch,
+                checkpoint_overrides={
+                    1: [{"value": "OMEGA", "source": "human-reviewed-official-solution"}]
+                },
             )
             self.assertEqual(result["included_ids"], [1])
             self.assertEqual(result["excluded"], [
@@ -54,7 +57,8 @@ class CCBC16TextSuiteTests(unittest.TestCase):
         self.assertNotIn("FINAL", runtime)
         self.assertEqual(oracle["answer"], "FINAL")
         self.assertEqual(oracle["intermediate_answers"], [
-            {"value": "ALPHA", "source": "official-solution-emphasis"}
+            {"value": "ALPHA", "source": "official-solution-emphasis"},
+            {"value": "OMEGA", "source": "human-reviewed-official-solution"},
         ])
 
 

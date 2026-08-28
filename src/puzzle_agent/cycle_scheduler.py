@@ -11,7 +11,7 @@ import time
 from typing import Any
 
 from .automation import run_watch_cycle
-from .cycle_runner import run_cycle
+from .cycle_runner import format_human_cycle_report, run_cycle
 
 
 def build_cycle_schedule(
@@ -19,6 +19,7 @@ def build_cycle_schedule(
     *,
     interval_hours: float = 3,
     duration_hours: float = 24,
+    expected_case_count: int = 5,
 ) -> list[datetime]:
     if start.tzinfo is None or start.utcoffset() is None:
         raise ValueError("start must be timezone-aware")
@@ -165,8 +166,16 @@ def run_cycle_scheduler(
                     cycle_id=cycle_id,
                     require_clean=True,
                     scheduled_at=due.isoformat(),
+                    expected_case_count=expected_case_count,
                 )
                 attempt["summary"] = manifest["summary"]
+                human_report = format_human_cycle_report(manifest)
+                report_path = Path(runs_root).resolve() / cycle_id / "hourly-report.md"
+                temporary_report = report_path.with_suffix(".tmp")
+                temporary_report.write_text(human_report, encoding="utf-8")
+                temporary_report.replace(report_path)
+                print(human_report, flush=True)
+                attempt["human_report_path"] = str(report_path)
                 if (
                     suite == "v2"
                     and manifest["summary"]["correct"] == manifest["summary"]["total"]

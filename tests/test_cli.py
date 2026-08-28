@@ -28,8 +28,10 @@ class CliTests(unittest.TestCase):
         args = _parser().parse_args([
             "cycle", "schedule", "--start-at", "2026-08-28T12:00:00+08:00",
             "--suite", "v2",
+            "--expected-case-count", "10",
         ])
         self.assertEqual(args.suite, "v2")
+        self.assertEqual(args.expected_case_count, 10)
 
     def run_cli(self, *args, cwd=ROOT):
         env = os.environ.copy()
@@ -176,7 +178,7 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "SOLVED")
         self.assertEqual(result["final_answer"].lower(), "hello")
-        self.assertEqual(result["budget"]["calls_used"], 5)
+        self.assertEqual(result["budget"]["calls_used"], 6)
         self.assertEqual(persisted["final_answer"].lower(), "hello")
         self.assertNotEqual(branched_id, session_id)
         self.assertEqual(final["answer"].lower(), "hello")

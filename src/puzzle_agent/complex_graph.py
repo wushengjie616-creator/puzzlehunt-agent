@@ -33,6 +33,8 @@ class PuzzleGraphState(TypedDict, total=False):
     attempts: list[dict[str, Any]]
     evidence: list[dict[str, Any]]
     intermediate_answers: list[dict[str, Any]]
+    validated_intermediate_answers: list[dict[str, Any]]
+    intermediate_validation: dict[str, Any]
     extractions: list[dict[str, Any]]
     answer_candidates: list[dict[str, Any]]
     open_questions: list[str]
@@ -91,6 +93,14 @@ _STAGE_INSTRUCTIONS = {
         "extraction is reproducible before promoting an answer candidate. Choose replan only when current "
         "evidence falsifies the plan and a materially different bounded experiment is available."
     ),
+    "VERIFY_INTERMEDIATES": (
+        'Output {"validated_intermediates":[{"value":"...","role":"carrier|instruction|ordering|parameter",'
+        '"evidence_ids":["..."]}],"checks":{"evidence_backed":true,"reproducible":true,'
+        '"distinct_from_final":true,"extraction_ready":true},"issues":["..."]}. '
+        "Validate only intermediate values already present in state; do not invent a replacement or final answer. "
+        "Every validated value must cite existing evidence IDs and explain a role in the remaining extraction. "
+        "Use false checks and explicit issues when no carrier is sufficiently supported."
+    ),
     "VERIFY_ANSWER": (
         'Output {"answer":"string or null","confidence":"low|medium|high",'
         '"checks":{"format":true,"evidence":true,"flavor_callback":true,"clue_coverage":true,'
@@ -121,6 +131,8 @@ def _messages(stage: str, state: PuzzleGraphState) -> list[dict[str, str]]:
         "attempts": state.get("attempts", []),
         "evidence": state.get("evidence", []),
         "intermediate_answers": state.get("intermediate_answers", []),
+        "validated_intermediate_answers": state.get("validated_intermediate_answers", []),
+        "intermediate_validation": state.get("intermediate_validation", {}),
         "extractions": state.get("extractions", []),
         "answer_candidates": state.get("answer_candidates", []),
         "open_questions": state.get("open_questions", []),
@@ -362,9 +374,9 @@ def _evaluate(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphSt
     if decision not in {"verify", "replan"}:
         raise ValueError("EVALUATE_EVIDENCE decision must be verify or replan")
     # Replanning consumes one hypothesis call and one further evaluation call;
-    # always reserve the final call for independent verification.
+    # always reserve both intermediate and final verification calls.
     remaining = budget["max_calls"] - budget["calls_used"]
-    if decision == "replan" and remaining < 3:
+    if decision == "replan" and remaining < 4:
         decision = "verify"
     intermediate_answers = (
         _array(data, "intermediate_answers")
@@ -386,9 +398,59 @@ def _evaluate(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphSt
         "answer_candidates": _array(data, "answer_candidates"),
         "budget": budget,
         "evaluation_decision": decision,
-        "stage": "HYPOTHESIZE_PLAN" if decision == "replan" else "VERIFY_ANSWER",
+        "stage": "HYPOTHESIZE_PLAN" if decision == "replan" else "VERIFY_INTERMEDIATES",
         "last_node": "evaluate_evidence",
-        "next_node": "hypothesize_plan" if decision == "replan" else "verify_answer",
+        "next_node": "hypothesize_plan" if decision == "replan" else "verify_intermediates",
+    }
+
+
+def _verify_intermediates(
+    provider: StageProvider, state: PuzzleGraphState
+) -> PuzzleGraphState:
+    data, budget = _call_stage(provider, "VERIFY_INTERMEDIATES", state)
+    if data is None:
+        return _exhausted("verify_intermediates", budget)
+    validated = _array(data, "validated_intermediates")
+    checks = data.get("checks", {})
+    required_checks = {
+        "evidence_backed", "reproducible", "distinct_from_final", "extraction_ready"
+    }
+    if (
+        not isinstance(checks, dict)
+        or not required_checks.issubset(checks)
+        or not all(isinstance(value, bool) for value in checks.values())
+    ):
+        raise ValueError("required intermediate verification checks are missing")
+    issues = _string_array(data, "issues")
+    evidence_ids = {
+        str(item["id"]) for item in state.get("evidence", []) if item.get("id") is not None
+    }
+    references_valid = bool(validated)
+    for item in validated:
+        item_evidence = item.get("evidence_ids")
+        if (
+            not isinstance(item.get("value"), str)
+            or not item["value"].strip()
+            or not isinstance(item.get("role"), str)
+            or not isinstance(item_evidence, list)
+            or not item_evidence
+            or not all(isinstance(value, str) and value in evidence_ids for value in item_evidence)
+        ):
+            references_valid = False
+            break
+    passed = bool(validated) and references_valid and all(checks.values()) and not issues
+    return {
+        "budget": budget,
+        "validated_intermediate_answers": validated,
+        "intermediate_validation": {
+            "passed": passed,
+            "checks": checks,
+            "evidence_references_valid": references_valid,
+            "issues": issues,
+        },
+        "stage": "VERIFY_ANSWER",
+        "last_node": "verify_intermediates",
+        "next_node": "verify_answer",
     }
 
 
@@ -424,6 +486,7 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
     unresolved_memory_gate = bool(
         state.get("open_questions", []) or state.get("unused_elements", [])
     )
+    intermediate_gate = not bool(state.get("intermediate_validation", {}).get("passed"))
     solved = (
         bool(answer)
         and confidence in {"medium", "high"}
@@ -431,6 +494,7 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         and all(checks.values())
         and not failed_tool_gate
         and not unresolved_memory_gate
+        and not intermediate_gate
     )
     return {
         "budget": budget,
@@ -442,7 +506,8 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         "verification_checks": checks,
         "blockers": list(state.get("blockers", []))
         + (["All planned deterministic experiments failed"] if failed_tool_gate else [])
-        + (["Open questions or unused clue elements remain"] if unresolved_memory_gate else []),
+        + (["Open questions or unused clue elements remain"] if unresolved_memory_gate else [])
+        + (["No evidence-backed intermediate was validated"] if intermediate_gate else []),
     }
 
 
@@ -468,7 +533,7 @@ def _route_artifacts(state: PuzzleGraphState) -> str:
 def _route_evaluation(state: PuzzleGraphState) -> str:
     if state.get("status") == "EXHAUSTED":
         return "end"
-    return "replan" if state.get("evaluation_decision") == "replan" else "verify"
+    return "replan" if state.get("evaluation_decision") == "replan" else "intermediate"
 
 
 def build_puzzle_graph(provider: StageProvider, *, checkpointer=None, step_mode: bool = False):
@@ -481,6 +546,7 @@ def build_puzzle_graph(provider: StageProvider, *, checkpointer=None, step_mode:
     builder.add_node("hypothesize_plan", lambda state: _hypothesize(provider, state))
     builder.add_node("tool_dispatch", _tool_dispatch)
     builder.add_node("evaluate_evidence", lambda state: _evaluate(provider, state))
+    builder.add_node("verify_intermediates", lambda state: _verify_intermediates(provider, state))
     builder.add_node("verify_answer", lambda state: _verify(provider, state))
 
     builder.add_edge(START, "intake")
@@ -503,9 +569,10 @@ def build_puzzle_graph(provider: StageProvider, *, checkpointer=None, step_mode:
     builder.add_edge("tool_dispatch", "evaluate_evidence")
     builder.add_conditional_edges("evaluate_evidence", _route_evaluation, {
         "replan": "hypothesize_plan",
-        "verify": "verify_answer",
+        "intermediate": "verify_intermediates",
         "end": END,
     })
+    builder.add_edge("verify_intermediates", "verify_answer")
     builder.add_edge("verify_answer", END)
 
     return builder.compile(

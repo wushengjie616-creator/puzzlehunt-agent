@@ -45,7 +45,22 @@ class ScriptedProvider:
             },
             "EVALUATE_EVIDENCE": {
                 "evidence_assessment": [{"hypothesis_id": "h1", "effect": "supports"}],
+                "intermediate_answers": [{
+                    "value": "HELLO", "role": "decoded_carrier", "evidence_ids": ["tool-1-1"]
+                }],
                 "answer_candidates": [{"answer": "HELLO", "confidence": "high"}],
+            },
+            "VERIFY_INTERMEDIATES": {
+                "validated_intermediates": [{
+                    "value": "HELLO", "role": "decoded_carrier", "evidence_ids": ["tool-1-1"]
+                }],
+                "checks": {
+                    "evidence_backed": True,
+                    "reproducible": True,
+                    "distinct_from_final": True,
+                    "extraction_ready": True,
+                },
+                "issues": [],
             },
             "VERIFY_ANSWER": {
                 "answer": "HELLO",
@@ -123,7 +138,7 @@ class PersistentSessionTests(unittest.TestCase):
         self.assertEqual(blocked.get("missing_artifacts"), ["grid"])
         self.assertEqual(resumed.get("status"), "SOLVED")
         self.assertEqual(resumed.get("artifacts", {}).get("grid"), "A B C")
-        self.assertEqual(len(provider.stages), 5)
+        self.assertEqual(len(provider.stages), 6)
         self.assertEqual(artifact_text, "A B C")
         self.assertIn("session_created", event_types)
         self.assertIn("artifact_resumed", event_types)

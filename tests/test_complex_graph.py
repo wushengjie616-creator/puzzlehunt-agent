@@ -29,6 +29,19 @@ class ScriptedStageProvider:
         marker = messages[0]["content"].split("PUZZLE_STAGE: ", 1)[1].splitlines()[0]
         self.stages.append(marker)
         self.messages.append(messages)
+        if marker == "VERIFY_INTERMEDIATES":
+            state = json.loads(messages[1]["content"])
+            intermediates = state.get("intermediate_answers", [])
+            return json.dumps({
+                "validated_intermediates": intermediates,
+                "checks": {
+                    "evidence_backed": bool(intermediates),
+                    "reproducible": bool(intermediates),
+                    "distinct_from_final": bool(intermediates),
+                    "extraction_ready": bool(intermediates),
+                },
+                "issues": [],
+            })
         responses = {
             "OBSERVE_CLASSIFY": {
                 "observations": [{"id": "o1", "text": "content is uryyb", "source": "content"}],
@@ -51,7 +64,8 @@ class ScriptedStageProvider:
             },
             "EVALUATE_EVIDENCE": {
                 "evidence_assessment": [{"hypothesis_id": "h1", "effect": "supports"}],
-                "answer_candidates": [{"answer": "HELLO", "confidence": "high", "evidence_ids": ["tool-1"]}],
+                "intermediate_answers": [{"value": "HELLO", "role": "decoded_carrier", "evidence_ids": ["tool-1-1"]}],
+                "answer_candidates": [{"answer": "HELLO", "confidence": "high", "evidence_ids": ["tool-1-1"]}],
             },
             "VERIFY_ANSWER": {
                 "answer": "HELLO",
@@ -151,17 +165,18 @@ class ComplexGraphTests(unittest.TestCase):
 
         self.assertEqual(
             provider.stages,
-            ["OBSERVE_CLASSIFY", "ASSOCIATE_THEME", "HYPOTHESIZE_PLAN", "EVALUATE_EVIDENCE", "VERIFY_ANSWER"],
+            ["OBSERVE_CLASSIFY", "ASSOCIATE_THEME", "HYPOTHESIZE_PLAN", "EVALUATE_EVIDENCE", "VERIFY_INTERMEDIATES", "VERIFY_ANSWER"],
         )
         self.assertEqual(result["status"], "SOLVED")
         self.assertEqual(result["final_answer"], "HELLO")
-        self.assertEqual(result["budget"]["calls_used"], 5)
+        self.assertEqual(result["budget"]["calls_used"], 6)
         self.assertGreaterEqual(len(result["attempts"]), 1)
         required_fields = {
             "OBSERVE_CLASSIFY": ("observations", "tensions"),
             "ASSOCIATE_THEME": ("association_candidates", "prediction", "falsifier"),
             "HYPOTHESIZE_PLAN": ("hypotheses", "plan"),
             "EVALUATE_EVIDENCE": ("evidence_assessment", "answer_candidates"),
+            "VERIFY_INTERMEDIATES": ("validated_intermediates", "evidence_backed", "extraction_ready"),
             "VERIFY_ANSWER": ("answer", "confidence", "checks"),
         }
         for stage, messages in zip(provider.stages, provider.messages):
@@ -204,7 +219,7 @@ class ComplexGraphTests(unittest.TestCase):
     def test_evidence_can_trigger_one_budgeted_replan_before_verification(self):
         provider = ReplanningProvider()
         result = build_puzzle_graph(provider).invoke(
-            new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=7)
+            new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=8)
         )
         self.assertEqual(provider.stages, [
             "OBSERVE_CLASSIFY",
@@ -213,13 +228,25 @@ class ComplexGraphTests(unittest.TestCase):
             "EVALUATE_EVIDENCE",
             "HYPOTHESIZE_PLAN",
             "EVALUATE_EVIDENCE",
+            "VERIFY_INTERMEDIATES",
             "VERIFY_ANSWER",
         ])
         self.assertEqual(result["status"], "SOLVED")
-        self.assertEqual(result["budget"]["calls_used"], 7)
+        self.assertEqual(result["budget"]["calls_used"], 8)
         self.assertTrue(any(item.get("tool") == "extract_nth" for item in result["attempts"]))
         evidence_ids = [item["id"] for item in result["evidence"] if "id" in item]
         self.assertEqual(len(evidence_ids), len(set(evidence_ids)))
+
+    def test_replan_is_suppressed_without_room_for_both_verification_nodes(self):
+        provider = ReplanningProvider()
+        result = build_puzzle_graph(provider).invoke(
+            new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=7)
+        )
+        self.assertEqual(provider.stages, [
+            "OBSERVE_CLASSIFY", "ASSOCIATE_THEME", "HYPOTHESIZE_PLAN",
+            "EVALUATE_EVIDENCE", "VERIFY_INTERMEDIATES", "VERIFY_ANSWER",
+        ])
+        self.assertNotEqual(result["status"], "EXHAUSTED")
 
     def test_plan_dispatches_registered_deterministic_tool(self):
         provider = RegistryPlanningProvider()
@@ -316,6 +343,28 @@ class ComplexGraphTests(unittest.TestCase):
         self.assertEqual(result["attempts"][0]["outcome"], "failed")
         self.assertEqual(result["status"], "NEEDS_REVIEW")
         self.assertIsNone(result["final_answer"])
+
+    def test_final_answer_is_rejected_without_a_validated_intermediate(self):
+        class MissingIntermediateProvider(ScriptedStageProvider):
+            def complete(self, messages):
+                marker = messages[0]["content"].split("PUZZLE_STAGE: ", 1)[1].splitlines()[0]
+                if marker == "EVALUATE_EVIDENCE":
+                    self.stages.append(marker)
+                    self.messages.append(messages)
+                    return json.dumps({
+                        "decision": "verify",
+                        "evidence_assessment": [{"hypothesis_id": "h1", "effect": "supports"}],
+                        "intermediate_answers": [],
+                        "answer_candidates": [{"answer": "HELLO", "confidence": "high", "evidence_ids": ["tool-1-1"]}],
+                    })
+                return super().complete(messages)
+
+        result = build_puzzle_graph(MissingIntermediateProvider()).invoke(
+            new_puzzle_state(PuzzleInput(content="uryyb"), max_calls=8)
+        )
+        self.assertEqual(result["status"], "NEEDS_REVIEW")
+        self.assertFalse(result["intermediate_validation"]["passed"])
+        self.assertIn("No evidence-backed intermediate was validated", result["blockers"])
 
 
 if __name__ == "__main__":

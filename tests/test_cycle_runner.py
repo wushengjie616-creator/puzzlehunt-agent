@@ -11,6 +11,7 @@ from puzzle_agent.benchmark import discover_cases, load_runtime_input, validate_
 from puzzle_agent.cycle_runner import (
     analyze_node_effects,
     execute_case_process,
+    format_human_cycle_report,
     run_case_worker,
     run_cycle,
 )
@@ -27,6 +28,37 @@ HAS_COMPLEX = (
 
 
 class CycleCaseContractTests(unittest.TestCase):
+    def test_human_cycle_report_has_timestamp_failures_and_optimization_hypothesis(self):
+        report = format_human_cycle_report({
+            "cycle_id": "hour-1",
+            "suite": "text",
+            "git_commit": "abc123",
+            "summary": {
+                "total": 1, "correct": 0, "intermediate_applicable": 1,
+                "intermediate_pass": 0, "reasoning_pass": 0,
+                "wrong": 0, "timeout": 0, "error": 0, "unsolved": 1,
+            },
+            "cases": [{
+                "case_id": "ccbc16-003", "status": "NEEDS_REVIEW",
+                "duration_ms": 1250, "llm_calls": 8, "correct": False,
+                "intermediate_matched": 0, "intermediate_expected": 2,
+                "reasoning_pass": False, "reasoning_score": 0.5,
+            }],
+            "node_summary": [{
+                "node": "tool_dispatch", "activated_cases": 1, "cases_total": 1,
+                "activation_count": 1, "wall_time_ms": 5,
+                "observed_effect_counts": {"TOOL_FAILED:1": 1},
+                "usefulness_counts": {"UNASSESSABLE": 1},
+                "issues": ["FAILED_TOOL_CALLS"],
+            }],
+        }, generated_at="2026-08-28T15:00:00+08:00")
+        self.assertIn("2026-08-28T15:00:00+08:00", report)
+        self.assertIn("ccbc16-003", report)
+        self.assertIn("0/2", report)
+        self.assertIn("失败分析", report)
+        self.assertIn("下一轮优化假设", report)
+        self.assertIn("工具", report)
+
     def test_24_hour_schedule_has_eight_three_hour_boundaries(self):
         start = datetime(2026, 8, 28, 3, 0, tzinfo=timezone(timedelta(hours=8)))
         schedule = build_cycle_schedule(start, interval_hours=3, duration_hours=24)
@@ -106,6 +138,15 @@ class CycleCaseContractTests(unittest.TestCase):
         self.assertIn("TOOL_FAILED:2", tool["observed_effects"])
         self.assertIn("FAILED_TOOL_CALLS", tool["issues"])
 
+    def test_zero_failed_tools_does_not_create_a_false_failure_issue(self):
+        report = analyze_node_effects([{
+            "node": "tool_dispatch", "wall_time_ms": 1,
+            "written_fields": ["attempts"], "new_evidence_ids": [],
+            "observed_effects": ["TOOL_COMPLETED:2", "TOOL_FAILED:0"],
+        }], correct=False)
+        tool = {item["node"]: item for item in report}["tool_dispatch"]
+        self.assertNotIn("FAILED_TOOL_CALLS", tool["issues"])
+
     @unittest.skipUnless(HAS_COMPLEX, "complex extra is not installed")
     def test_worker_steps_nodes_and_never_loads_oracle(self):
         case = discover_cases(CYCLE_CASES, "v1")[0]
@@ -170,13 +211,17 @@ class CycleCaseContractTests(unittest.TestCase):
             self.assertIn("final_answer_frozen_at", item)
             self.assertIn("reasoning_pass", item)
             self.assertIn("reasoning_score", item)
+            self.assertIn("intermediate_pass", item)
+            self.assertIn("intermediate_score", item)
         self.assertIn("reasoning_pass", result["summary"])
+        self.assertIn("intermediate_pass", result["summary"])
         self.assertNotIn("oracle", manifest.casefold())
         self.assertNotIn("expected_answer", manifest.casefold())
-        self.assertEqual(len(node_summary), 9)
+        self.assertEqual(len(node_summary), 10)
         self.assertEqual({item["node"] for item in node_summary}, {
             "intake", "artifact_inventory", "human_interrupt", "observe_classify",
             "associate_theme", "hypothesize_plan", "tool_dispatch", "evaluate_evidence",
+            "verify_intermediates",
             "verify_answer",
         })
         self.assertIn("Node aggregate", analysis)

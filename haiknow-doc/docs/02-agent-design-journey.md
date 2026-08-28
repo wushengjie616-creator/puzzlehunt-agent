@@ -240,3 +240,11 @@ CCBC16 多次把“不唯一”本身用作机制。如果 solver 只返回第�
 ## 第 24 站：机制选择之前必须有本体发现
 
 用户指出 v1 风味文本把操作步骤写得过明，暴露了旧图把“观察后猜机制”压缩成一步的问题。CCBC12/15/16 共 37 道人类路径复核显示，真正 aha 往往是表示空间或知识本体切换。图中因此新增 `ASSOCIATE_THEME`：先列 surface tension，再维护 3–5 个 ontology/bridge 候选、holdout prediction 与 falsifier；这个阶段看不到工具目录。只有 bridge 能解释至少两个独立信号并通过廉价预测后，下一节点才选择工具。默认预算由 6 提到 8，正常路径五次模型调用，仍只允许一次证据驱动 replan。
+
+## 第 25 站：中间答案不能只存在，必须被独立验证
+
+首次 v2 完整流程中，模型正确联想到国际象棋，却没有物化棋子分配、谢幕顺序或提取载体；旧图仍直接从 evidence evaluation 跳到 final verify。新增 `VERIFY_INTERMEDIATES` 后，原始 carrier 必须引用真实 evidence ID，并通过 evidence-backed、reproducible、distinct-from-final、extraction-ready 四项检查。最终机器门要求该阶段通过；“猜中 final 但没有中间链”不再能进入 `SOLVED`。正常路径因此由五次变为六次，单次 replan 路径正好使用八次预算。
+
+## 第 26 站：官方题面转换必须读取玩家真正看到的 HTML
+
+旧 hard converter 只读取 `content/extend_content`，但 CCBC16 一些纯文本题（例如 #3）的主体只在 `html`，导致旧“28 道文本题”统计把空题面也算可运行。转换器现在读取 `html + content + extend_content`，并扫描内联图片、脚本及空 surface。按可直接运行的严格门，49 道非 Meta 当前有 10 道无需图片/交互；其余题保持 excluded reason，等待保真 artifact 转写，URL placeholder 不冒充文本题面。

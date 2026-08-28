@@ -17,6 +17,7 @@ from typing import Any, Sequence
 from .benchmark import (
     discover_cases,
     evaluate_case,
+    evaluate_intermediate_case,
     evaluate_reasoning_state,
     load_runtime_input,
     validate_case,
@@ -33,6 +34,7 @@ _GRAPH_NODES = (
     "hypothesize_plan",
     "tool_dispatch",
     "evaluate_evidence",
+    "verify_intermediates",
     "verify_answer",
 )
 
@@ -152,7 +154,12 @@ def analyze_node_effects(traces: list[dict[str, Any]], *, correct: bool) -> list
         else:
             usefulness = "NEUTRAL"
         issues: list[str] = []
-        if any(effect.startswith("TOOL_FAILED:") for effect in observed_effects):
+        if any(
+            effect.startswith("TOOL_FAILED:")
+            and effect.rsplit(":", 1)[-1].isdigit()
+            and int(effect.rsplit(":", 1)[-1]) > 0
+            for effect in observed_effects
+        ):
             issues.append("FAILED_TOOL_CALLS")
         if "PLAN_ITEMS:0" in observed_effects:
             issues.append("EMPTY_PLAN")
@@ -265,6 +272,12 @@ def _observable_effects(
         effects.append(f"INTERMEDIATE_ANSWERS:{len(after.get('intermediate_answers', []))}")
         debt = len(after.get("open_questions", [])) + len(after.get("unused_elements", []))
         effects.append(f"MEMORY_DEBT:{debt}")
+    elif node == "verify_intermediates":
+        validation = after.get("intermediate_validation", {})
+        effects.append(
+            f"INTERMEDIATES_VALIDATED:{len(after.get('validated_intermediate_answers', []))}"
+        )
+        effects.append(f"INTERMEDIATE_GATE_PASSED:{int(bool(validation.get('passed')))}")
     elif node == "verify_answer":
         effects.append(f"TERMINAL_STATUS:{str(after.get('status', '')).upper()}")
         effects.append(f"FINAL_ANSWER_ACCEPTED:{int(bool(after.get('final_answer')))}")
@@ -300,7 +313,8 @@ def run_case_worker(
     error_type: str | None = None
     error_summary: str | None = None
     model_nodes = {
-        "observe_classify", "associate_theme", "hypothesize_plan", "evaluate_evidence", "verify_answer"
+        "observe_classify", "associate_theme", "hypothesize_plan", "evaluate_evidence",
+        "verify_intermediates", "verify_answer"
     }
     terminal = {"SOLVED", "UNSOLVED", "EXHAUSTED", "BLOCKED_INPUT"}
     for _ in range(max_steps):
@@ -493,6 +507,7 @@ def run_cycle(
                     if state_path.is_file() else {}
                 )
                 reasoning = evaluate_reasoning_state(worker_state)
+                intermediate = evaluate_intermediate_case(case, worker_state)
                 status = "SOLVED" if correct else (
                     "WRONG" if worker.get("final_answer") else worker.get("status", "ERROR")
                 )
@@ -503,6 +518,7 @@ def run_cycle(
             else:
                 correct = False
                 reasoning = evaluate_reasoning_state({})
+                intermediate = evaluate_intermediate_case(case, {})
                 status = process_result["status"]
                 trace = []
                 normalized_answer = None
@@ -538,6 +554,11 @@ def run_cycle(
                 "reasoning_pass": reasoning["reasoning_pass"],
                 "reasoning_score": reasoning["score"],
                 "reasoning_checks": reasoning["checks"],
+                "intermediate_applicable": intermediate["applicable"],
+                "intermediate_pass": intermediate["pass"],
+                "intermediate_score": intermediate["score"],
+                "intermediate_matched": intermediate["matched"],
+                "intermediate_expected": intermediate["expected"],
                 "llm_calls": calls_used,
                 "llm_calls_succeeded": calls_succeeded,
                 "error_summary": (
@@ -552,6 +573,10 @@ def run_cycle(
             "total": len(case_results),
             "correct": sum(item["correct"] for item in case_results),
             "reasoning_pass": sum(item["reasoning_pass"] for item in case_results),
+            "intermediate_applicable": sum(
+                item["intermediate_applicable"] for item in case_results
+            ),
+            "intermediate_pass": sum(item["intermediate_pass"] for item in case_results),
             "wrong": sum(item["status"] == "WRONG" for item in case_results),
             "timeout": sum(item["status"] == "TIMEOUT" for item in case_results),
             "error": sum(item["status"] == "ERROR" for item in case_results),
@@ -596,13 +621,14 @@ def _write_cycle_analysis(path: Path, manifest: dict[str, Any]) -> None:
         f"- Provider: `{manifest['provider']['name']}` / `{manifest['provider']['model']}`",
         f"- Result: {manifest['summary']['correct']}/{manifest['summary']['total']}",
         "",
-        "| Case | Status | Time (ms) | Calls | Correct | Reasoning |",
-        "|---|---:|---:|---:|---:|---:|",
+        "| Case | Status | Time (ms) | Calls | Correct | Intermediate | Reasoning |",
+        "|---|---:|---:|---:|---:|---:|---:|",
     ]
     for item in manifest["cases"]:
         lines.append(
             f"| {item['case_id']} | {item['status']} | {item['duration_ms']} | "
             f"{item['llm_calls']} | {str(item['correct']).lower()} | "
+            f"{item['intermediate_matched']}/{item['intermediate_expected']} | "
             f"{str(item['reasoning_pass']).lower()} ({item['reasoning_score']:.2f}) |"
         )
     lines.extend([
@@ -630,3 +656,73 @@ def _write_cycle_analysis(path: Path, manifest: dict[str, Any]) -> None:
         "未答对时节点作用保持 `UNASSESSABLE`，避免把相关性误报为因果贡献。",
     ])
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def format_human_cycle_report(
+    manifest: dict[str, Any], *, generated_at: str | None = None
+) -> str:
+    generated_at = generated_at or datetime.now().astimezone().isoformat(timespec="seconds")
+    summary = manifest["summary"]
+    lines = [
+        f"# PuzzleHunt 小时评测 · {manifest['cycle_id']}",
+        "",
+        f"- 报告时间：`{generated_at}`",
+        f"- Suite：`{manifest.get('suite')}`",
+        f"- Git：`{manifest.get('git_commit')}`",
+        f"- 最终答案：{summary.get('correct', 0)}/{summary.get('total', 0)}",
+        f"- 中间答案：{summary.get('intermediate_pass', 0)}/{summary.get('intermediate_applicable', 0)}",
+        f"- 推理通过：{summary.get('reasoning_pass', 0)}/{summary.get('total', 0)}",
+        "",
+        "## 逐题结果",
+        "",
+        "| 题目 | 状态 | 耗时(ms) | 调用 | 最终 | 中间 | 推理 |",
+        "|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    for item in manifest.get("cases", []):
+        lines.append(
+            f"| {item['case_id']} | {item['status']} | {item['duration_ms']} | "
+            f"{item['llm_calls']} | {str(item['correct']).lower()} | "
+            f"{item['intermediate_matched']}/{item['intermediate_expected']} | "
+            f"{str(item['reasoning_pass']).lower()} ({item['reasoning_score']:.2f}) |"
+        )
+
+    tool_issues = sorted({
+        issue
+        for node in manifest.get("node_summary", [])
+        if node.get("node") == "tool_dispatch"
+        for issue in node.get("issues", [])
+    })
+    failures: list[str] = []
+    if summary.get("intermediate_pass", 0) < summary.get("intermediate_applicable", 0):
+        failures.append("存在官方中间 checkpoint 未被验证，主题识别、载体物化或证据引用链不完整。")
+    if summary.get("correct", 0) < summary.get("total", 0):
+        failures.append("部分题目未得到正确最终答案，需要区分中间推理失败与最终提取失败。")
+    if summary.get("timeout", 0):
+        failures.append(f"有 {summary['timeout']} 题超过单题硬时限。")
+    if summary.get("error", 0):
+        failures.append(f"有 {summary['error']} 题发生 worker/provider 错误。")
+    if tool_issues:
+        failures.append("工具节点问题：" + "、".join(tool_issues) + "。")
+    if not failures:
+        failures.append("本轮未发现答案、阶段 checkpoint 或工具层失败。")
+
+    hypotheses: list[str] = []
+    if summary.get("intermediate_pass", 0) < summary.get("intermediate_applicable", 0):
+        hypotheses.append("检查失败题的 association→intermediate 链；优先补能验证关键载体的工具或收紧中间验证 prompt。")
+    if (
+        summary.get("intermediate_pass", 0) > 0
+        and summary.get("correct", 0) < summary.get("intermediate_pass", 0)
+    ):
+        hypotheses.append("中间答案已命中但最终答案失败；优先加强 extraction plan 与终局格式/覆盖检查。")
+    if tool_issues:
+        hypotheses.append("按真实失败参数补 ToolSpec、前置条件或缺失的确定性工具，不扩大 shotgun 搜索。")
+    if summary.get("reasoning_pass", 0) < summary.get("total", 0):
+        hypotheses.append("审计未通过题的竞争假设、falsifier 与 replan 是否产生了新实验，避免重复计划。")
+    if not hypotheses:
+        hypotheses.append("保持冻结框架，下一小时复测稳定性；没有报告证据时不修改 prompt 或工具。")
+
+    lines.extend(["", "## 失败分析", ""])
+    lines.extend(f"- {item}" for item in failures)
+    lines.extend(["", "## 下一轮优化假设", ""])
+    lines.extend(f"- {item}" for item in hypotheses)
+    return "\n".join(lines) + "\n"

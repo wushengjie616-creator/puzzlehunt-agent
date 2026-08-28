@@ -64,7 +64,8 @@ def evaluate_reasoning_state(state: dict[str, Any]) -> dict[str, Any]:
         "experiment_and_evidence": (
             bool(state.get("attempts")) or state.get("plan") == []
         ) and bool(state.get("evidence")),
-        "intermediate_materialized": bool(state.get("intermediate_answers")),
+        "intermediate_materialized": bool(state.get("validated_intermediate_answers"))
+        and bool(state.get("intermediate_validation", {}).get("passed")),
         "coverage_audited": state.get("unused_elements") == []
         and isinstance(checks, dict)
         and bool(checks)
@@ -77,6 +78,50 @@ def evaluate_reasoning_state(state: dict[str, Any]) -> dict[str, Any]:
         "passed_checks": passed,
         "total_checks": len(criteria),
         "checks": criteria,
+    }
+
+
+def evaluate_intermediate_case(
+    case_dir: str | Path, state: dict[str, Any]
+) -> dict[str, Any]:
+    oracle = _read_json(Path(case_dir) / "oracle.json")
+    checkpoints = oracle.get("intermediate_answers", [])
+    expected_groups: list[set[str]] = []
+    for item in checkpoints:
+        if not isinstance(item, dict) or not isinstance(item.get("value"), str):
+            continue
+        values = [item["value"]]
+        aliases = item.get("aliases", [])
+        if isinstance(aliases, list):
+            values.extend(alias for alias in aliases if isinstance(alias, str))
+        normalized = {_normalize(value) for value in values if _normalize(value)}
+        if normalized:
+            expected_groups.append(normalized)
+    actual = state.get("validated_intermediate_answers", [])
+    actual_values = {
+        _normalize(item["value"])
+        for item in actual
+        if isinstance(item, dict) and isinstance(item.get("value"), str)
+        and _normalize(item["value"])
+    }
+    matched = sum(
+        any(
+            expected_value == actual_value
+            or expected_value in actual_value
+            or actual_value in expected_value
+            for expected_value in group
+            for actual_value in actual_values
+        )
+        for group in expected_groups
+    )
+    expected = len(expected_groups)
+    return {
+        "applicable": expected > 0,
+        "pass": expected > 0 and matched == expected,
+        "matched": matched,
+        "expected": expected,
+        "submitted": len(actual_values),
+        "score": matched / expected if expected else 0.0,
     }
 
 

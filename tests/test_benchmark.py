@@ -6,6 +6,7 @@ import unittest
 from puzzle_agent.benchmark import (
     discover_cases,
     evaluate_case,
+    evaluate_intermediate_case,
     evaluate_reasoning_state,
     load_runtime_input,
     validate_case,
@@ -84,6 +85,10 @@ class DerivedBenchmarkTests(unittest.TestCase):
         lucky = evaluate_reasoning_state({"final_answer": "RIGHT"})
         self.assertFalse(lucky["reasoning_pass"])
         self.assertEqual(lucky["passed_checks"], 0)
+        raw_only = evaluate_reasoning_state({
+            "intermediate_answers": [{"value": "unguarded"}]
+        })
+        self.assertFalse(raw_only["checks"]["intermediate_materialized"])
 
         traced = evaluate_reasoning_state({
             "association_candidates": [
@@ -98,6 +103,8 @@ class DerivedBenchmarkTests(unittest.TestCase):
             "attempts": [{"id": "try"}],
             "evidence": [{"id": "e"}],
             "intermediate_answers": [{"value": "carrier"}],
+            "validated_intermediate_answers": [{"value": "carrier"}],
+            "intermediate_validation": {"passed": True},
             "unused_elements": [],
             "verification_checks": {
                 "format": True, "evidence": True, "flavor_callback": True,
@@ -107,6 +114,34 @@ class DerivedBenchmarkTests(unittest.TestCase):
         })
         self.assertTrue(traced["reasoning_pass"])
         self.assertEqual(traced["passed_checks"], traced["total_checks"])
+
+    def test_intermediate_evaluator_scores_validated_values_separately_from_final(self):
+        with tempfile.TemporaryDirectory() as directory:
+            case = Path(directory)
+            (case / "oracle.json").write_text(json.dumps({
+                "answer": "FINAL",
+                "intermediate_answers": [
+                    {"value": "ALPHA", "source": "official-solution-emphasis"},
+                    {"value": "BRIDGE", "aliases": ["SPAN"], "source": "official-solution-emphasis"},
+                ],
+            }), encoding="utf-8")
+            none = evaluate_intermediate_case(case, {"validated_intermediate_answers": []})
+            partial = evaluate_intermediate_case(case, {
+                "validated_intermediate_answers": [
+                    {"value": "alpha", "role": "carrier", "evidence_ids": ["e1"]}
+                ]
+            })
+            alias = evaluate_intermediate_case(case, {
+                "validated_intermediate_answers": [
+                    {"value": "SPAN carrier", "role": "carrier", "evidence_ids": ["e2"]}
+                ]
+            })
+        self.assertFalse(none["pass"])
+        self.assertEqual(none["matched"], 0)
+        self.assertEqual(partial["matched"], 1)
+        self.assertEqual(partial["expected"], 2)
+        self.assertEqual(partial["score"], 0.5)
+        self.assertEqual(alias["matched"], 1)
 
 
 if __name__ == "__main__":

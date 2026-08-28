@@ -56,6 +56,23 @@ class OfflineStageProvider:
                     "confidence": "high" if best.get("score", 0) >= 0.8 else "medium",
                     "evidence_ids": [best["id"]],
                 }] if best else []),
+                "intermediate_answers": ([{
+                    "value": best["output"],
+                    "role": "decoded_carrier",
+                    "evidence_ids": [best["id"]],
+                }] if best else []),
+            }
+        elif stage == "VERIFY_INTERMEDIATES":
+            intermediates = state.get("intermediate_answers", [])
+            response = {
+                "validated_intermediates": intermediates,
+                "checks": {
+                    "evidence_backed": bool(intermediates),
+                    "reproducible": bool(intermediates),
+                    "distinct_from_final": bool(intermediates),
+                    "extraction_ready": bool(intermediates),
+                },
+                "issues": [] if intermediates else ["no intermediate carrier"],
             }
         elif stage == "VERIFY_ANSWER":
             candidates = state.get("answer_candidates", [])

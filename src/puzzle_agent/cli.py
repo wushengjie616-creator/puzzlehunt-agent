@@ -130,6 +130,7 @@ def _parser() -> argparse.ArgumentParser:
     schedule.add_argument("--timeout", type=float, default=3600)
     schedule.add_argument("--interval-hours", type=float, default=3)
     schedule.add_argument("--duration-hours", type=float, default=24)
+    schedule.add_argument("--expected-case-count", type=int, default=5)
     return parser
 
 
@@ -184,6 +185,7 @@ def main(argv: list[str] | None = None) -> int:
                     timeout_seconds=args.timeout,
                     interval_hours=args.interval_hours,
                     duration_hours=args.duration_hours,
+                    expected_case_count=args.expected_case_count,
                 ))
                 return 0
             if args.cycle_command == "worker":

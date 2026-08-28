@@ -61,6 +61,7 @@ def build_text_suite(
     manifest_path: str | Path,
     output_root: str | Path,
     fetch_json: JsonFetcher,
+    checkpoint_overrides: dict[int, list[dict[str, str]]] | None = None,
 ) -> dict[str, Any]:
     """Fetch official payloads and retain only self-contained textual surfaces."""
 
@@ -69,6 +70,7 @@ def build_text_suite(
     if suite_root.exists() and any(suite_root.iterdir()):
         raise ValueError("text suite output must be empty to avoid stale cases")
     entries = load_nonmeta_manifest(manifest_path)
+    checkpoint_overrides = checkpoint_overrides or {}
     included_ids: list[int] = []
     excluded: list[dict[str, Any]] = []
     for entry in entries:
@@ -84,11 +86,24 @@ def build_text_suite(
             continue
 
         solution = payload.get("analysis") or payload.get("solution") or ""
+        checkpoints = extract_solution_checkpoints(
+            solution, converted["oracle"]["answer"]
+        )
+        seen_checkpoints = {_normalized(item["value"]) for item in checkpoints}
+        for item in checkpoint_overrides.get(puzzle_id, []):
+            if (
+                not isinstance(item, dict)
+                or not isinstance(item.get("value"), str)
+                or not isinstance(item.get("source"), str)
+            ):
+                raise ValueError(f"invalid checkpoint override for puzzle {puzzle_id}")
+            normalized = _normalized(item["value"])
+            if normalized and normalized != _normalized(converted["oracle"]["answer"]) and normalized not in seen_checkpoints:
+                checkpoints.append(dict(item))
+                seen_checkpoints.add(normalized)
         oracle = {
             "answer": converted["oracle"]["answer"],
-            "intermediate_answers": extract_solution_checkpoints(
-                solution, converted["oracle"]["answer"]
-            ),
+            "intermediate_answers": checkpoints,
         }
         case = suite_root / f"ccbc16-{puzzle_id:03d}"
         _write_json(case / "input.json", runtime_input)

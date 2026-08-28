@@ -33,6 +33,8 @@ def new_puzzle_state(
         "attempts": [],
         "evidence": [],
         "intermediate_answers": [],
+        "validated_intermediate_answers": [],
+        "intermediate_validation": {},
         "extractions": [],
         "answer_candidates": [],
         "open_questions": [],
