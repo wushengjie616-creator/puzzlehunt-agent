@@ -32,6 +32,12 @@ text / image / mixed
 包含 technique、target、value、premises 及前后 state fingerprint；replay verifier 从 givens 重新生成同一
 确定性步骤。固定点未解完即 `STALLED`，自由模型建议只能标记为 `UNVERIFIED_ADVISORY`，不能修改盘面。
 
+扫雷采用与数独不同的产品边界：它是本地互动游戏，不经过 DeepSeek normalization，也不自动求解。服务端
+保存权威雷位，首次 reveal 后才布雷；浏览器只取得 covered/flagged/revealed 状态，终局才显示雷。引擎支持
+零区 flood、flag、chord、胜负和计时；进程内 `MinesweeperStore` 最多保留 64 局，game ID 可在刷新后恢复，
+但服务重启即失效。逻辑提示只从公开数字做确定性八邻域传播，忽略玩家旗子的真实性，不读取隐藏雷位，且
+只返回建议、不改变棋盘。对应写 API 继续复用本地 capability、Host、Origin 与 JSON 安全门。
+
 ## 3. Simple 数据流
 
 ```text

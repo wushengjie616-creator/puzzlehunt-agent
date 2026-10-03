@@ -10,7 +10,10 @@ class PaperPuzzleGatewayTests(unittest.TestCase):
         catalog = gateway.catalog()
         self.assertEqual(catalog[0]["id"], "sudoku")
         self.assertTrue(catalog[0]["enabled"])
-        self.assertTrue(any(item["id"] == "minesweeper" and not item["enabled"] for item in catalog))
+        self.assertTrue(any(
+            item["id"] == "minesweeper" and item["enabled"] and item["mode"] == "game"
+            for item in catalog
+        ))
         result = gateway.run({
             "kind": "sudoku",
             "canonical": {"size": 9, "grid": [[None] * 9 for _ in range(9)]},

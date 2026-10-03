@@ -19,6 +19,7 @@ from puzzle_agent.intake.contracts import ReceiptError, ReceiptSigner, canonical
 from puzzle_agent.intake.normalizer import DeepSeekNormalizer, NormalizationError
 from puzzle_agent.intake.uploads import UploadError, validate_image_upload
 from puzzle_agent.paper_puzzle.gateway import PaperPuzzleGateway
+from puzzle_agent.paper_puzzle.components.minesweeper import MinesweeperError, MinesweeperStore
 from puzzle_agent.providers.deepseek import DeepSeekConfig, DeepSeekProvider
 
 
@@ -74,6 +75,7 @@ def create_app(
     app.state.signer = ReceiptSigner(receipt_secret or secrets.token_bytes(32))
     app.state.capability = capability_token or secrets.token_urlsafe(32)
     app.state.gateway = PaperPuzzleGateway()
+    app.state.minesweeper = MinesweeperStore(max_games=64)
     app.state.intakes: dict[str, dict[str, Any]] = {}
     app.state.sessions: dict[str, dict[str, Any]] = {}
     app.state.lock = Lock()
@@ -124,6 +126,51 @@ def create_app(
             "catalog": app.state.gateway.catalog(),
             "normalization_required": True,
         }
+
+    def get_minesweeper_game(game_id: str):
+        try:
+            return app.state.minesweeper.get(game_id)
+        except MinesweeperError as exc:
+            raise HTTPException(404, str(exc)) from exc
+
+    @app.post("/api/minesweeper/games", status_code=201)
+    async def create_minesweeper_game(request: Request):
+        body = await request.json()
+        difficulty = body.get("difficulty") if isinstance(body, dict) else None
+        try:
+            game_id, game = app.state.minesweeper.create(difficulty)
+        except MinesweeperError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return {"game_id": game_id, **game.public_state()}
+
+    @app.get("/api/minesweeper/games/{game_id}")
+    def get_minesweeper_state(game_id: str):
+        return {"game_id": game_id, **get_minesweeper_game(game_id).public_state()}
+
+    @app.post("/api/minesweeper/games/{game_id}/actions")
+    async def act_on_minesweeper_game(game_id: str, request: Request):
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise HTTPException(400, "JSON object required")
+        action = body.get("action")
+        row, column = body.get("row"), body.get("column")
+        game = get_minesweeper_game(game_id)
+        try:
+            if action == "reveal":
+                state = game.reveal(row, column)
+            elif action == "flag":
+                state = game.toggle_flag(row, column)
+            elif action == "chord":
+                state = game.chord(row, column)
+            else:
+                raise MinesweeperError("action must be reveal, flag, or chord")
+        except MinesweeperError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return {"game_id": game_id, **state}
+
+    @app.post("/api/minesweeper/games/{game_id}/hint")
+    def hint_minesweeper_game(game_id: str):
+        return get_minesweeper_game(game_id).logical_hint()
 
     def add_event(record: dict[str, Any], event: str, detail: str) -> None:
         record["events"].append({"id": len(record["events"]) + 1, "event": event, "detail": detail})
