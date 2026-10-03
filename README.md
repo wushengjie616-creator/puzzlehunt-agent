@@ -1,6 +1,32 @@
 # Puzzle Solving Agent
 
-一个只提供 CLI 的 PuzzleHunt 解题 Agent。它有两种运行方式：
+一个同时提供 CLI 与本地 Web 界面的 PuzzleHunt 解题 Agent。无需账号即可在本机提交文字或题面图片；Web
+入口会强制先用 DeepSeek 规范化输入，再交给通用 Agent 或纸笔谜题组件。
+
+## 本地 Web 与普通数独
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -e ".[web]"
+.venv/bin/puzzle-agent web --port 8000
+```
+
+打开 `http://127.0.0.1:8000`。服务只允许监听 `127.0.0.1` / `localhost`，无需登录；每次启动会生成仅供
+当前页面使用的本地 capability token，并同时校验 Host、Origin 和 JSON Content-Type。不要用反向代理把该
+模式直接暴露到公网。
+
+页面接受文字、PNG、JPEG 或 WebP（单图最大 10 MiB），所有输入都必须经过 `deepseek-flash` 的
+`NORMALIZE_INPUT` 阶段。识别结果必须先由用户编辑、确认，随后服务端签发绑定 source、模型 envelope 与
+canonical input hash 的短期回执；直接调用 session API 不能绕过该阶段。API Key 始终只在服务端。
+
+纸笔谜题专区目前只有普通数独可用。数独组件支持标准 9×9，以及显式提供宫结构的其他 N×N；它只应用
+裸单和行/列/宫隐单，记录候选数、依据和前后状态指纹，并可从 givens 重放。基础技巧不够时返回 `STALLED`
+和 `UNVERIFIED_ADVISORY`，绝不搜索、回溯或猜数。扫雷、数织和数和卡片目前是路线图，不代表已实现。
+
+真实图片识别会产生 DeepSeek 调用费用；默认测试使用 fake provider，本次本地部署不包含未经单独授权的
+付费视觉冒烟。若未配置 `DEEPSEEK_API_KEY`，页面仍可启动，但规范化会明确失败而不会绕过模型。
+
+项目另有两种 CLI 运行方式：
 
 - **simple mode**：零第三方运行时依赖；本地跑常见密码候选，然后进行一次 DeepSeek 单轮请求。
 - **complex mode**：可选 LangGraph/SQLite runtime；按观察、假设、工具实验、证据评价和答案验证进行多次独立 DeepSeek 单轮请求，并支持暂停、恢复、历史和分叉。
@@ -32,6 +58,7 @@ CLI 自动读取当前工作目录的 `.env.local`。该文件已被 `.gitignore
 ```dotenv
 DEEPSEEK_API_KEY=replace-with-your-api-key
 DEEPSEEK_MODEL=deepseek-v4-pro
+DEEPSEEK_VISION_MODEL=deepseek-flash
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
 
@@ -96,9 +123,10 @@ OBSERVE_CLASSIFY
 & $pa session step <session-id> --offline
 ```
 
-### 缺失图片或表格
+### CLI 中缺失图片或表格
 
-DeepSeek 官方 API 当前是 text-only。题目可以声明必须转写的 artifact：
+传统 complex CLI 的 artifact 流程仍以文本转写为主；Web 入口已经可以用 DeepSeek Vision 读取题面图片。
+CLI 题目可以声明必须转写的 artifact：
 
 ```json
 {

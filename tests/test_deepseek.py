@@ -77,6 +77,21 @@ class DeepSeekContractTests(unittest.TestCase):
         self.assertEqual(payload["max_tokens"], 16384)
         self.assertEqual(timeout, 60.0)
 
+    def test_vision_content_parts_are_forwarded_without_exposing_the_key(self):
+        opener = RecordingOpener()
+        provider = DeepSeekProvider(
+            DeepSeekConfig(api_key="vision-secret", model="deepseek-flash"),
+            opener=opener,
+        )
+        parts = [
+            {"type": "text", "text": "Normalize this Sudoku"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBORw0KGgo="}},
+        ]
+        provider.complete([{"role": "user", "content": parts}])
+        payload = json.loads(opener.calls[0][0].data)
+        self.assertEqual(payload["messages"][0]["content"], parts)
+        self.assertNotIn("vision-secret", opener.calls[0][0].data.decode())
+
     def test_api_errors_do_not_echo_the_key(self):
         provider = DeepSeekProvider(DeepSeekConfig(api_key="super-secret-value"), opener=FailingOpener())
         with self.assertRaises(RuntimeError) as raised:

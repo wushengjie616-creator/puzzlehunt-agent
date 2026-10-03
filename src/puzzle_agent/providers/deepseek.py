@@ -31,7 +31,7 @@ class DeepSeekProvider:
         self.config = config
         self.opener = opener or request.build_opener()
 
-    def complete(self, messages: list[dict[str, str]]) -> str:
+    def complete(self, messages: list[dict[str, object]]) -> str:
         payload = {
             "model": self.config.model,
             "messages": messages,

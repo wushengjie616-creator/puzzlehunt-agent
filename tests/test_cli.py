@@ -24,6 +24,11 @@ HAS_COMPLEX = module_available("langgraph.graph") and module_available("langgrap
 
 
 class CliTests(unittest.TestCase):
+    def test_web_command_is_localhost_only_by_contract(self):
+        args = _parser().parse_args(["web", "--port", "8765"])
+        self.assertEqual(args.host, "127.0.0.1")
+        self.assertEqual(args.port, 8765)
+
     def test_cycle_run_accepts_text_suite_case_count_and_report_path(self):
         args = _parser().parse_args([
             "cycle", "run",
