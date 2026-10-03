@@ -13,11 +13,15 @@ acceptance_contract: v1
 
 - 2026-10-03：用户批准 P0014，并要求在当前 Codex session 存活期间无人值守执行到完成。
 - 2026-10-03：授权范围确认为本地实现、测试与 commit；不包含真实付费 DeepSeek、push、merge 或公网部署。
+- 2026-10-03：Session Loop preflight 除 state selftest 外均通过；已确认当前 HAiKnow runtime 缺少其声明的
+  `scripts/tests/test-session-loop-state.sh`，state selftest 以 exit 23 失败。依无人值守安全门停止，尚未派发
+  writer，也未修改业务代码。
 - 待执行：按 RED→GREEN→REFACTOR 完成 A01–A08；A09 在没有单独付费授权时保持 conditional/unknown。
 
 ## 与计划的偏差
 
-- 暂无。
+- 控制面阻断：HAiKnow v0.33.0 runtime 安装包缺少 Session Loop state focused selftest。修复全局 runtime
+  属于本项目计划之外的新权限，不能由主会话静默绕过或自行修改。
 
 ## 关键 commit
 
@@ -26,7 +30,9 @@ acceptance_contract: v1
 
 ## 测试 / 验证
 
-- 待执行。
+- `session-loop-preflight.sh --surface codex --mode session-alive --permissions-confirmed`：FAIL，仅
+  `state_selftest=FAIL`，其余 marker/worktree/skill/subagent/lock/runtime IO 均 PASS。
+- `session-loop-state.sh --selftest`：exit 23，报告 focused selftest 文件不存在。
 
 ## 验收逐项处置
 
