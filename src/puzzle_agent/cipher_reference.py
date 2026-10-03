@@ -12,11 +12,23 @@ from .cipher_workbench import caesar_decode, decode_ascii_decimal, decode_bacon
 _MAX_TEXT = 10_000
 
 
-def _bacon_table() -> list[dict[str, str]]:
+_BACON_CLASSIC24_LETTERS = (
+    "A", "B", "C", "D", "E", "F", "G", "H", "I/J", "K", "L", "M",
+    "N", "O", "P", "Q", "R", "S", "T", "U/V", "W", "X", "Y", "Z",
+)
+
+
+def _bacon_table(letters: tuple[str, ...]) -> list[dict[str, str]]:
     return [
-        {"letter": chr(ord("A") + index), "code": format(index, "05b").replace("0", "a").replace("1", "b")}
-        for index in range(26)
+        {"letter": letter, "code": format(index, "05b").replace("0", "a").replace("1", "b")}
+        for index, letter in enumerate(letters)
     ]
+
+
+BACON_VARIANTS = {
+    "modern26": tuple(chr(ord("A") + index) for index in range(26)),
+    "classic24": _BACON_CLASSIC24_LETTERS,
+}
 
 
 _BRAILLE = {
@@ -87,7 +99,15 @@ _REFERENCES = (
         "summary": "把字母写成五位 a/b（或任意两种状态）组合。",
         "rule": "现代 26 字母表可按 A=aaaaa 到 Z=bbaab；每五位一组。",
         "cautions": "古典 24 字母版本会合并 I/J 与 U/V，解题时必须先看题面采用哪种变体。",
-        "table": _bacon_table(),
+        "table": _bacon_table(BACON_VARIANTS["modern26"]),
+        "variants": [
+            {
+                "id": variant,
+                "label": "现代 26 字母版" if variant == "modern26" else "古典 24 字母版",
+                "table": _bacon_table(letters),
+            }
+            for variant, letters in BACON_VARIANTS.items()
+        ],
         "visual": "compact-grid",
     },
     {
@@ -260,7 +280,10 @@ def transform(payload: dict[str, Any]) -> dict[str, Any]:
             {"shift": shift, "output": caesar_decode(text, shift)} for shift in range(26)
         ]}
 
-    bacon = {item["letter"]: item["code"] for item in _bacon_table()}
+    bacon = {
+        item["letter"]: item["code"]
+        for item in _bacon_table(BACON_VARIANTS["modern26"])
+    }
     if operation == "bacon_encode":
         return {"operation": operation, "variant": "modern-26", "output": _encode_letters(text, bacon)}
     if operation == "bacon_decode":

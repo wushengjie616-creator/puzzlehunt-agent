@@ -1,8 +1,9 @@
 ---
 id: P0014
 title: 普通谜题鲁棒推理链与数独键盘导航
-status: in_progress
+status: completed
 created_at: 2026-10-03
+plan_completed_at: 2026-10-04
 mode: review
 paired_task: T0013
 acceptance_contract: v1

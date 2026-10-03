@@ -2,8 +2,10 @@
 
 from collections import Counter
 from dataclasses import dataclass
+import hashlib
 from itertools import permutations
 import inspect
+import json
 from typing import Any, Callable
 import unicodedata
 
@@ -14,7 +16,7 @@ from .cipher_workbench import (
     rail_fence_decode as _rail_fence_decode,
     vigenere_decode as _vigenere_decode,
 )
-from .cipher_reference import lookup_cipher_reference
+from .cipher_reference import BACON_VARIANTS, lookup_cipher_reference
 
 
 _MAX_TOOL_TEXT = 10_000
@@ -595,6 +597,111 @@ def unicode_inspect(text: str) -> dict[str, Any]:
     } for index, character in enumerate(text)]}
 
 
+def _fingerprint(value: Any) -> str:
+    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def expand_symbol_groups(
+    groups: list[list[str]],
+    mapping: dict[str, str],
+    allowed_symbols: str | None = None,
+    expected_width: int | None = None,
+) -> dict[str, Any]:
+    if not isinstance(groups, list) or not groups or len(groups) > 256:
+        raise ValueError("groups must contain 1..256 token lists")
+    if not all(isinstance(group, list) and group and len(group) <= 256 for group in groups):
+        raise ValueError("each group must contain 1..256 tokens")
+    if not all(isinstance(token, str) and token and len(token) <= 128 for group in groups for token in group):
+        raise ValueError("group tokens must be non-empty bounded strings")
+    if not isinstance(mapping, dict) or not mapping or len(mapping) > 256:
+        raise ValueError("mapping must contain 1..256 explicit token expansions")
+    if not all(
+        isinstance(token, str) and token and len(token) <= 128
+        and isinstance(expansion, str) and expansion and len(expansion) <= 256
+        for token, expansion in mapping.items()
+    ):
+        raise ValueError("mapping keys and expansions must be non-empty bounded strings")
+    if allowed_symbols is not None:
+        if not isinstance(allowed_symbols, str) or not allowed_symbols or len(set(allowed_symbols)) != len(allowed_symbols):
+            raise ValueError("allowed_symbols must contain unique characters")
+        invalid = {
+            character for expansion in mapping.values() for character in expansion
+            if character not in set(allowed_symbols)
+        }
+        if invalid:
+            raise ValueError(f"mapping expansion contains symbols outside allowed_symbols: {sorted(invalid)}")
+    if expected_width is not None and (
+        not isinstance(expected_width, int) or isinstance(expected_width, bool)
+        or expected_width < 1 or expected_width > 65_536
+    ):
+        raise ValueError("expected_width must be an integer in 1..65536")
+
+    unknown = sorted({token for group in groups for token in group if token not in mapping})
+    expanded: list[dict[str, Any]] = []
+    for index, group in enumerate(groups):
+        parts = [{"token": token, "expansion": mapping.get(token)} for token in group]
+        has_unknown = any(part["expansion"] is None for part in parts)
+        output = None if has_unknown else "".join(part["expansion"] for part in parts)
+        width = None if output is None else len(output)
+        width_ok = output is not None and (expected_width is None or width == expected_width)
+        alphabet_ok = output is not None and (
+            allowed_symbols is None or not set(output).difference(allowed_symbols)
+        )
+        expanded.append({
+            "index": index,
+            "tokens": list(group),
+            "parts": parts,
+            "output": output,
+            "width": width,
+            "width_ok": width_ok,
+            "alphabet_ok": alphabet_ok,
+            "passed": width_ok and alphabet_ok,
+        })
+    payload = {
+        "groups": groups,
+        "mapping": mapping,
+        "allowed_symbols": allowed_symbols,
+        "expected_width": expected_width,
+    }
+    return {
+        "output": [item["output"] for item in expanded],
+        "groups": expanded,
+        "unmapped_tokens": unknown,
+        "all_passed": not unknown and all(item["passed"] for item in expanded),
+        "input_fingerprint": _fingerprint(payload),
+    }
+
+
+def decode_bacon_groups(groups: list[str], variant: str) -> dict[str, Any]:
+    if variant not in BACON_VARIANTS:
+        raise ValueError("variant must be modern26 or classic24")
+    if not isinstance(groups, list) or not groups or len(groups) > 2048:
+        raise ValueError("groups must contain 1..2048 Bacon groups")
+    if not all(isinstance(group, str) and len(group) == 5 for group in groups):
+        raise ValueError("each Bacon group must contain exactly five symbols")
+    normalized = [group.upper() for group in groups]
+    if any(set(group).difference("AB") for group in normalized):
+        raise ValueError("Bacon groups must contain only A and B")
+    table = BACON_VARIANTS[variant]
+    letters: list[str] = []
+    items: list[dict[str, Any]] = []
+    for group in normalized:
+        value = int(group.replace("A", "0").replace("B", "1"), 2)
+        if value >= len(table):
+            raise ValueError(f"group {group} is outside the {variant} table")
+        letter = table[value]
+        letters.append(letter)
+        items.append({"code": group, "value": value, "letter": letter})
+    return {
+        "output": "".join(letters),
+        "letters": letters,
+        "items": items,
+        "variant": variant,
+        "input_fingerprint": _fingerprint({"groups": normalized, "variant": variant}),
+    }
+
+
 def minesweeper_propagate(grid: list[str]) -> dict[str, Any]:
     if not isinstance(grid, list) or not grid or not all(isinstance(row, str) and row for row in grid):
         raise ValueError("grid must be a non-empty rectangular list of strings")
@@ -719,6 +826,8 @@ class ToolRegistry:
                 ToolSpec("solution_position_analysis", solution_position_analysis, contract="solutions is 2..100 equal-length strings, not one candidate"),
                 ToolSpec("palindrome_mismatch", palindrome_mismatch, contract="text is compared at mirrored character positions"),
                 ToolSpec("unicode_inspect", unicode_inspect, contract="text returns codepoint/name/category records; it does not decode semantics"),
+                ToolSpec("expand_symbol_groups", expand_symbol_groups, contract="groups and mapping are explicit; optional allowed_symbols and expected_width are mechanically checked without guessing mappings"),
+                ToolSpec("decode_bacon_groups", decode_bacon_groups, contract="groups are explicit five-symbol A/B strings; variant is modern26|classic24 and is never guessed"),
                 ToolSpec("minesweeper_propagate", minesweeper_propagate, contract="grid is <=2500 rectangular cells using 0-8|?|*; returns only deterministic 8-neighbor deductions"),
             )
         }

@@ -19,7 +19,13 @@ HAS_LANGGRAPH = module_available("langgraph.graph") and module_available("langgr
 
 if HAS_LANGGRAPH:
     from langgraph.checkpoint.memory import InMemorySaver
-    from puzzle_agent.complex_graph import build_puzzle_graph, _route_subproblem_validation
+    from puzzle_agent.complex_graph import (
+        build_puzzle_graph,
+        _hypothesize,
+        _observe,
+        _route_subproblem_validation,
+        _verify,
+    )
 
 
 class ScriptedStageProvider:
@@ -346,6 +352,90 @@ class SemanticRecoveryProvider(ScriptedStageProvider):
 
 @unittest.skipUnless(HAS_LANGGRAPH, "complex extra is not installed")
 class ComplexGraphTests(unittest.TestCase):
+    def test_representation_contract_flows_through_observation_and_planning(self):
+        class RepresentationProvider:
+            def complete(self, messages):
+                marker = messages[0]["content"].split("PUZZLE_STAGE: ", 1)[1].splitlines()[0]
+                if marker == "OBSERVE_CLASSIFY":
+                    return json.dumps({
+                        "observations": [{"id": "o1", "text": "three token groups", "source": "content"}],
+                        "tensions": [{"id": "t1", "signal_ids": ["o1"], "question": "why uneven?"}],
+                        "answer_constraints": [{"id": "c1", "kind": "length", "value": 2, "signal_ids": ["o1"], "explicit": True}],
+                    })
+                return json.dumps({
+                    "hypotheses": [
+                        {"id": "h1", "mechanism": "composite symbols"},
+                        {"id": "h2", "mechanism": "literal tokens"},
+                    ],
+                    "representation_hypotheses": [{
+                        "id": "r1", "association_id": "a1",
+                        "units": [["x", "y"]],
+                        "mapping": [{"token": "x", "expansion": "AB", "basis": "shape", "signal_ids": ["o1"]}],
+                        "invariants": [{"kind": "expanded_width", "value": 3, "signal_ids": ["o1"]}],
+                        "prediction": "all groups expand to width three",
+                        "falsifier": "a group has another width",
+                    }],
+                    "plan": [{
+                        "id": "p1", "tool": "expand_symbol_groups",
+                        "arguments": {"groups": [["x", "y"]], "mapping": {"x": "AB", "y": "A"}, "expected_width": 3},
+                        "signal_ids": ["o1"], "representation_id": "r1",
+                        "purpose": "check width", "prediction": "width three", "falsifier": "another width",
+                    }],
+                })
+
+        provider = RepresentationProvider()
+        state = new_puzzle_state(PuzzleInput(content="x y"), max_calls=4)
+        observed = {**state, **_observe(provider, state)}
+        self.assertEqual(observed["answer_constraints"][0]["value"], 2)
+        planned = {**observed, **_hypothesize(provider, observed)}
+        self.assertEqual(planned["representation_hypotheses"][0]["id"], "r1")
+        self.assertEqual(planned["plan"][0]["representation_id"], "r1")
+
+    def test_machine_gate_rejects_answer_length_and_unresolved_variant_ambiguity(self):
+        class VerifyProvider:
+            def __init__(self, answer):
+                self.answer = answer
+
+            def complete(self, _messages):
+                return json.dumps({
+                    "answer": self.answer,
+                    "confidence": "high",
+                    "checks": {
+                        "format": True, "evidence": True, "flavor_callback": True,
+                        "clue_coverage": True, "all_elements_consumed": True,
+                        "independent_derivation": True,
+                    },
+                })
+
+        base = new_puzzle_state(PuzzleInput(content="tokens"), max_calls=4)
+        base.update({
+            "answer_constraints": [{"id": "c1", "kind": "length", "value": 2, "explicit": True}],
+            "representation_hypotheses": [{"id": "r1"}],
+            "representation_assessment": [{"representation_id": "r1", "effect": "supports"}],
+            "plan": [{"representation_id": "r1"}],
+            "attempts": [{"outcome": "completed"}],
+            "evidence": [
+                {"id": "tool-1", "tool": "expand_symbol_groups", "representation_id": "r1", "all_passed": True},
+                {"id": "tool-2", "tool": "decode_bacon_groups", "representation_id": "r1", "variant": "modern26", "output": "OK"},
+            ],
+            "intermediate_validation": {"passed": True},
+            "blockers": [], "open_questions": [], "unused_elements": [],
+        })
+        solved = _verify(VerifyProvider("OK"), base)
+        self.assertEqual(solved["status"], "SOLVED")
+
+        wrong_length = _verify(VerifyProvider("LONG"), base)
+        self.assertEqual(wrong_length["status"], "NEEDS_REVIEW")
+        self.assertIn("Explicit answer constraints failed", wrong_length["blockers"])
+
+        ambiguous_state = dict(base)
+        ambiguous_state["evidence"] = base["evidence"] + [{
+            "id": "tool-3", "tool": "decode_bacon_groups", "representation_id": "r1",
+            "variant": "classic24", "output": "NO",
+        }]
+        ambiguous = _verify(VerifyProvider("OK"), ambiguous_state)
+        self.assertEqual(ambiguous["status"], "NEEDS_REVIEW")
+        self.assertIn("Explicit variants remain ambiguous", ambiguous["blockers"])
     def test_invalid_stage_json_terminates_as_needs_review_instead_of_worker_error(self):
         class InvalidObservationProvider(ScriptedStageProvider):
             def complete(self, messages):

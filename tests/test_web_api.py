@@ -1,3 +1,5 @@
+import json
+import subprocess
 import time
 import tempfile
 from pathlib import Path
@@ -116,6 +118,76 @@ class WebApiTests(unittest.TestCase):
         bootstrap = self.client.get("/api/bootstrap").json()
         self.assertEqual(bootstrap["capability_token"], "test-capability")
         self.assertFalse(bootstrap["login_required"])
+
+    def test_sudoku_keyboard_navigation_clamps_at_edges_without_changing_values(self):
+        home = self.client.get("/")
+        self.assertIn('/static/sudoku-navigation.js', home.text)
+        script = self.client.get("/static/sudoku-navigation.js")
+        self.assertEqual(script.status_code, 200)
+        probe = subprocess.run(
+            [
+                "node",
+                "-e",
+                "const n=require('./src/puzzle_agent/web/static/sudoku-navigation.js');"
+                "console.log(JSON.stringify(["
+                "n.sudokuNavigationTarget(4,4,'ArrowUp',9),"
+                "n.sudokuNavigationTarget(4,4,'ArrowRight',9),"
+                "n.sudokuNavigationTarget(0,0,'ArrowLeft',9),"
+                "n.sudokuNavigationTarget(8,8,'ArrowDown',9),"
+                "n.sudokuNavigationTarget(4,4,'Tab',9)"
+                "]));",
+            ],
+            cwd=Path(__file__).resolve().parents[1],
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        self.assertEqual(
+            json.loads(probe.stdout),
+            [[3, 4], [4, 5], [0, 0], [8, 8], None],
+        )
+        app_script = self.client.get("/static/app.js").text
+        self.assertIn('input.addEventListener("keydown"', app_script)
+        self.assertIn("sudokuNavigationTarget", app_script)
+
+    def test_general_agent_trace_is_projected_from_persisted_evidence(self):
+        home = self.client.get("/")
+        self.assertIn('/static/agent-trace.js', home.text)
+        script = self.client.get("/static/agent-trace.js")
+        self.assertEqual(script.status_code, 200)
+        state = {
+            "observations": [{"id": "o1", "text": "three uneven groups"}],
+            "answer_constraints": [{"kind": "length", "value": 2}],
+            "association_candidates": [{"ontology": "binary code", "prediction": "fixed width"}],
+            "cipher_reference_hints": [{"name": "培根密码"}],
+            "representation_hypotheses": [{"id": "r1", "prediction": "all groups have width five"}],
+            "evidence": [{"tool": "expand_symbol_groups", "all_passed": True}],
+            "representation_assessment": [{"representation_id": "r1", "effect": "supports"}],
+            "verification_checks": {"format": True},
+            "blockers": [], "open_questions": [], "unused_elements": [],
+        }
+        probe = subprocess.run(
+            [
+                "node", "-e",
+                "const t=require('./src/puzzle_agent/web/static/agent-trace.js');"
+                f"const s={json.dumps(state, ensure_ascii=False)};"
+                "console.log(JSON.stringify(t.buildAgentTraceSections(s)));",
+            ],
+            cwd=Path(__file__).resolve().parents[1],
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        sections = json.loads(probe.stdout)
+        self.assertEqual(
+            [section["title"] for section in sections],
+            ["看到什么", "联想到什么", "查了什么", "怎么验证", "为什么接受或停下"],
+        )
+        self.assertIn("three uneven groups", sections[0]["items"][0])
+        self.assertTrue(any("r1" in item and "supports" in item for item in sections[3]["items"]))
+        app_script = self.client.get("/static/app.js").text
+        self.assertIn("buildAgentTraceSections", app_script)
+        self.assertIn("renderAgentTrace", app_script)
 
     def test_player_selected_kind_reaches_normalizer_and_sudoku_can_stop_after_one_step(self):
         started = self.client.post("/api/intakes", headers=self.headers, json={

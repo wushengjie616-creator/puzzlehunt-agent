@@ -35,6 +35,9 @@ class ComplexStateTests(unittest.TestCase):
             "intermediate_answers",
             "open_questions",
             "unused_elements",
+            "answer_constraints",
+            "representation_hypotheses",
+            "representation_assessment",
         ):
             self.assertEqual(state.get(collection), [])
         json.dumps(state, ensure_ascii=False)
@@ -53,6 +56,12 @@ class ComplexStateTests(unittest.TestCase):
         state = new_puzzle_state(PuzzleInput(title="盲文", content="六点排列"))
         self.assertEqual([item["id"] for item in state["cipher_reference_hints"]], ["braille"])
         self.assertNotIn("table", state["cipher_reference_hints"][0])
+
+    def test_keyword_hint_never_becomes_answer_or_evidence_by_itself(self):
+        state = new_puzzle_state(PuzzleInput(title="培根意面食谱", content="今晚吃什么"))
+        self.assertEqual([item["id"] for item in state["cipher_reference_hints"]], ["bacon"])
+        self.assertEqual(state["evidence"], [])
+        self.assertIsNone(state["final_answer"])
 
 
 

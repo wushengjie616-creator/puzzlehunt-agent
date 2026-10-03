@@ -275,6 +275,97 @@ class DeterministicPuzzleToolTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "rails"):
             registry.execute("rail_fence_decode", {"text": "ABC", "rails": 1})
 
+    def test_symbol_expansion_replays_explicit_mapping_and_checks_invariants(self):
+        registry = ToolRegistry()
+        result = registry.execute("expand_symbol_groups", {
+            "groups": [["x", "y"], ["y", "y", "x"]],
+            "mapping": {"x": "AB", "y": "A"},
+            "allowed_symbols": "AB",
+            "expected_width": 3,
+        })
+        self.assertEqual([item["output"] for item in result["groups"]], ["ABA", "AAAB"])
+        self.assertEqual([item["width_ok"] for item in result["groups"]], [True, False])
+        self.assertFalse(result["all_passed"])
+        self.assertEqual(result["unmapped_tokens"], [])
+
+        missing = registry.execute("expand_symbol_groups", {
+            "groups": [["x", "z"]], "mapping": {"x": ".-"},
+            "allowed_symbols": ".-", "expected_width": 4,
+        })
+        self.assertIsNone(missing["groups"][0]["output"])
+        self.assertEqual(missing["unmapped_tokens"], ["z"])
+        self.assertFalse(missing["all_passed"])
+
+    def test_bacon_variants_are_explicit_and_keep_combined_letters(self):
+        registry = ToolRegistry()
+        modern = registry.execute("decode_bacon_groups", {
+            "groups": ["BAABA", "ABAAA"], "variant": "modern26",
+        })
+        self.assertEqual(modern["output"], "SI")
+        self.assertEqual(modern["variant"], "modern26")
+        classic = registry.execute("decode_bacon_groups", {
+            "groups": ["BAABA", "ABAAA"], "variant": "classic24",
+        })
+        self.assertEqual(classic["letters"], ["T", "I/J"])
+        self.assertEqual(classic["variant"], "classic24")
+
+        replay = registry.execute("expand_symbol_groups", {
+            "groups": [["left", "dot"]],
+            "mapping": {"left": "-", "dot": "."},
+            "allowed_symbols": ".-",
+            "expected_width": 2,
+        })
+        self.assertTrue(replay["all_passed"])
+        self.assertEqual(
+            registry.execute("decode_bacon_groups", {
+                "groups": ["AABBA"], "variant": "modern26",
+            })["output"],
+            "G",
+        )
+
+    def test_symbol_expansion_and_bacon_reject_implicit_or_unbounded_inputs(self):
+        registry = ToolRegistry()
+        with self.assertRaisesRegex(ValueError, "mapping"):
+            registry.execute("expand_symbol_groups", {"groups": [["x"]], "mapping": {"x": ""}})
+        with self.assertRaisesRegex(ValueError, "allowed"):
+            registry.execute("expand_symbol_groups", {
+                "groups": [["x"]], "mapping": {"x": "C"}, "allowed_symbols": "AB",
+            })
+        with self.assertRaisesRegex(ValueError, "variant"):
+            registry.execute("decode_bacon_groups", {"groups": ["AAAAA"], "variant": "guess"})
+        with self.assertRaisesRegex(ValueError, "five"):
+            registry.execute("decode_bacon_groups", {"groups": ["AAAA"], "variant": "modern26"})
+
+    def test_bacon_teaching_example_uses_generic_expansion_before_variant_decode(self):
+        registry = ToolRegistry()
+        expanded = registry.execute("expand_symbol_groups", {
+            "groups": [
+                ["吧", "啊", "吧"], ["啊", "吧", "啊", "啊"],
+                ["啊", "卟", "吧", "卟"], ["啊", "吧", "吧"],
+                ["啊", "吧", "啊", "啊"], ["啊", "卟", "吧", "卟"],
+                ["啊", "啊", "卟", "吧"],
+            ],
+            "mapping": {"啊": "A", "卟": "B", "吧": "BA"},
+            "allowed_symbols": "AB", "expected_width": 5,
+        })
+        self.assertTrue(expanded["all_passed"])
+        modern = registry.execute("decode_bacon_groups", {
+            "groups": expanded["output"], "variant": "modern26",
+        })
+        classic = registry.execute("decode_bacon_groups", {
+            "groups": expanded["output"], "variant": "classic24",
+        })
+        self.assertEqual(modern["output"], "SINKING")
+        self.assertNotEqual(classic["output"], modern["output"])
+
+        non_bacon = registry.execute("expand_symbol_groups", {
+            "groups": [["long", "short"]],
+            "mapping": {"long": "-", "short": "."},
+            "allowed_symbols": ".-", "expected_width": 2,
+        })
+        self.assertTrue(non_bacon["all_passed"])
+        self.assertEqual(non_bacon["output"], ["-."])
+
 
 if __name__ == "__main__":
     unittest.main()

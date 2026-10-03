@@ -146,7 +146,10 @@ def create_app(
 
     @app.get("/static/{name}")
     def static_asset(name: str):
-        if name not in {"app.js", "cipher-tools.js", "paper-puzzles.js", "styles.css"}:
+        if name not in {
+            "app.js", "cipher-tools.js", "paper-puzzles.js",
+            "styles.css", "sudoku-navigation.js", "agent-trace.js",
+        }:
             raise HTTPException(404)
         return FileResponse(_STATIC / name)
 

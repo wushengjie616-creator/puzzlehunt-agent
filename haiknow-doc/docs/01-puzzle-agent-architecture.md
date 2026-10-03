@@ -42,7 +42,8 @@ prompt，输出 kind 不一致即失败关闭，不能静默落到通用 Agent�
 确认阶段按题型渲染编辑器，而不向玩家暴露 canonical JSON：Sudoku 使用可编辑 N×N 网格并依据
 `box_rows/box_cols`（标准 9×9 默认 3×3）绘制粗分宫线，Nonogram 使用行列线索表，general 使用文本框。
 Sudoku 编辑器实时检测行、列、宫内的重复数字并标红冲突格。编辑器只负责提示和收集输入，最终 canonical
-仍由服务端严格 validator 校验并绑定确认回执。
+仍由服务端严格 validator 校验并绑定确认回执。方向键使用纯函数计算相邻坐标并在边界 clamp，不环绕、
+不改值；Tab、数字和删除不被拦截。
 
 普通 9×9 数独的视觉 prompt 明确忽略截图 UI，只抄录盘内印刷数字，不求解，并要求整数 1..9 / `null`
 矩阵。模型若只在 JSON 表示层产生无歧义噪声（数字字符串，或以 `0`、`.`、空字符串表示空格，或给出
@@ -119,11 +120,15 @@ provider wrapper 在当前调用前后检查。若请求发生在一次非流式
 - 子问题验证轮把每个非空局部答案精确分入 supported、contradicted 或 needs-test；只有值不漂移、引用真实 signal 且给出 prediction/falsifier 的 supported 结果才能进入 evidence，无支持结果的子题必须显式 unresolved。
 - 首轮局部语义覆盖不足一半时，框架可在计划前做一次恢复轮：已验证结果视为不可变锚点，未解单元重新物化；完全没有锚点时只生成 1–3 个题面可落地的高杠杆候选。恢复后禁止再进入工具重规划，保证总预算仍有界。
 - 计划轮至少保留两个 competing hypotheses，并选择可判别实验。
+- 观察轮保存题面明确给出的答案长度等 `answer_constraints`；计划轮最多保存四个带映射依据、不变量、预测和
+  证伪条件的 `representation_hypotheses`。表示只能在通用展开工具证明全组约束后升级为 evidence。
 - 每个工具计划必须引用可见 signal，给出具体 prediction 与 falsifier；空计划保持为空，不再暗中回退到通用密码 shotgun。
 - 工具轮只运行白名单确定性工具，结果带 provenance 写入 evidence。
 - 评价轮必须消费工具或人工产生的新 evidence。
 - 中间验证轮只接受已存在且引用真实 evidence ID 的 carrier/instruction/ordering/parameter；原始中间猜测不能直接通过。
 - 验证轮检查格式、证据、风味/标题回扣；不足时返回 null/`NEEDS_REVIEW`。
+- 显式答案长度由运行时复核；尚无通过机器不变量的表示，或两个未否决的显式码表变体产生不同输出时，
+  即使模型给出全真 checks 也只能 `NEEDS_REVIEW`。
 - 验证响应中的未知局部 result ID 被忽略且不产生 evidence；终局漏填的 required check 由机器补为 `false`。两者都会留下问题标记并安全停在 `NEEDS_REVIEW`，不会因保守总化而提升答案。
 - 预算耗尽返回 `EXHAUSTED`，不继续调用或编造结果。
 - DeepSeek 的显式网络传输失败可从同一 checkpoint 重试同一节点一次。非法 JSON/非对象输出不重试、不猜补，记录长度与摘要指纹后安全终止为 `NEEDS_REVIEW`；未知子题引用和无 signal/缺契约的计划项被保守丢弃并写入 blocker。其他尚未总化的 schema 错误仍显式失败，避免把错误输出静默吞掉。
@@ -133,8 +138,8 @@ provider wrapper 在当前调用前后检查。若请求发生在一次非流式
 框架中立 state 是 JSON 兼容映射，主要分区为：
 
 - immutable `puzzle`、`artifacts`、`required_artifacts`，以及从题面关键词确定性生成的 `cipher_reference_hints`
-- `observations`、`flavor_associations`、`structure_model`、`subproblems`、`subproblem_results`、`validated_subproblem_results` 与 `subproblem_validation`
-- `hypotheses`、`plan`、`attempts`、`evidence`
+- `observations`、`answer_constraints`、`flavor_associations`、`structure_model`、`subproblems`、`subproblem_results`、`validated_subproblem_results` 与 `subproblem_validation`
+- `hypotheses`、`representation_hypotheses`、`representation_assessment`、`plan`、`attempts`、`evidence`
 - `intermediate_answers`、`validated_intermediate_answers`、`intermediate_validation`、`extractions`、`answer_candidates`
 - `open_questions`、`missing_artifacts`、`blockers`
 - `budget`、`semantic_refinement_used`、`stage`、`status`、`last_node`、`next_node`
@@ -197,12 +202,17 @@ Unicode 图形猜字母。`ToolRegistry` 负责模型可计划调用的确定性
 | `phone_keypad_decode` / `braille_decode` / `playfair_codec` | 固定约定的常见密码，非法或歧义输入不猜 |
 | `decode_token_morse` / `solution_position_analysis` | 显式点划 token；比较多解的逐位不变量与差异，不只返回第一个解 |
 | `palindrome_mismatch` / `unicode_inspect` | 回文镜像错位载体；保留易混 Unicode 字符的码位、名称和类别 |
+| `expand_symbol_groups` | 显式 token 映射、允许字符集和固定宽度验证；输出逐 token 展开与输入指纹，不枚举映射 |
+| `decode_bacon_groups` | 显式 `modern26` / `classic24` 变体；24 字母版保留 I/J、U/V 歧义，不自动选优 |
 
 每次调用用 tool+arguments fingerprint 去重，replan 中相同调用记录为 `duplicate_skipped` 而不再次执行。未知工具或参数错误形成 failed attempt，不进入成功 evidence。
 
 规划 prompt 的工具签名由 `inspect.signature()` 对 ToolRegistry 当前 callable 生成，例如 `a1z26_decode(values)`、`grid_trace(grid, start, directions)`。ToolSpec 在同一注册点补充紧凑前置条件，例如 0-based 坐标、`N|E|S|W`、等长字符串和 constraint object shape。只列工具名已被 cycle 2 证伪；只有签名又在 cycle 3 暴露类型/前置条件错误，因此两者都属于执行契约。
 
 阶段 memory 不是对话历史，而是结构化状态：`observations` 与 `flavor_associations` 保存题面事实和可检验联想，`attempts/evidence/extractions` 保存机械实验账本，`intermediate_answers` 保存候选载体，`validated_intermediate_answers` 只保存通过独立证据门的中间结果，`open_questions` 与 `unused_elements` 保存尚未闭合的推理债务。没有验证过的中间结果、或后两项非空时，机器终局门都不能接受 `SOLVED`。
+
+Web 不请求模型另写“思维过程”，而是将上述 state 投影为五段可审计 trace：看到、联想、资料路由、表示/
+工具验证以及接受或停下原因。旧 session 缺少新字段时按空集合显示。
 
 周期报告不读取模型私有思维链。每个节点 trace 额外记录可观察效果：观察/联想数量、假设与计划数量、工具成功/失败和 extraction 增量、评价的 verify/replan 决策、阶段 memory 债务，以及终局是否接受答案。错误题的因果 usefulness 仍标 `UNASSESSABLE`，但报告会显示实际行为及 `FAILED_TOOL_CALLS`、`EMPTY_PLAN`、`PROVIDER_ERROR` 等问题，不再只给空泛激活率。
 

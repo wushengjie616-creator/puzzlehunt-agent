@@ -26,6 +26,7 @@ class PuzzleGraphState(TypedDict, total=False):
     stage: str
     revision: int
     observations: list[dict[str, Any]]
+    answer_constraints: list[dict[str, Any]]
     tensions: list[dict[str, Any]]
     flavor_associations: list[dict[str, Any]]
     association_candidates: list[dict[str, Any]]
@@ -36,6 +37,8 @@ class PuzzleGraphState(TypedDict, total=False):
     semantic_refinement_used: int
     structure_model: dict[str, Any]
     hypotheses: list[dict[str, Any]]
+    representation_hypotheses: list[dict[str, Any]]
+    representation_assessment: list[dict[str, Any]]
     plan: list[dict[str, Any]]
     attempts: list[dict[str, Any]]
     evidence: list[dict[str, Any]]
@@ -61,7 +64,9 @@ _TOOL_CATALOG = ", ".join(("cipher_workbench()", *ToolRegistry().signatures))
 _STAGE_INSTRUCTIONS = {
     "OBSERVE_CLASSIFY": (
         'Output {"observations":[{"id":"...","text":"...","source":"title|flavor_text|content|artifact"}],'
-        '"tensions":[{"id":"...","signal_ids":["..."],"question":"why is this unnatural?"}]}. '
+        '"tensions":[{"id":"...","signal_ids":["..."],"question":"why is this unnatural?"}],'
+        '"answer_constraints":[{"id":"...","kind":"length|pattern|group_count",'
+        '"value":7,"signal_ids":["..."],"explicit":true}]}. '
         "Record directly visible facts, formatting, repetitions, anomalies, missing/conflicting information, "
         "and every clue channel (title, flavor, order, labels, coordinates). A tension names what needs explaining, "
         "not a cipher, tool, theme, mechanism, or answer. Do not solve in this stage."
@@ -112,8 +117,12 @@ _STAGE_INSTRUCTIONS = {
     "HYPOTHESIZE_PLAN": (
         'Output {"hypotheses":[{"id":"...","mechanism":"...","association_id":"...",'
         '"prediction":"...","falsifier":"...","confidence":0.0}],'
+        '"representation_hypotheses":[{"id":"...","association_id":"...","units":[["token"]],'
+        '"mapping":[{"token":"...","expansion":"...","basis":"...","signal_ids":["..."]}],'
+        '"invariants":[{"kind":"expanded_width|alphabet","value":5,"signal_ids":["..."]}],'
+        '"prediction":"...","falsifier":"..."}],'
         '"plan":[{"id":"...","tool":"...","arguments":{},"signal_ids":["..."],'
-        '"purpose":"...","prediction":"...","falsifier":"..."}]}. '
+        '"representation_id":"optional","purpose":"...","prediction":"...","falsifier":"..."}]}. '
         "Preserve at least two competing, distinguishable hypotheses. Consider whether an intermediate answer "
         "is still a carrier and whether an inconsistency or multiple solutions are intentional information. "
         "Choose the smallest discriminating plan, normally 1-4 calls, and cover the final extraction. "
@@ -130,6 +139,8 @@ _STAGE_INSTRUCTIONS = {
     "EVALUATE_EVIDENCE": (
         'Output {"decision":"verify|replan","evidence_assessment":['
         '{"hypothesis_id":"...","effect":"supports|weakens|rejects"}],'
+        '"representation_assessment":[{"representation_id":"...",'
+        '"effect":"supports|weakens|rejects","reason":"..."}],'
         '"intermediate_answers":[{"value":"...","role":"carrier|candidate","evidence_ids":["..."]}],'
         '"open_questions":["..."],"unused_elements":["..."],'
         '"answer_candidates":[{"answer":"...","confidence":"low|medium|high","evidence_ids":["..."]}]}. '
@@ -189,6 +200,7 @@ def _messages(stage: str, state: PuzzleGraphState) -> list[dict[str, str]]:
         "cipher_reference_hints": state.get("cipher_reference_hints", []),
         "artifacts": state.get("artifacts", {}),
         "observations": state.get("observations", []),
+        "answer_constraints": state.get("answer_constraints", []),
         "tensions": state.get("tensions", []),
         "flavor_associations": state.get("flavor_associations", []),
         "association_candidates": state.get("association_candidates", []),
@@ -199,6 +211,8 @@ def _messages(stage: str, state: PuzzleGraphState) -> list[dict[str, str]]:
         "subproblem_validation": state.get("subproblem_validation", {}),
         "semantic_refinement_used": state.get("semantic_refinement_used", 0),
         "hypotheses": state.get("hypotheses", []),
+        "representation_hypotheses": state.get("representation_hypotheses", []),
+        "representation_assessment": state.get("representation_assessment", []),
         "plan": state.get("plan", []),
         "attempts": state.get("attempts", []),
         "evidence": state.get("evidence", []),
@@ -340,6 +354,7 @@ def _observe(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphSta
     return {
         "observations": _array(data, "observations"),
         "tensions": _array(data, "tensions"),
+        "answer_constraints": _array(data, "answer_constraints"),
         "budget": budget,
         "stage": "ASSOCIATE_THEME",
         "last_node": "observe_classify",
@@ -610,6 +625,19 @@ def _hypothesize(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGrap
     hypotheses = _array(data, "hypotheses")
     if len(hypotheses) < 2:
         raise ValueError("HYPOTHESIZE_PLAN must preserve at least two competing hypotheses")
+    representations = _array(data, "representation_hypotheses")
+    if len(representations) > 4:
+        raise ValueError("HYPOTHESIZE_PLAN may preserve at most four representation hypotheses")
+    representation_ids: set[str] = set()
+    for item in representations:
+        identifier = item.get("id")
+        if not isinstance(identifier, str) or not identifier.strip() or identifier in representation_ids:
+            raise ValueError("representation hypotheses must have unique non-empty ids")
+        if not all(isinstance(item.get(name), str) and item[name].strip() for name in ("prediction", "falsifier")):
+            raise ValueError("representation hypotheses require prediction and falsifier")
+        if not isinstance(item.get("units"), list) or not isinstance(item.get("mapping"), list) or not isinstance(item.get("invariants"), list):
+            raise ValueError("representation hypotheses require units, mapping, and invariants")
+        representation_ids.add(identifier)
     raw_plan = _array(data, "plan")
     plan: list[dict[str, Any]] = []
     for item in raw_plan:
@@ -624,6 +652,9 @@ def _hypothesize(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGrap
                 "tool", "purpose", "prediction", "falsifier"
             ))
         )
+        representation_id = item.get("representation_id")
+        if representation_id is not None and representation_id not in representation_ids:
+            valid = False
         if valid:
             plan.append(item)
     blockers = list(state.get("blockers", []))
@@ -631,6 +662,7 @@ def _hypothesize(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGrap
         blockers.append(f"AUTO_DROPPED_INVALID_PLAN_ITEMS:{len(raw_plan) - len(plan)}")
     return {
         "hypotheses": hypotheses,
+        "representation_hypotheses": representations,
         "plan": plan,
         "blockers": blockers,
         "budget": budget,
@@ -651,6 +683,7 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
     for plan_index, plan in enumerate(plans, start=1):
         plan_serial = attempt_base + plan_index
         tool = plan.get("tool")
+        representation_id = plan.get("representation_id")
         arguments = plan.get("arguments", {})
         fingerprint = json.dumps([tool, arguments], ensure_ascii=False, sort_keys=True)
         if fingerprint in previous_fingerprints:
@@ -688,6 +721,7 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
                 "id": evidence_id,
                 "kind": "deterministic_tool_result",
                 "tool": tool,
+                **({"representation_id": representation_id} if representation_id else {}),
                 **result,
             })
             if tool in {
@@ -699,14 +733,19 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
                 "caesar_shift", "atbash_transform", "base_decode", "morse_decode",
                 "vigenere_decode", "rail_fence_decode",
                 "bounded_mojibake_scan", "minesweeper_propagate",
+                "expand_symbol_groups", "decode_bacon_groups",
             }:
                 extractions.append({
                     "tool": tool,
                     "arguments": arguments,
                     "output": result["output"],
                     "evidence_id": evidence_id,
+                    **({"representation_id": representation_id} if representation_id else {}),
                 })
-            attempts.append({"tool": tool, "fingerprint": fingerprint, "outcome": "completed"})
+            attempts.append({
+                "tool": tool, "fingerprint": fingerprint, "outcome": "completed",
+                **({"representation_id": representation_id} if representation_id else {}),
+            })
     return {
         "evidence": evidence,
         "attempts": attempts,
@@ -752,11 +791,26 @@ def _evaluate(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphSt
         _string_array(data, "unused_elements")
         if "unused_elements" in data else list(state.get("unused_elements", []))
     )
+    representation_assessment = (
+        _array(data, "representation_assessment")
+        if "representation_assessment" in data
+        else list(state.get("representation_assessment", []))
+    )
+    known_representation_ids = {
+        item.get("id") for item in state.get("representation_hypotheses", [])
+    }
+    if any(
+        item.get("representation_id") not in known_representation_ids
+        or item.get("effect") not in {"supports", "weakens", "rejects"}
+        for item in representation_assessment
+    ):
+        raise ValueError("representation assessment references an unknown hypothesis or effect")
     return {
         "evidence": evidence,
         "intermediate_answers": intermediate_answers,
         "open_questions": open_questions,
         "unused_elements": unused_elements,
+        "representation_assessment": representation_assessment,
         "answer_candidates": _array(data, "answer_candidates"),
         "budget": budget,
         "evaluation_decision": decision,
@@ -928,6 +982,41 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
     )
     intermediate_gate = not bool(state.get("intermediate_validation", {}).get("passed"))
     blocker_gate = bool(state.get("blockers", []))
+    constraint_gate = False
+    for constraint in state.get("answer_constraints", []):
+        if constraint.get("explicit") is not True:
+            continue
+        if constraint.get("kind") == "length":
+            value = constraint.get("value")
+            if not isinstance(value, int) or isinstance(value, bool) or not isinstance(answer, str) or len(answer) != value:
+                constraint_gate = True
+        else:
+            constraint_gate = True
+    representations = state.get("representation_hypotheses", [])
+    assessment_by_id = {
+        item.get("representation_id"): item.get("effect")
+        for item in state.get("representation_assessment", [])
+    }
+    active_representation_ids = {
+        item.get("id") for item in representations
+        if assessment_by_id.get(item.get("id")) == "supports"
+    }
+    representation_evidence = [
+        item for item in state.get("evidence", [])
+        if item.get("tool") == "expand_symbol_groups"
+        and item.get("representation_id") in active_representation_ids
+        and item.get("all_passed") is True
+    ]
+    representation_gate = bool(representations) and (
+        not active_representation_ids or not representation_evidence
+    )
+    variant_outputs = {
+        item.get("output") for item in state.get("evidence", [])
+        if item.get("tool") == "decode_bacon_groups"
+        and item.get("representation_id") in active_representation_ids
+        and isinstance(item.get("output"), str)
+    }
+    variant_ambiguity_gate = len(variant_outputs) > 1
     solved = (
         bool(answer)
         and confidence in {"medium", "high"}
@@ -937,6 +1026,9 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         and not unresolved_memory_gate
         and not intermediate_gate
         and not blocker_gate
+        and not constraint_gate
+        and not representation_gate
+        and not variant_ambiguity_gate
     )
     return {
         "budget": budget,
@@ -950,7 +1042,10 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         + (["Missing verification checks were treated as false"] if missing_checks else [])
         + (["All planned deterministic experiments failed"] if failed_tool_gate else [])
         + (["Open questions or unused clue elements remain"] if unresolved_memory_gate else [])
-        + (["No evidence-backed intermediate was validated"] if intermediate_gate else []),
+        + (["No evidence-backed intermediate was validated"] if intermediate_gate else [])
+        + (["Explicit answer constraints failed"] if constraint_gate else [])
+        + (["No representation hypothesis passed its machine-checkable invariant"] if representation_gate else [])
+        + (["Explicit variants remain ambiguous"] if variant_ambiguity_gate else []),
     }
 
 

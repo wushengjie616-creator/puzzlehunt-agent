@@ -44,6 +44,14 @@ class CipherReferenceTests(unittest.TestCase):
         self.assertIn("I/J", bacon["cautions"])
         self.assertTrue(bacon["table"])
         self.assertEqual(bacon["table"][-1], {"letter": "Z", "code": "bbaab"})
+        self.assertEqual(
+            [variant["id"] for variant in bacon["variants"]],
+            ["modern26", "classic24"],
+        )
+        classic = bacon["variants"][1]
+        self.assertEqual(classic["table"][8]["letter"], "I/J")
+        self.assertEqual(classic["table"][19]["letter"], "U/V")
+        self.assertEqual(classic["table"][-1], {"letter": "Z", "code": "babbb"})
         by_id = {item["id"]: item for item in all_items}
         self.assertEqual(by_id["bacon"]["visual"], "compact-grid")
         self.assertEqual(by_id["pigpen"]["visual"], "pigpen-image")
