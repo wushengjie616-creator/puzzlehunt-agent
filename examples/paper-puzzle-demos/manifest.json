@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {"id": "sudoku-4x4-image", "puzzle_type": "sudoku", "engine": "sudoku", "origin": "original", "requires_deepseek": true, "capabilities": ["image_normalization", "fixed_workflow", "trace"]},
+    {"id": "nonogram-cross-image", "puzzle_type": "nonogram", "engine": "nonogram", "origin": "original", "requires_deepseek": true, "capabilities": ["image_normalization", "line_domains", "trace"]},
+    {"id": "futoshiki-4x4-rules", "puzzle_type": "futoshiki", "engine": "rule_based", "origin": "original", "requires_deepseek": true, "capabilities": ["method_synthesis", "all_different", "less_than", "replay"]},
+    {"id": "kakuro-cross-sums", "puzzle_type": "kakuro", "engine": "rule_based", "origin": "original", "requires_deepseek": true, "capabilities": ["method_synthesis", "sum_support", "replay"]},
+    {"id": "skyscrapers-3x3-rules", "puzzle_type": "skyscrapers", "engine": "rule_based", "origin": "original", "requires_deepseek": true, "capabilities": ["method_synthesis", "visibility_support", "replay"]}
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "method_summary":"交替应用行列唯一性与不等式支持。",
+  "strategy_order":["given_propagation","all_different_elimination","all_different_hidden_single","less_than_support"],
+  "constraints":[
+    {"id":"row-1","type":"all_different","variables":["R1C1","R1C2","R1C3","R1C4"],"complete_set":true,"source_rule_ids":["r1"],"source_clue_ids":[]},
+    {"id":"row-2","type":"all_different","variables":["R2C1","R2C2","R2C3","R2C4"],"complete_set":true,"source_rule_ids":["r1"],"source_clue_ids":[]},
+    {"id":"row-3","type":"all_different","variables":["R3C1","R3C2","R3C3","R3C4"],"complete_set":true,"source_rule_ids":["r1"],"source_clue_ids":[]},
+    {"id":"row-4","type":"all_different","variables":["R4C1","R4C2","R4C3","R4C4"],"complete_set":true,"source_rule_ids":["r1"],"source_clue_ids":[]},
+    {"id":"column-1","type":"all_different","variables":["R1C1","R2C1","R3C1","R4C1"],"complete_set":true,"source_rule_ids":["r1"],"source_clue_ids":[]},
+    {"id":"column-2","type":"all_different","variables":["R1C2","R2C2","R3C2","R4C2"],"complete_set":true,"source_rule_ids":["r1"],"source_clue_ids":[]},
+    {"id":"column-3","type":"all_different","variables":["R1C3","R2C3","R3C3","R4C3"],"complete_set":true,"source_rule_ids":["r1"],"source_clue_ids":[]},
+    {"id":"column-4","type":"all_different","variables":["R1C4","R2C4","R3C4","R4C4"],"complete_set":true,"source_rule_ids":["r1"],"source_clue_ids":[]},
+    {"id":"lt-c1","type":"less_than","variables":["R1C1","R1C2"],"source_rule_ids":["r2"],"source_clue_ids":["c1"]}
+  ],
+  "coverage":{"rule_ids":["r1","r2"],"clue_ids":["c1"]}
+}

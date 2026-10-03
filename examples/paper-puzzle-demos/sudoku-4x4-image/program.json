@@ -1,0 +1,1 @@
+{"component":"sudoku","workflow":["initialize_candidates","naked_single","hidden_single_row","hidden_single_column","hidden_single_region"],"search_used":false}

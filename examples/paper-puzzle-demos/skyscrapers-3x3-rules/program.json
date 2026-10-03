@@ -1,0 +1,15 @@
+{
+  "method_summary":"先按边缘可见数过滤每条行列的排列，再传播行列互异。",
+  "strategy_order":["given_propagation","visibility_support","all_different_elimination","all_different_hidden_single"],
+  "constraints":[
+    {"id":"row1","type":"all_different","variables":["R1C1","R1C2","R1C3"],"complete_set":true,"source_rule_ids":["r1"],"source_clue_ids":[]},{"id":"row2","type":"all_different","variables":["R2C1","R2C2","R2C3"],"complete_set":true,"source_rule_ids":["r1"],"source_clue_ids":[]},{"id":"row3","type":"all_different","variables":["R3C1","R3C2","R3C3"],"complete_set":true,"source_rule_ids":["r1"],"source_clue_ids":[]},
+    {"id":"col1","type":"all_different","variables":["R1C1","R2C1","R3C1"],"complete_set":true,"source_rule_ids":["r1"],"source_clue_ids":[]},{"id":"col2","type":"all_different","variables":["R1C2","R2C2","R3C2"],"complete_set":true,"source_rule_ids":["r1"],"source_clue_ids":[]},{"id":"col3","type":"all_different","variables":["R1C3","R2C3","R3C3"],"complete_set":true,"source_rule_ids":["r1"],"source_clue_ids":[]},
+    {"id":"v-r1l","type":"visibility","variables":["R1C1","R1C2","R1C3"],"target":3,"source_rule_ids":["r2"],"source_clue_ids":["r1l"]},{"id":"v-r1r","type":"visibility","variables":["R1C3","R1C2","R1C1"],"target":1,"source_rule_ids":["r2"],"source_clue_ids":["r1r"]},
+    {"id":"v-r2l","type":"visibility","variables":["R2C1","R2C2","R2C3"],"target":2,"source_rule_ids":["r2"],"source_clue_ids":["r2l"]},{"id":"v-r2r","type":"visibility","variables":["R2C3","R2C2","R2C1"],"target":2,"source_rule_ids":["r2"],"source_clue_ids":["r2r"]},
+    {"id":"v-r3l","type":"visibility","variables":["R3C1","R3C2","R3C3"],"target":1,"source_rule_ids":["r2"],"source_clue_ids":["r3l"]},{"id":"v-r3r","type":"visibility","variables":["R3C3","R3C2","R3C1"],"target":2,"source_rule_ids":["r2"],"source_clue_ids":["r3r"]},
+    {"id":"v-c1t","type":"visibility","variables":["R1C1","R2C1","R3C1"],"target":3,"source_rule_ids":["r2"],"source_clue_ids":["c1t"]},{"id":"v-c1b","type":"visibility","variables":["R3C1","R2C1","R1C1"],"target":1,"source_rule_ids":["r2"],"source_clue_ids":["c1b"]},
+    {"id":"v-c2t","type":"visibility","variables":["R1C2","R2C2","R3C2"],"target":2,"source_rule_ids":["r2"],"source_clue_ids":["c2t"]},{"id":"v-c2b","type":"visibility","variables":["R3C2","R2C2","R1C2"],"target":2,"source_rule_ids":["r2"],"source_clue_ids":["c2b"]},
+    {"id":"v-c3t","type":"visibility","variables":["R1C3","R2C3","R3C3"],"target":1,"source_rule_ids":["r2"],"source_clue_ids":["c3t"]},{"id":"v-c3b","type":"visibility","variables":["R3C3","R2C3","R1C3"],"target":2,"source_rule_ids":["r2"],"source_clue_ids":["c3b"]}
+  ],
+  "coverage":{"rule_ids":["r1","r2"],"clue_ids":["r1l","r1r","r2l","r2r","r3l","r3r","c1t","c1b","c2t","c2b","c3t","c3b"]}
+}

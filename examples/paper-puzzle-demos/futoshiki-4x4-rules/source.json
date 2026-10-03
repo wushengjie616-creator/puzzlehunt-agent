@@ -1,0 +1,12 @@
+{
+  "rules":[{"id":"r1","text":"每行每列恰好使用 1、2、3、4 且不重复。"},{"id":"r2","text":"小于号两侧数字满足左小右大。"}],
+  "symbols":[1,2,3,4],
+  "entities":[
+    {"id":"R1C1","label":"R1C1","row":0,"column":0,"value":1},{"id":"R1C2","label":"R1C2","row":0,"column":1,"value":null},{"id":"R1C3","label":"R1C3","row":0,"column":2,"value":3},{"id":"R1C4","label":"R1C4","row":0,"column":3,"value":4},
+    {"id":"R2C1","label":"R2C1","row":1,"column":0,"value":3},{"id":"R2C2","label":"R2C2","row":1,"column":1,"value":4},{"id":"R2C3","label":"R2C3","row":1,"column":2,"value":1},{"id":"R2C4","label":"R2C4","row":1,"column":3,"value":null},
+    {"id":"R3C1","label":"R3C1","row":2,"column":0,"value":null},{"id":"R3C2","label":"R3C2","row":2,"column":1,"value":1},{"id":"R3C3","label":"R3C3","row":2,"column":2,"value":4},{"id":"R3C4","label":"R3C4","row":2,"column":3,"value":3},
+    {"id":"R4C1","label":"R4C1","row":3,"column":0,"value":4},{"id":"R4C2","label":"R4C2","row":3,"column":1,"value":3},{"id":"R4C3","label":"R4C3","row":3,"column":2,"value":null},{"id":"R4C4","label":"R4C4","row":3,"column":3,"value":1}
+  ],
+  "clues":[{"id":"c1","text":"R1C1 < R1C2","entity_ids":["R1C1","R1C2"]}],
+  "display":{"type":"grid","rows":4,"columns":4}
+}

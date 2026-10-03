@@ -1,0 +1,1 @@
+{"component":"nonogram","workflow":["enumerate_line_patterns","intersect_row_domains","intersect_column_domains","repeat_to_fixed_point"],"search_used":false}
