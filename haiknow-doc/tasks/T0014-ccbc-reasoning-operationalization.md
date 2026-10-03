@@ -3,6 +3,7 @@ id: T0014
 title: CCBC 研究精髓全面产品化
 status: completed
 created_at: 2026-10-04
+plan_completed_at: 2026-10-04
 paired_plan: P0015
 acceptance_contract: v1
 ---
