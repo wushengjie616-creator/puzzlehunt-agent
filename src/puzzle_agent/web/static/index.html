@@ -30,7 +30,7 @@
 
     <section id="result" class="panel hidden">
       <div class="section-title"><span>03</span><div><h2>做题过程</h2><p>每一步都能从原始 givens 重放验证。</p></div></div>
-      <div id="status" class="status"></div><div id="grid" class="sudoku-grid"></div><ol id="trace" class="trace"></ol>
+      <div id="status" class="status"></div><div id="grid" class="sudoku-grid"></div><div id="nonogram-grid" class="nonogram-grid hidden" role="grid" aria-label="数织结果"></div><ol id="trace" class="trace"></ol>
     </section>
 
     <section id="minesweeper-game" class="panel hidden" aria-labelledby="minesweeper-title">
@@ -59,7 +59,8 @@
       <div class="cards">
         <article class="puzzle-card enabled"><div class="badge">可用</div><h3>普通数独</h3><p>裸单、行/列/宫隐单；停滞时明确交还给 Agent。</p></article>
         <article class="puzzle-card enabled"><div class="badge">可玩</div><h3>扫雷</h3><p>本地互动游戏；首次点击安全，提示只给确定性结论。</p><button id="open-minesweeper">打开扫雷</button></article>
-        <article class="puzzle-card"><div class="badge">路线图</div><h3>数织 · 数和</h3><p>行列线索传播与交叉和约束。</p></article>
+        <article class="puzzle-card enabled"><div class="badge">可用</div><h3>数织</h3><p>逐行逐列取合法模式交集；显示每一步黑格与空格依据。</p><button id="open-nonogram">开始数织</button></article>
+        <article class="puzzle-card"><div class="badge">路线图</div><h3>数和</h3><p>交叉和约束与候选组合传播。</p></article>
       </div>
     </section>
   </main>

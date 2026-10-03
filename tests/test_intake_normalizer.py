@@ -54,6 +54,32 @@ class IntakeNormalizerTests(unittest.TestCase):
         with self.assertRaisesRegex(NormalizationError, "kind"):
             DeepSeekNormalizer(FakeProvider({"canonical": {}})).normalize(text="x")
 
+    def test_nonogram_envelope_is_supported_and_validated(self):
+        canonical = {
+            "row_clues": [[3], [1, 1], []],
+            "column_clues": [[2], [1], [2]],
+        }
+        provider = FakeProvider({
+            "kind": "nonogram",
+            "title": "小数织",
+            "confidence": 0.9,
+            "warnings": [],
+            "canonical": canonical,
+        })
+        result = DeepSeekNormalizer(provider).normalize(text="数织题")
+        self.assertEqual(result["envelope"]["canonical"], canonical)
+        system_prompt = provider.calls[0][0]["content"]
+        self.assertIn("nonogram", system_prompt)
+        self.assertIn("row_clues", system_prompt)
+        with self.assertRaisesRegex(NormalizationError, "Nonogram"):
+            DeepSeekNormalizer._validate_envelope({
+                "kind": "nonogram",
+                "title": "坏题",
+                "confidence": 1.0,
+                "warnings": [],
+                "canonical": {"row_clues": [[0]], "column_clues": [[1]]},
+            })
+
     def test_upload_checks_declared_type_magic_and_pixel_limit(self):
         normalized = validate_image_upload(png_bytes(), "image/png", filename="grid.png")
         self.assertEqual(normalized.mime, "image/png")

@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from puzzle_agent.paper_puzzle.components.sudoku import build_state
+from puzzle_agent.paper_puzzle.components.nonogram import build_state as build_nonogram_state
 
 from .contracts import canonical_hash
 
@@ -15,8 +16,9 @@ class NormalizationError(ValueError):
 
 
 _SYSTEM_PROMPT = """You are the mandatory NORMALIZE_INPUT stage for a puzzle agent.
-Return one JSON object only. Classify kind as sudoku or general. Preserve all supplied clues.
+Return one JSON object only. Classify kind as sudoku, nonogram, or general. Preserve all supplied clues.
 For sudoku, canonical must contain size, grid using null for blanks, and optional symbols/regions/box shape.
+For a black-and-white nonogram, canonical must contain row_clues and column_clues as arrays of positive-integer arrays; use [] for an empty line. It may contain a grid using null for unknown, 1 for filled, and 0 for empty.
 For general puzzles, canonical must contain text and may contain title/artifact_notes.
 Always include title, confidence (0..1), warnings (array), kind, and canonical.
 Never solve the puzzle in this stage."""
@@ -67,8 +69,8 @@ class DeepSeekNormalizer:
 
     @staticmethod
     def _validate_envelope(envelope: Any) -> None:
-        if not isinstance(envelope, dict) or envelope.get("kind") not in {"sudoku", "general"}:
-            raise NormalizationError("normalized kind must be sudoku or general")
+        if not isinstance(envelope, dict) or envelope.get("kind") not in {"sudoku", "nonogram", "general"}:
+            raise NormalizationError("normalized kind must be sudoku, nonogram, or general")
         canonical = envelope.get("canonical")
         if not isinstance(canonical, dict):
             raise NormalizationError("normalized canonical input must be an object")
@@ -82,5 +84,10 @@ class DeepSeekNormalizer:
                 build_state(canonical)
             except ValueError as exc:
                 raise NormalizationError(f"invalid normalized Sudoku: {exc}") from exc
+        elif envelope["kind"] == "nonogram":
+            try:
+                build_nonogram_state(canonical)
+            except ValueError as exc:
+                raise NormalizationError(f"invalid normalized Nonogram: {exc}") from exc
         elif not isinstance(canonical.get("text"), str) or not canonical["text"].strip():
             raise NormalizationError("general canonical input requires non-empty text")

@@ -38,6 +38,13 @@ text / image / mixed
 但服务重启即失效。逻辑提示只从公开数字做确定性八邻域传播，忽略玩家旗子的真实性，不读取隐藏雷位，且
 只返回建议、不改变棋盘。对应写 API 继续复用本地 capability、Host、Origin 与 JSON 安全门。
 
+数织继续使用统一的强制 normalization journey。canonical 由 `row_clues`、`column_clues` 与可选的三态
+`grid` 组成；引擎为每条行/列生成局部合法模式，按已知格过滤并取模式交集，只把所有兼容模式共同拥有的
+黑格/空格写入盘面。扫描顺序固定为行后列，每次有变化后从行重新开始，整轮无变化即 `STALLED`，没有
+整盘 DFS、回溯或猜格路径。每个 line step 保存线索、兼容模式数、共同结论、实际变更和前后 fingerprint；
+replay 从 canonical 重新生成同一步。停滞后的模型输出只保留 `UNVERIFIED_ADVISORY` 分析与技巧名，任何
+cell assignment 都会被裁掉。
+
 ## 3. Simple 数据流
 
 ```text

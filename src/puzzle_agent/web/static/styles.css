@@ -30,6 +30,11 @@ button{border:0;border-radius:10px;padding:13px 18px;font-weight:800;cursor:poin
 .puzzle-card p{color:var(--muted);margin:0 0 16px}
 .badge{position:absolute;top:12px;right:12px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--green)}
 .sudoku-grid{display:grid;max-width:540px;margin:24px auto;border:3px solid var(--ink)}
+.nonogram-grid{display:grid;width:max-content;max-width:100%;overflow:auto;margin:24px auto;border:3px solid var(--ink)}
+.nonogram-cell{width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--line);font:700 14px ui-monospace,monospace}
+.nonogram-cell.filled{background:var(--ink)}
+.nonogram-cell.empty{background:#fffdf7;color:#9b9486}
+.nonogram-cell.unknown{background:#eee9dc;color:#817a6d}
 .cell{aspect-ratio:1;display:grid;place-items:center;border:1px solid var(--line);font:700 clamp(18px,4vw,28px) Georgia,serif}
 .trace{padding-left:24px}
 .trace li{padding:10px;border-bottom:1px solid var(--line)}

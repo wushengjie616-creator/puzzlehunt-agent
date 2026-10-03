@@ -285,12 +285,12 @@ def create_app(
             raise HTTPException(403, "Canonical input is not the confirmed version")
         session_id = uuid.uuid4().hex
         kind = record["envelope"]["kind"]
-        if kind == "sudoku":
+        if kind in {"sudoku", "nonogram"}:
             result = app.state.gateway.run({"kind": kind, "canonical": canonical})
             if result["status"] == "STALLED" and app.state.agent_provider is not None:
                 try:
                     result["advisory"] = app.state.gateway.advise_stall(
-                        result, app.state.agent_provider
+                        result, app.state.agent_provider, kind=kind
                     )
                 except (RuntimeError, ValueError) as exc:
                     result["advisory"] = {
