@@ -15,13 +15,34 @@ python3 -m venv .venv
 当前页面使用的本地 capability token，并同时校验 Host、Origin 和 JSON Content-Type。不要用反向代理把该
 模式直接暴露到公网。
 
-页面接受文字、PNG、JPEG 或 WebP（单图最大 10 MiB），所有输入都必须经过 `deepseek-flash` 的
+本地站点包含三个入口：
+
+- `/`：文字/图片题目提交、DeepSeek 规范化确认和解题过程；
+- `/paper-puzzles`：数独、数织入口和可直接游玩的本地扫雷；
+- `/cipher-tools`：古典密码搜索库、凯撒全移位、培根、猪圈图、盲文、旗语、ASCII、A1Z26 与二/三/十进制转换。
+
+页面接受文字、点击选择或拖拽加入的 PNG、JPEG 或 WebP（单图最大 10 MiB），所有输入都必须经过 `deepseek-flash` 的
 `NORMALIZE_INPUT` 阶段。识别结果必须先由用户编辑、确认，随后服务端签发绑定 source、模型 envelope 与
 canonical input hash 的短期回执；直接调用 session API 不能绕过该阶段。API Key 始终只在服务端。
 
+题目入口可明确选择自动识别、普通谜题、普通数独或数织；从纸笔子页面进入会预选相应组件。显式选择会作为
+`preferred_kind` 交给 DeepSeek，模型返回不同题型时失败关闭，避免数独误入通用 Agent。选择数独后还可选
+“只提示下一步”或“使用基础技巧完整做完”。
+
+确认识别结果时不显示 JSON：数独使用可直接修改的 N×N 棋盘，并按宫边界绘制粗线；数织使用逐行、逐列
+线索表；普通谜题使用文本编辑框。页面把修改结果重新组装为 canonical input，再交给同一服务端校验与
+确认回执流程。若数独 OCR 在同一行、列或宫内抄出重复数字，识别结果仍会进入该棋盘，并把冲突格标红；
+玩家修正后才可通过严格确认，不会把冲突盘面交给解题器。
+
+普通 9×9 图片识别会要求模型忽略截图中的日期、计时器、数字键盘等界面元素，只抄录盘内已知数且不预先
+解题。若模型仅把 1–9 或空格写成字符串、`0`、`.` 等无歧义 JSON 形式，normalizer 会确定性转换为整数与
+`null`，并在 warnings 中提醒玩家逐格核对。行列尺寸、未知符号等结构错误在识别阶段失败关闭；重复数字
+或候选矛盾作为可修正警告进入确认页，若未修正则在确认阶段失败关闭。
+
 纸笔谜题专区目前提供普通数独、数织解法器和本地互动扫雷。数独组件支持标准 9×9，以及显式提供宫结构的其他 N×N；它只应用
-裸单和行/列/宫隐单，记录候选数、依据和前后状态指纹，并可从 givens 重放。基础技巧不够时返回 `STALLED`
-和 `UNVERIFIED_ADVISORY`，绝不搜索、回溯或猜数。
+裸单和行/列/宫隐单，记录候选数、中文观察说明、依据和前后状态指纹，并可从 givens 重放。单步模式找到首个
+确定数后返回 `STEP_LIMIT`；基础技巧不够时才返回 `STALLED` 和 `UNVERIFIED_ADVISORY`。两种模式都绝不
+搜索、回溯或猜数。
 
 扫雷不是自动求解器，而是服务端权威棋盘的本地小游戏：支持初级 9×9/10 雷、中级 16×16/40 雷和高级
 16×30/99 雷；首次翻格安全，支持零区展开、右键插旗、双击数字 chord、计时、胜负、重开和刷新恢复。
@@ -33,13 +54,19 @@ canonical input hash 的短期回执；直接调用 session API 不能绕过该�
 兼容排列数、变更格和前后状态指纹供重放验证。组件不做整盘搜索、回溯或猜格；固定点未完成时返回
 `STALLED`，Agent 建议只能标记为 `UNVERIFIED_ADVISORY`，不能直接改盘。数和仍是路线图。
 
-真实图片识别会产生 DeepSeek 调用费用；默认测试使用 fake provider，本次本地部署不包含未经单独授权的
-付费视觉冒烟。若未配置 `DEEPSEEK_API_KEY`，页面仍可启动，但规范化会明确失败而不会绕过模型。
+真实图片识别会产生 DeepSeek 调用费用；默认测试使用 fake provider，本地验收不包含未经单独授权的
+付费视觉冒烟。若未配置 `DEEPSEEK_API_KEY`，首页会在提交前显示不可用原因并禁用规范化按钮，不会绕过
+模型。复制 `.env.example` 为 `.env.local`、填入 Key 并重启服务即可加载；配置状态不验证余额、网络或
+Key 是否有效，实际调用错误仍会在题目进度中显示。
 
 项目另有两种 CLI 运行方式：
 
-- **simple mode**：零第三方运行时依赖；本地跑常见密码候选，然后进行一次 DeepSeek 单轮请求。
-- **complex mode**：可选 LangGraph/SQLite runtime；按观察、假设、工具实验、证据评价和答案验证进行多次独立 DeepSeek 单轮请求，并支持暂停、恢复、历史和分叉。
+- **simple mode**：零第三方运行时依赖；先按题面关键词索引相关古典密码规则，再运行本地常见密码候选，最后进行一次 DeepSeek 单轮请求。
+- **complex mode**：可选 LangGraph/SQLite runtime；按观察、假设、工具实验、证据评价和答案验证进行多次独立 DeepSeek 单轮请求。关键词命中会写入紧凑资料提示，Agent 可按需调用完整密码对照表，并支持暂停、恢复、历史和分叉。
+
+Web 中运行通用复杂 Agent 时会显示“终止推理”。点击后浏览器立即停止等待，服务端在当前 DeepSeek
+请求返回后阻止后续节点，并把 session 持久标记为 `CANCELLED`。非流式在途请求无法安全强杀或撤回，
+因此终止可能需要等待当前单次请求结束，但不会继续产生下一轮模型调用。
 
 ## 安装
 
@@ -72,7 +99,7 @@ DEEPSEEK_VISION_MODEL=deepseek-flash
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
 
-shell 环境变量优先于 `.env.local`。只允许上述三个 `DEEPSEEK_*` 键；Key 不写入 checkpoint、事件、prompt dump 或错误正文。
+shell 环境变量优先于 `.env.local`。只允许上述四个 `DEEPSEEK_*` 键；Key 不写入 checkpoint、事件、prompt dump 或错误正文。
 
 当前 DeepSeek 适配器使用：
 
@@ -167,8 +194,14 @@ CLI 题目可以声明必须转写的 artifact：
 
 密码工作台包括：
 
-- Caesar/ROT、Atbash、Base16/32/64、二进制、Morse、A1Z26
+- Caesar/ROT、Atbash、Base16/32/64、二进制、Morse、A1Z26、现代 26 字母培根与十进制 ASCII
 - Vigenère（显式 key）、Rail Fence、反转、奇偶位、首尾字母
+
+Web 密码资料库另外提供猪圈密码的位置/点位对照。猪圈图形跨字体且存在变体，因此本期不把任意 Unicode
+符号自动映射成字母；页面会提醒先用题面重复符号验证字母表方向。培根工具默认现代 26 字母变体，古典
+I/J、U/V 合并形式只作为资料说明，避免静默混用。资料页使用桌面 10 列、窄屏 5 列的紧凑格；猪圈卡
+包含 GPT 生成的纯黑白 A–Z 示意图，盲文以六个黑白点显示 A–Z 和 0–9，旗语以面对发信者的双臂八方向图
+显示 A–Z。凯撒和栅栏保留规则说明，不再重复显示冗长对照表。
 
 complex tool registry 还包括：
 

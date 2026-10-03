@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>密码工具 · Puzzle Agent</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <nav class="site-nav" aria-label="主导航"><a href="/">题目入口</a><a href="/paper-puzzles">纸笔谜题</a><a class="active" href="/cipher-tools">密码工具</a></nav>
+  <header class="hero compact-hero">
+    <div><span class="eyebrow">CIPHER DESK</span><h1>密码工具</h1></div>
+    <p>先用确定性转换整理线索，再结合题目标题、格式和独立提示判断候选。</p>
+  </header>
+  <main>
+    <section class="panel tool-panel">
+      <div class="section-title"><span>01</span><div><h2>快速转换</h2><p>转换结果是证据候选，不自动宣称谜题答案。</p></div></div>
+      <div class="tool-controls">
+        <label for="operation">转换方式</label>
+        <select id="operation">
+          <option value="caesar_all">凯撒 · 全部 26 移位</option><option value="bacon_encode">培根 · 编码</option><option value="bacon_decode">培根 · 解码</option>
+          <option value="a1z26_encode">A1Z26 · 编码</option><option value="a1z26_decode">A1Z26 · 解码</option><option value="ascii_encode">ASCII · 编码</option><option value="ascii_decode">ASCII · 解码</option>
+          <option value="braille_encode">盲文点位 · 编码</option><option value="braille_decode">盲文点位 · 解码</option><option value="radix_convert">二/三/十进制转换</option>
+        </select>
+        <span id="base-control" class="hidden"><label for="from-base">输入进制</label><select id="from-base"><option value="2">二进制</option><option value="3">三进制</option><option value="10">十进制</option></select></span>
+      </div>
+      <label for="cipher-input">输入</label><textarea id="cipher-input" rows="5" placeholder="例如 Khoor、72 105、1000001 或 14 1 12"></textarea>
+      <button id="transform" class="primary">转换</button><p id="transform-error" class="error-text" aria-live="polite"></p><div id="transform-result" class="result-box"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title"><span>02</span><div><h2>古典密码搜索库</h2><p>收录培根、猪圈、凯撒、栅栏、ASCII 和旗语。</p></div></div>
+      <label for="reference-search">搜索名称、别名或规则</label><div class="search-row"><input id="reference-search" type="search" placeholder="例如 猪圈、ROT、ASCII"><button id="search">搜索</button></div>
+      <div id="reference-results" class="reference-list" aria-live="polite"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title"><span>03</span><div><h2>盲文速查表</h2><p>六点盲文点位：左列从上到下为 1、2、3，右列为 4、5、6。</p></div></div>
+      <p class="reference-note">数字需要先发送数字标志 <code>3456</code>，随后 1–0 分别复用 A–J 的点位。</p>
+      <div id="braille-table" class="braille-grid"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title"><span>04</span><div><h2>旗语速查表</h2><p>面对发信者读取；下方“左/右”均指发信者自己的手。</p></div></div>
+      <div id="semaphore-table" class="semaphore-grid"></div>
+    </section>
+  </main>
+  <footer>所有转换均在本地确定性脚本中完成 · 不调用 DeepSeek</footer>
+  <script src="/static/cipher-tools.js" defer></script>
+</body>
+</html>

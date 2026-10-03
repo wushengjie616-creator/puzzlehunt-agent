@@ -9,6 +9,7 @@ from threading import Lock, Thread
 from typing import Any
 from urllib.parse import urlparse
 import uuid
+from collections.abc import MutableMapping
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -21,6 +22,7 @@ from puzzle_agent.intake.uploads import UploadError, validate_image_upload
 from puzzle_agent.paper_puzzle.gateway import PaperPuzzleGateway
 from puzzle_agent.paper_puzzle.components.minesweeper import MinesweeperError, MinesweeperStore
 from puzzle_agent.providers.deepseek import DeepSeekConfig, DeepSeekProvider
+from puzzle_agent.cipher_reference import BRAILLE_TABLE, SEMAPHORE_TABLE, search_references, transform
 
 
 _STATIC = Path(__file__).with_name("static")
@@ -29,19 +31,22 @@ _ALLOWED_HOSTS = {"127.0.0.1", "localhost", "testserver", "::1"}
 
 
 class _UnavailableNormalizer:
+    reason = "DEEPSEEK_API_KEY 未配置；请在项目根目录创建 .env.local 后重启服务"
+
     def normalize(self, **kwargs):
-        raise RuntimeError("DEEPSEEK_API_KEY is required for mandatory input normalization")
+        raise RuntimeError(self.reason)
 
 
-def _default_normalizer():
-    load_env_local()
-    api_key = os.getenv("DEEPSEEK_API_KEY")
+def _default_normalizer(environ: MutableMapping[str, str] | None = None):
+    target = os.environ if environ is None else environ
+    load_env_local(environ=target)
+    api_key = target.get("DEEPSEEK_API_KEY")
     if not api_key:
         return _UnavailableNormalizer()
     provider = DeepSeekProvider(DeepSeekConfig(
         api_key=api_key,
-        base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
-        model=os.getenv("DEEPSEEK_VISION_MODEL", "deepseek-flash"),
+        base_url=target.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+        model=target.get("DEEPSEEK_VISION_MODEL", "deepseek-flash"),
         thinking="disabled",
         reasoning_effort="low",
         max_tokens=8192,
@@ -49,15 +54,16 @@ def _default_normalizer():
     return DeepSeekNormalizer(provider)
 
 
-def _default_agent_provider():
-    load_env_local()
-    api_key = os.getenv("DEEPSEEK_API_KEY")
+def _default_agent_provider(environ: MutableMapping[str, str] | None = None):
+    target = os.environ if environ is None else environ
+    load_env_local(environ=target)
+    api_key = target.get("DEEPSEEK_API_KEY")
     if not api_key:
         return None
     return DeepSeekProvider(DeepSeekConfig(
         api_key=api_key,
-        base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
-        model=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro"),
+        base_url=target.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+        model=target.get("DEEPSEEK_MODEL", "deepseek-v4-pro"),
     ))
 
 
@@ -68,10 +74,32 @@ def create_app(
     receipt_secret: bytes | None = None,
     capability_token: str | None = None,
     sessions_root: Path | None = None,
+    env: MutableMapping[str, str] | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Puzzle Agent Local Web", docs_url=None, redoc_url=None)
-    app.state.normalizer = normalizer or _default_normalizer()
-    app.state.agent_provider = agent_provider or _default_agent_provider()
+    target_env = os.environ if env is None else env
+    app.state.normalizer = normalizer if normalizer is not None else _default_normalizer(target_env)
+    app.state.agent_provider = agent_provider if agent_provider is not None else _default_agent_provider(target_env)
+    if normalizer is not None:
+        app.state.deepseek_status = {
+            "configured": True,
+            "status": "injected-test-provider",
+            "message": "使用注入的规范化 provider。",
+            "vision_model": "injected",
+            "agent_model": "injected" if agent_provider is not None else None,
+        }
+    else:
+        configured = bool(target_env.get("DEEPSEEK_API_KEY"))
+        app.state.deepseek_status = {
+            "configured": configured,
+            "status": "configured" if configured else "missing-api-key",
+            "message": (
+                "DeepSeek 已配置；该状态不验证网络、余额或 Key 有效性。"
+                if configured else _UnavailableNormalizer.reason
+            ),
+            "vision_model": target_env.get("DEEPSEEK_VISION_MODEL", "deepseek-flash"),
+            "agent_model": target_env.get("DEEPSEEK_MODEL", "deepseek-v4-pro"),
+        }
     app.state.signer = ReceiptSigner(receipt_secret or secrets.token_bytes(32))
     app.state.capability = capability_token or secrets.token_urlsafe(32)
     app.state.gateway = PaperPuzzleGateway()
@@ -108,11 +136,25 @@ def create_app(
     def home():
         return FileResponse(_STATIC / "index.html")
 
+    @app.get("/paper-puzzles")
+    def paper_puzzles():
+        return FileResponse(_STATIC / "paper-puzzles.html")
+
+    @app.get("/cipher-tools")
+    def cipher_tools():
+        return FileResponse(_STATIC / "cipher-tools.html")
+
     @app.get("/static/{name}")
     def static_asset(name: str):
-        if name not in {"app.js", "styles.css"}:
+        if name not in {"app.js", "cipher-tools.js", "paper-puzzles.js", "styles.css"}:
             raise HTTPException(404)
         return FileResponse(_STATIC / name)
+
+    @app.get("/static/assets/{name}")
+    def static_image_asset(name: str):
+        if name != "pigpen-reference-gpt.png":
+            raise HTTPException(404)
+        return FileResponse(_STATIC / "assets" / name)
 
     @app.get("/health")
     def health():
@@ -125,7 +167,27 @@ def create_app(
             "capability_token": app.state.capability,
             "catalog": app.state.gateway.catalog(),
             "normalization_required": True,
+            "deepseek": deepcopy(app.state.deepseek_status),
         }
+
+    @app.get("/api/ciphers/references")
+    def cipher_references(q: str = ""):
+        try:
+            return {
+                "items": search_references(q),
+                "braille_table": BRAILLE_TABLE,
+                "semaphore_table": SEMAPHORE_TABLE,
+            }
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    @app.post("/api/ciphers/transform")
+    async def cipher_transform(request: Request):
+        body = await request.json()
+        try:
+            return transform(body)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
 
     def get_minesweeper_game(game_id: str):
         try:
@@ -175,12 +237,23 @@ def create_app(
     def add_event(record: dict[str, Any], event: str, detail: str) -> None:
         record["events"].append({"id": len(record["events"]) + 1, "event": event, "detail": detail})
 
-    def run_normalization(intake_id: str, text: str, image: bytes | None, image_mime: str | None) -> None:
+    def run_normalization(
+        intake_id: str,
+        text: str,
+        image: bytes | None,
+        image_mime: str | None,
+        preferred_kind: str | None,
+    ) -> None:
         record = app.state.intakes[intake_id]
         try:
             record["status"] = "NORMALIZING"
             add_event(record, "normalizing", "DeepSeek NORMALIZE_INPUT started")
-            result = app.state.normalizer.normalize(text=text, image=image, image_mime=image_mime)
+            result = app.state.normalizer.normalize(
+                text=text,
+                image=image,
+                image_mime=image_mime,
+                preferred_kind=preferred_kind,
+            )
             record.update(result)
             record["status"] = "READY_FOR_CONFIRMATION"
             add_event(record, "ready", "Model output validated; user confirmation required")
@@ -197,6 +270,9 @@ def create_app(
         text = body.get("text", "")
         if not isinstance(text, str) or len(text) > 50_000:
             raise HTTPException(400, "text must be at most 50000 characters")
+        preferred_kind = body.get("preferred_kind")
+        if preferred_kind not in {None, "sudoku", "nonogram", "general"}:
+            raise HTTPException(400, "preferred_kind must be sudoku, nonogram, general, or null")
         image_data = None
         image_mime = None
         image = body.get("image")
@@ -219,12 +295,17 @@ def create_app(
         if not text.strip() and image_data is None:
             raise HTTPException(400, "text or image is required")
         intake_id = uuid.uuid4().hex
-        record = {"intake_id": intake_id, "status": "QUEUED", "events": []}
+        record = {
+            "intake_id": intake_id,
+            "status": "QUEUED",
+            "preferred_kind": preferred_kind,
+            "events": [],
+        }
         add_event(record, "queued", "Input accepted by local safety gate")
         app.state.intakes[intake_id] = record
         Thread(
             target=run_normalization,
-            args=(intake_id, text, image_data, image_mime),
+            args=(intake_id, text, image_data, image_mime, preferred_kind),
             daemon=True,
             name=f"normalize-{intake_id[:8]}",
         ).start()
@@ -285,8 +366,15 @@ def create_app(
             raise HTTPException(403, "Canonical input is not the confirmed version")
         session_id = uuid.uuid4().hex
         kind = record["envelope"]["kind"]
+        solve_mode = body.get("solve_mode", "full")
+        if solve_mode not in {"full", "next_step"}:
+            raise HTTPException(400, "solve_mode must be full or next_step")
+        if kind != "sudoku" and solve_mode != "full":
+            raise HTTPException(422, "solve_mode next_step is only supported for sudoku")
         if kind in {"sudoku", "nonogram"}:
-            result = app.state.gateway.run({"kind": kind, "canonical": canonical})
+            result = app.state.gateway.run(
+                {"kind": kind, "canonical": canonical}, solve_mode=solve_mode
+            )
             if result["status"] == "STALLED" and app.state.agent_provider is not None:
                 try:
                     result["advisory"] = app.state.gateway.advise_stall(
@@ -297,7 +385,13 @@ def create_app(
                         "status": "UNVERIFIED_ADVISORY",
                         "message": f"Advisory unavailable: {exc}",
                     }
-            session = {"session_id": session_id, "kind": kind, "status": result["status"], "result": result}
+            session = {
+                "session_id": session_id,
+                "kind": kind,
+                "solve_mode": solve_mode,
+                "status": result["status"],
+                "result": result,
+            }
         else:
             from puzzle_agent.complex_session import SessionManager
             if app.state.complex_manager is None:
@@ -326,11 +420,26 @@ def create_app(
             return deepcopy(session["result"])
         if app.state.agent_provider is None:
             raise HTTPException(503, "DEEPSEEK_API_KEY is required to run the complex Agent")
+        session["status"] = "RUNNING"
         result = app.state.complex_manager.run(
             session["complex_session_id"], app.state.agent_provider
         )
         session["status"] = result.get("status", "UNKNOWN")
         session["result"] = result
+        return deepcopy(result)
+
+    @app.post("/api/sessions/{session_id}/stop", status_code=202)
+    def stop_session(session_id: str):
+        session = app.state.sessions.get(session_id)
+        if session is None:
+            raise HTTPException(404, "Unknown session")
+        if session["kind"] != "general" or app.state.complex_manager is None:
+            raise HTTPException(409, "Only a running general Agent session can be stopped")
+        try:
+            result = app.state.complex_manager.request_stop(session["complex_session_id"])
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        session["status"] = "STOP_REQUESTED"
         return deepcopy(result)
 
     return app

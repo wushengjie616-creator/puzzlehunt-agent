@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import re
 import sqlite3
+from threading import Lock
 from typing import Any
 import uuid
 
@@ -27,9 +28,34 @@ class _UnavailableProvider:
         raise RuntimeError("A provider is required to advance this session")
 
 
+class _CancellationRequested(RuntimeError):
+    pass
+
+
+class _CancellableProvider:
+    def __init__(self, provider, stop_marker: Path):
+        self.provider = provider
+        self.stop_marker = stop_marker
+
+    def complete(self, messages):
+        if self.stop_marker.is_file():
+            raise _CancellationRequested("Player requested cancellation")
+        try:
+            result = self.provider.complete(messages)
+        except Exception as exc:
+            if self.stop_marker.is_file():
+                raise _CancellationRequested("Player requested cancellation") from exc
+            raise
+        if self.stop_marker.is_file():
+            raise _CancellationRequested("Player requested cancellation")
+        return result
+
+
 class SessionManager:
     def __init__(self, root: str | Path):
         self.root = Path(root).resolve()
+        self._run_lock = Lock()
+        self._running: set[str] = set()
 
     def create(
         self,
@@ -58,15 +84,50 @@ class SessionManager:
         return session_id
 
     def run(self, session_id: str, provider) -> dict[str, Any]:
-        with self._open_graph(session_id, provider, step_mode=False) as (graph, config):
-            snapshot = graph.get_state(config)
-            if snapshot.values and not snapshot.next:
-                return dict(snapshot.values)
-            graph_input = None if snapshot.values else self._load_initial(session_id)
-            graph.invoke(graph_input, config)
-            result = dict(graph.get_state(config).values)
-        self._append_event(session_id, "session_run", self._state_summary(result))
-        return result
+        session_dir = self._session_dir(session_id)
+        stop_marker = session_dir / "stop.json"
+        with self._run_lock:
+            if session_id in self._running:
+                raise ValueError("Session is already running")
+            if stop_marker.is_file():
+                return self._cancelled_state(session_id)
+            self._running.add(session_id)
+        try:
+            cancellable = _CancellableProvider(provider, stop_marker)
+            try:
+                with self._open_graph(session_id, cancellable, step_mode=False) as (graph, config):
+                    snapshot = graph.get_state(config)
+                    if snapshot.values and not snapshot.next:
+                        return dict(snapshot.values)
+                    graph_input = None if snapshot.values else self._load_initial(session_id)
+                    graph.invoke(graph_input, config)
+                    result = dict(graph.get_state(config).values)
+            except _CancellationRequested:
+                result = self._mark_cancelled(session_id)
+                self._append_event(session_id, "session_cancelled", self._state_summary(result))
+                return result
+            self._append_event(session_id, "session_run", self._state_summary(result))
+            return result
+        finally:
+            with self._run_lock:
+                self._running.discard(session_id)
+
+    def request_stop(self, session_id: str) -> dict[str, Any]:
+        session_dir = self._session_dir(session_id)
+        with self._run_lock:
+            if session_id not in self._running:
+                raise ValueError("Session is not running")
+            marker = session_dir / "stop.json"
+            if marker.is_file():
+                return json.loads(marker.read_text(encoding="utf-8"))
+            requested = {
+                "session_id": session_id,
+                "status": "STOP_REQUESTED",
+                "requested_at": datetime.now(timezone.utc).isoformat(),
+            }
+            self._write_json(marker, requested)
+        self._append_event(session_id, "session_stop_requested", {})
+        return requested
 
     def step(self, session_id: str, provider) -> dict[str, Any]:
         with self._open_graph(session_id, provider, step_mode=True) as (graph, config):
@@ -98,7 +159,9 @@ class SessionManager:
     def status(self, session_id: str) -> dict[str, Any]:
         with self._open_graph(session_id, _UnavailableProvider()) as (graph, config):
             snapshot = graph.get_state(config)
-            return dict(snapshot.values) if snapshot.values else self._load_initial(session_id)
+            state = dict(snapshot.values) if snapshot.values else self._load_initial(session_id)
+        marker = self._session_dir(session_id) / "stop.json"
+        return self._cancelled_overlay(state, marker) if marker.is_file() else state
 
     def history(self, session_id: str) -> list[dict[str, Any]]:
         with self._open_graph(session_id, _UnavailableProvider()) as (graph, config):
@@ -175,6 +238,34 @@ class SessionManager:
         path = self._session_dir(session_id) / "puzzle.json"
         data = json.loads(path.read_text(encoding="utf-8"))
         return data["initial_state"]
+
+    def _cancelled_state(self, session_id: str) -> dict[str, Any]:
+        with self._open_graph(session_id, _UnavailableProvider()) as (graph, config):
+            snapshot = graph.get_state(config)
+            state = dict(snapshot.values) if snapshot.values else self._load_initial(session_id)
+        return self._cancelled_overlay(state, self._session_dir(session_id) / "stop.json")
+
+    @staticmethod
+    def _cancelled_overlay(state: dict[str, Any], marker: Path) -> dict[str, Any]:
+        cancellation = json.loads(marker.read_text(encoding="utf-8"))
+        result = dict(state)
+        result.update({
+            "status": cancellation["status"],
+            "stage": "CANCELLED" if cancellation["status"] == "CANCELLED" else result.get("stage"),
+            "next_node": None if cancellation["status"] == "CANCELLED" else result.get("next_node"),
+            "cancellation": cancellation,
+        })
+        return result
+
+    def _mark_cancelled(self, session_id: str) -> dict[str, Any]:
+        marker = self._session_dir(session_id) / "stop.json"
+        requested = json.loads(marker.read_text(encoding="utf-8"))
+        requested.update({
+            "status": "CANCELLED",
+            "cancelled_at": datetime.now(timezone.utc).isoformat(),
+        })
+        self._write_json(marker, requested)
+        return self._cancelled_state(session_id)
 
     def _open_graph(self, session_id: str, provider, step_mode: bool = False):
         session_dir = self._session_dir(session_id)

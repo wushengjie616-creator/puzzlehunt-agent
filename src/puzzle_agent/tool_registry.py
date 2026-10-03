@@ -14,6 +14,7 @@ from .cipher_workbench import (
     rail_fence_decode as _rail_fence_decode,
     vigenere_decode as _vigenere_decode,
 )
+from .cipher_reference import lookup_cipher_reference
 
 
 _MAX_TOOL_TEXT = 10_000
@@ -701,6 +702,7 @@ class ToolRegistry:
                 ToolSpec("morse_decode", morse_decode, contract="text uses explicit dots/dashes; spaces separate letters and slash or double-space separates words"),
                 ToolSpec("vigenere_decode", vigenere_decode, contract="key is known and explicit; this tool does not guess keys"),
                 ToolSpec("rail_fence_decode", rail_fence_decode, contract="rails is known and explicit integer 2..100; this tool does not guess rail count"),
+                ToolSpec("cipher_reference_lookup", lookup_cipher_reference, contract="query is an explicit cipher keyword; returns the matching rule and bounded reference table"),
                 ToolSpec("a1z26_decode", a1z26_decode, contract="values is non-empty list[int] in 1..26"),
                 ToolSpec("interleave_sequences", interleave_sequences, contract="sequences is list of at least two equal-length strings"),
                 ToolSpec("grid_trace", grid_trace, contract="grid is list[str], start is 0-based [row,col], directions uses N|E|S|W"),

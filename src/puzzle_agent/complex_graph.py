@@ -18,6 +18,7 @@ class StageProvider(Protocol):
 
 class PuzzleGraphState(TypedDict, total=False):
     puzzle: dict[str, Any]
+    cipher_reference_hints: list[dict[str, Any]]
     artifacts: dict[str, Any]
     required_artifacts: list[str]
     missing_artifacts: list[str]
@@ -121,6 +122,8 @@ _STAGE_INSTRUCTIONS = {
         "not only the first transform. Every call needs an observed signal, a concrete predicted output shape, "
         "and a falsifier; do not shotgun unrelated tools. Never repeat a prior tool with the same arguments. "
         "Do not use a generic cipher tool unless the observations contain a specific encoding signal. "
+        "Treat cipher_reference_hints as routing hints rather than evidence. When a matching hint applies and its "
+        "mapping is needed, call cipher_reference_lookup with the provided lookup_query instead of relying on memory. "
         "Use exact parameter names and satisfy the input contracts; do not invent aliases. Tools: "
         f"{_TOOL_CATALOG}."
     ),
@@ -183,6 +186,7 @@ def _messages(stage: str, state: PuzzleGraphState) -> list[dict[str, str]]:
     )
     visible_state = {
         "puzzle": state["puzzle"],
+        "cipher_reference_hints": state.get("cipher_reference_hints", []),
         "artifacts": state.get("artifacts", {}),
         "observations": state.get("observations", []),
         "tensions": state.get("tensions", []),

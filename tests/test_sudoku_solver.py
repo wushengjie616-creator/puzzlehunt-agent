@@ -56,6 +56,17 @@ class SudokuSolverTests(unittest.TestCase):
         self.assertEqual(result["steps"], [])
         self.assertEqual(result["unresolved_cells"], 81)
 
+    def test_next_step_mode_stops_after_one_assignment_with_observation_explanation(self):
+        result = solve_sudoku({"size": 9, "grid": EASY_GRID}, max_steps=1)
+        self.assertEqual(result["status"], "STEP_LIMIT")
+        self.assertEqual(len(result["steps"]), 1)
+        step = result["steps"][0]
+        self.assertIn(step["target"], step["explanation"])
+        self.assertIn(str(step["value"]), step["explanation"])
+        self.assertIn("观察", step["explanation"])
+        self.assertGreater(result["unresolved_cells"], 0)
+        self.assertIsNone(result["advisory"])
+
     def test_other_sizes_require_explicit_regions_and_can_solve(self):
         grid = [
             [1, None, 3, 4],

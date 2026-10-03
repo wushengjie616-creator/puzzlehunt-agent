@@ -49,6 +49,12 @@ class ComplexStateTests(unittest.TestCase):
         # a bounded hypothesis/evaluation replan needs two more calls.
         self.assertEqual(state["budget"], {"max_calls": 10, "calls_used": 0})
 
+    def test_initial_state_indexes_relevant_cipher_reference_hints(self):
+        state = new_puzzle_state(PuzzleInput(title="盲文", content="六点排列"))
+        self.assertEqual([item["id"] for item in state["cipher_reference_hints"]], ["braille"])
+        self.assertNotIn("table", state["cipher_reference_hints"][0])
+
+
 
 if __name__ == "__main__":
     unittest.main()

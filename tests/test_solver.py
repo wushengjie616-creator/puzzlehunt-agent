@@ -56,6 +56,24 @@ class SolverTests(unittest.TestCase):
         for value in ("T", "F", "C", "N", "JSON"):
             self.assertIn(value, joined)
 
+    def test_solver_injects_only_keyword_matched_cipher_reference_hints(self):
+        response = json.dumps({
+            "answer": None,
+            "confidence": "low",
+            "reasoning_summary": ["insufficient evidence"],
+            "key_evidence": [],
+            "methods_tried": [],
+            "alternatives": [],
+            "missing_information": ["encoded text"],
+        })
+        provider = RecordingProvider(response)
+        PuzzleSolver(provider).solve(PuzzleInput(title="凯撒移位", content="测试"))
+        prompt = provider.messages[-1]["content"]
+        self.assertIn("CIPHER_REFERENCES_JSON", prompt)
+        self.assertIn('"id": "caesar"', prompt)
+        self.assertNotIn('"id": "pigpen"', prompt)
+
+
 
 if __name__ == "__main__":
     unittest.main()

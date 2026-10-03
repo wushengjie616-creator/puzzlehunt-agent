@@ -4,6 +4,8 @@ from puzzle_agent.cipher_workbench import (
     CipherWorkbench,
     atbash,
     caesar_decode,
+    decode_ascii_decimal,
+    decode_bacon,
     decode_a1z26,
     decode_base,
     decode_morse,
@@ -22,6 +24,8 @@ class CipherKnownVectorTests(unittest.TestCase):
         self.assertEqual(decode_base("SGVsbG8=", 64), "Hello")
         self.assertEqual(decode_morse(".... . .-.. .-.. ---"), "HELLO")
         self.assertEqual(decode_a1z26("8-5-12-12-15"), "HELLO")
+        self.assertEqual(decode_bacon("aabbb aabaa ababb ababb abbba"), "HELLO")
+        self.assertEqual(decode_ascii_decimal("72 101 108 108 111"), "Hello")
         self.assertEqual(vigenere_decode("LXFOPVEFRNHR", "LEMON"), "ATTACKATDAWN")
         self.assertEqual(rail_fence_decode("WECRLTEERDSOEEFEAOCAIVDEN", 3), "WEAREDISCOVEREDFLEEATONCE")
 
@@ -39,6 +43,12 @@ class CipherKnownVectorTests(unittest.TestCase):
         self.assertIn("hello", {item.output.lower() for item in candidates})
         self.assertLessEqual(len(candidates), 5)
         self.assertLessEqual(sum(len(item.output) for item in candidates), 30)
+
+    def test_workbench_includes_bacon_and_ascii_candidates(self):
+        bacon = CipherWorkbench(max_candidates=80).analyze(PuzzleInput(content="aabbb aabaa ababb ababb abbba"))
+        self.assertIn(("bacon", "HELLO"), {(item.method, item.output) for item in bacon})
+        ascii_items = CipherWorkbench(max_candidates=80).analyze(PuzzleInput(content="72 101 108 108 111"))
+        self.assertIn(("ascii_decimal", "Hello"), {(item.method, item.output) for item in ascii_items})
 
 
 if __name__ == "__main__":

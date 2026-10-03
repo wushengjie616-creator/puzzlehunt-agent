@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+  <nav class="site-nav" aria-label="主导航"><a class="active" href="/">题目入口</a><a href="/paper-puzzles">纸笔谜题</a><a href="/cipher-tools">密码工具</a></nav>
   <header class="hero">
     <div><span class="eyebrow">LOCAL · NO LOGIN</span><h1>Puzzle Agent</h1></div>
     <p>把凌乱的文字或题面图片交给 DeepSeek 整理，再由可验证组件逐步推理。</p>
@@ -14,23 +15,45 @@
   <main>
     <section class="panel intake-panel">
       <div class="section-title"><span>01</span><div><h2>提交题目</h2><p>文字、图片或两者皆可。所有输入都会先经过 DeepSeek。</p></div></div>
+      <div id="deepseek-state" class="service-state pending" aria-live="polite">正在检查 DeepSeek 配置……</div>
+      <div class="route-controls">
+        <label for="puzzle-kind">题目类型</label>
+        <select id="puzzle-kind">
+          <option value="auto">自动识别</option>
+          <option value="general">普通谜题</option>
+          <option value="sudoku">普通数独</option>
+          <option value="nonogram">数织</option>
+        </select>
+        <p id="entry-context" class="route-note">自动识别会让 DeepSeek 判断题型。</p>
+      </div>
+      <fieldset id="sudoku-options" class="mode-options hidden">
+        <legend>数独推理方式</legend>
+        <label><input type="radio" name="sudoku-mode" value="next_step" checked> 只提示下一步</label>
+        <label><input type="radio" name="sudoku-mode" value="full"> 使用基础技巧完整做完</label>
+      </fieldset>
       <label for="puzzle-text">题目文字</label>
       <textarea id="puzzle-text" rows="7" placeholder="粘贴题面、规则、提示……"></textarea>
-      <div class="file-row"><label class="file-button">选择题面图片<input id="puzzle-image" type="file" accept="image/png,image/jpeg,image/webp"></label><span id="file-name">PNG / JPEG / WebP，最大 10 MiB</span></div>
+      <div id="image-drop-zone" class="drop-zone">
+        <label class="file-button">选择题面图片<input id="puzzle-image" type="file" accept="image/png,image/jpeg,image/webp"></label>
+        <span>或将图片拖到这里</span>
+        <small id="file-name">PNG / JPEG / WebP，最大 10 MiB</small>
+      </div>
       <button id="normalize" class="primary">DeepSeek 识别并整理</button>
       <div id="progress" class="progress" aria-live="polite"></div>
     </section>
 
     <section id="preview" class="panel hidden">
-      <div class="section-title"><span>02</span><div><h2>确认识别结果</h2><p>模型可能看错数字，请在求解前检查并修改 JSON。</p></div></div>
+      <div class="section-title"><span>02</span><div><h2>确认识别结果</h2><p>模型可能看错，请在推理前直接检查并修改下面的题面。</p></div></div>
       <div id="meta" class="meta"></div>
-      <textarea id="canonical" rows="16" spellcheck="false"></textarea>
+      <div id="canonical-editor" class="canonical-editor"></div>
       <button id="confirm" class="primary">确认并开始推理</button>
     </section>
 
     <section id="result" class="panel hidden">
       <div class="section-title"><span>03</span><div><h2>做题过程</h2><p>每一步都能从原始 givens 重放验证。</p></div></div>
-      <div id="status" class="status"></div><div id="grid" class="sudoku-grid"></div><div id="nonogram-grid" class="nonogram-grid hidden" role="grid" aria-label="数织结果"></div><ol id="trace" class="trace"></ol>
+      <div id="status" class="status"></div>
+      <button id="stop-reasoning" class="danger hidden" type="button">终止推理</button>
+      <div id="grid" class="sudoku-grid"></div><div id="nonogram-grid" class="nonogram-grid hidden" role="grid" aria-label="数织结果"></div><ol id="trace" class="trace"></ol>
     </section>
 
     <section id="minesweeper-game" class="panel hidden" aria-labelledby="minesweeper-title">
@@ -62,6 +85,12 @@
         <article class="puzzle-card enabled"><div class="badge">可用</div><h3>数织</h3><p>逐行逐列取合法模式交集；显示每一步黑格与空格依据。</p><button id="open-nonogram">开始数织</button></article>
         <article class="puzzle-card"><div class="badge">路线图</div><h3>数和</h3><p>交叉和约束与候选组合传播。</p></article>
       </div>
+      <p class="section-link"><a href="/paper-puzzles">进入纸笔谜题子页面 →</a></p>
+    </section>
+
+    <section class="paper-section">
+      <div class="section-title"><span>↔</span><div><h2>密码工具</h2><p>检索古典密码规则，使用确定性的转换表辅助解题。</p></div></div>
+      <p class="section-link"><a href="/cipher-tools">打开密码搜索库与转换表 →</a></p>
     </section>
   </main>
   <footer>默认仅监听 127.0.0.1 · API Key 不会进入浏览器</footer>

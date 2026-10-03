@@ -40,6 +40,28 @@ class PaperPuzzleGatewayTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unsupported"):
             PaperPuzzleGateway().run({"kind": "kakuro", "canonical": {}})
 
+    def test_sudoku_next_step_mode_is_explicit_and_not_available_to_nonogram(self):
+        sudoku = PaperPuzzleGateway().run({
+            "kind": "sudoku",
+            "canonical": {
+                "size": 4,
+                "box_rows": 2,
+                "box_cols": 2,
+                "grid": [
+                    [1, None, 3, 4], [3, 4, 1, None],
+                    [None, 1, 4, 3], [4, 3, None, 1],
+                ],
+            },
+        }, solve_mode="next_step")
+        self.assertEqual(sudoku["status"], "STEP_LIMIT")
+        self.assertEqual(len(sudoku["steps"]), 1)
+
+        with self.assertRaisesRegex(ValueError, "solve_mode"):
+            PaperPuzzleGateway().run({
+                "kind": "nonogram",
+                "canonical": {"row_clues": [[1]], "column_clues": [[1]]},
+            }, solve_mode="next_step")
+
     def test_stall_advisory_cannot_modify_the_board(self):
         class AdvisoryProvider:
             def complete(self, messages):

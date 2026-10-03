@@ -259,6 +259,10 @@ class DeterministicPuzzleToolTests(unittest.TestCase):
             registry.execute("rail_fence_decode", {"text": "WECRLTEERDSOEEFEAOCAIVDEN", "rails": 3})["output"],
             "WEAREDISCOVEREDFLEEATONCE",
         )
+        reference = registry.execute("cipher_reference_lookup", {"query": "猪圈密码"})
+        self.assertEqual(reference["match_count"], 1)
+        self.assertEqual(reference["output"][0]["id"], "pigpen")
+        self.assertEqual(len(reference["output"][0]["table"]), 26)
 
     def test_classic_cipher_registry_rejects_guessing_or_invalid_encodings(self):
         registry = ToolRegistry()

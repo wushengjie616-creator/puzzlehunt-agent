@@ -39,11 +39,18 @@ class PaperPuzzleGateway:
             {"id": "kakuro", "name": "数和", "enabled": False, "description": "路线图"},
         ]
 
-    def run(self, envelope: dict[str, Any]) -> dict[str, Any]:
+    def run(self, envelope: dict[str, Any], *, solve_mode: str = "full") -> dict[str, Any]:
+        if solve_mode not in {"full", "next_step"}:
+            raise ValueError("solve_mode must be full or next_step")
         kind = envelope.get("kind")
         if kind == "sudoku":
-            return solve_sudoku(envelope.get("canonical"))
+            return solve_sudoku(
+                envelope.get("canonical"),
+                max_steps=1 if solve_mode == "next_step" else None,
+            )
         if kind == "nonogram":
+            if solve_mode != "full":
+                raise ValueError("solve_mode next_step is only supported for sudoku")
             return solve_nonogram(envelope.get("canonical"))
         raise ValueError(f"Unsupported paper puzzle component: {kind}")
 

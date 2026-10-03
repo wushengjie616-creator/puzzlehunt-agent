@@ -2,6 +2,7 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+import threading
 import unittest
 
 from puzzle_agent.domain import PuzzleInput
@@ -98,8 +99,59 @@ class ScriptedProvider:
         }[stage])
 
 
+class BlockingProvider:
+    def __init__(self):
+        self.started = threading.Event()
+        self.release = threading.Event()
+        self.calls = 0
+
+    def complete(self, messages):
+        self.calls += 1
+        self.started.set()
+        if not self.release.wait(2):
+            raise RuntimeError("test provider was not released")
+        return json.dumps({"observations": [], "tensions": []})
+
+
 @unittest.skipUnless(HAS_COMPLEX, "complex extra is not installed")
 class PersistentSessionTests(unittest.TestCase):
+    def test_stop_request_cancels_after_current_provider_call_and_persists(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manager = SessionManager(Path(directory))
+            session_id = manager.create(PuzzleInput(content="long puzzle"), max_calls=8)
+            provider = BlockingProvider()
+            outcome = {}
+
+            def run_session():
+                try:
+                    outcome["result"] = manager.run(session_id, provider)
+                except Exception as exc:  # captured so the assertion reports the real failure
+                    outcome["error"] = exc
+
+            worker = threading.Thread(target=run_session)
+            worker.start()
+            self.assertTrue(provider.started.wait(1))
+            try:
+                requested = manager.request_stop(session_id)
+            finally:
+                provider.release.set()
+                worker.join(3)
+
+            self.assertFalse(worker.is_alive())
+            self.assertNotIn("error", outcome)
+            self.assertEqual(requested["status"], "STOP_REQUESTED")
+            self.assertEqual(outcome["result"]["status"], "CANCELLED")
+            self.assertEqual(manager.status(session_id)["status"], "CANCELLED")
+            self.assertEqual(provider.calls, 1)
+            event_types = [
+                json.loads(line)["type"]
+                for line in (Path(directory) / session_id / "events.jsonl").read_text(
+                    encoding="utf-8"
+                ).splitlines()
+            ]
+            self.assertIn("session_stop_requested", event_types)
+            self.assertIn("session_cancelled", event_types)
+
     def test_run_persists_state_and_history_for_a_new_manager(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

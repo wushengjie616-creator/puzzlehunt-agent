@@ -30,4 +30,4 @@ puzzle-agent = "puzzle_agent.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-puzzle_agent = ["web/static/*.html", "web/static/*.css", "web/static/*.js"]
+puzzle_agent = ["web/static/*.html", "web/static/*.css", "web/static/*.js", "web/static/assets/*.png"]

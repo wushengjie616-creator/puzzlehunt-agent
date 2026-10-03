@@ -232,9 +232,28 @@ def _apply_assignment(state: SudokuState, assignment: Assignment, index: int) ->
         "target": assignment["target"],
         "value": value,
         "premises": assignment["premises"],
+        "explanation": _explain_assignment(assignment),
         "before_fingerprint": before,
         "after_fingerprint": after,
     }
+
+
+def _explain_assignment(assignment: Assignment) -> str:
+    target = assignment["target"]
+    value = assignment["value"]
+    technique = assignment["technique"]
+    if technique == "naked_single":
+        return (
+            f"观察 {target}：排除同一行、同一列和所在宫已经出现的数字后，"
+            f"待选数只剩 {value}，所以这里填 {value}。"
+        )
+    unit_kind = technique.removeprefix("hidden_single_")
+    unit_number = str(assignment["premises"]["unit"]).split(":", 1)[1]
+    unit_label = {"row": "行", "column": "列", "region": "宫"}[unit_kind]
+    return (
+        f"观察第 {unit_number} {unit_label}中的数字 {value}：这一{unit_label}尚未出现 {value}，"
+        f"并且所有空格里只有 {target} 仍把 {value} 作为待选数，所以 {target} 填 {value}。"
+    )
 
 
 def _candidate_matrix(state: SudokuState) -> list[list[list[int]]]:
@@ -255,6 +274,10 @@ def _is_solved(state: SudokuState) -> bool:
 
 
 def solve_sudoku(payload: dict[str, Any], *, max_steps: int | None = None) -> dict[str, Any]:
+    if max_steps is not None and (
+        not isinstance(max_steps, int) or isinstance(max_steps, bool) or max_steps < 0
+    ):
+        raise SudokuError("max_steps must be a non-negative integer")
     state = build_state(payload)
     givens_hash = _stable_hash({"grid": state.grid, "regions": state.spec.regions, "symbols": state.spec.symbols})
     steps: list[dict[str, Any]] = []
@@ -264,7 +287,9 @@ def solve_sudoku(payload: dict[str, Any], *, max_steps: int | None = None) -> di
         if assignment is None:
             break
         steps.append(_apply_assignment(state, assignment, len(steps) + 1))
-    status = "SOLVED" if _is_solved(state) else "STALLED"
+    solved = _is_solved(state)
+    reached_step_limit = max_steps is not None and len(steps) >= limit and not solved
+    status = "SOLVED" if solved else "STEP_LIMIT" if reached_step_limit else "STALLED"
     return {
         "status": status,
         "grid": [row[:] for row in state.grid],
@@ -273,7 +298,7 @@ def solve_sudoku(payload: dict[str, Any], *, max_steps: int | None = None) -> di
         "unresolved_cells": sum(value is None for row in state.grid for value in row),
         "givens_hash": givens_hash,
         "state_fingerprint": _fingerprint(state),
-        "advisory": None if status == "SOLVED" else {
+        "advisory": None if status != "STALLED" else {
             "status": "UNVERIFIED_ADVISORY",
             "message": "Singles reached a fixed point; a verified higher-order technique is required.",
         },
@@ -291,6 +316,8 @@ def replay_trace(payload: dict[str, Any], steps: list[dict[str, Any]]) -> dict[s
         for key in ("technique", "target", "value", "premises"):
             if supplied.get(key) != expected.get(key):
                 raise SudokuError(f"replay failed at step {index}: {key} mismatch")
+        if supplied.get("explanation") != _explain_assignment(expected):
+            raise SudokuError(f"replay failed at step {index}: explanation mismatch")
         actual = _apply_assignment(state, expected, index)
         if supplied.get("after_fingerprint") != actual["after_fingerprint"]:
             raise SudokuError(f"replay failed at step {index}: after fingerprint mismatch")

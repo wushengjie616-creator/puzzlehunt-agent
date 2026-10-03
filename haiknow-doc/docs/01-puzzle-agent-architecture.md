@@ -12,25 +12,48 @@
 
 `PuzzleInput`、DeepSeek provider 和确定性工具不依赖 LangGraph。simple mode 不会因为 complex mode 增加基础依赖。
 
-Web 默认仅监听 `127.0.0.1`。写请求同时受随机 capability token、Host、Origin、Content-Type 门保护，不提供
+Web 默认仅监听 `127.0.0.1`。站点把题目入口、`/paper-puzzles` 纸笔栏目和 `/cipher-tools` 密码工具拆成
+三个可直接访问的页面。写请求同时受随机 capability token、Host、Origin、Content-Type 门保护，不提供
 账号系统，也不把 API Key、原图或 base64 放入浏览器响应和事件。原图只在内存中经过解码、像素限制与
 重编码，规范化线程结束后释放。
+
+`/api/bootstrap` 只返回 DeepSeek 是否已配置、视觉/Agent 模型名和非敏感提示，不返回 Key。未配置时首页
+在提交前禁用规范化并提示创建 `.env.local`；“已配置”仅表示 Key 存在，不代表网络、余额或凭据已通过
+付费探测。当前默认视觉模型为 `deepseek-flash`，使用官方 OpenAI-compatible Chat Completions 的
+`image_url` data URL 输入。
 
 ## 2. Web 规范化与纸笔组件
 
 ```text
 text / image / mixed
   → upload safety gate
-  → DeepSeek NORMALIZE_INPUT (deepseek-flash content parts)
-  → schema + puzzle validation
+  → DeepSeek NORMALIZE_INPUT (deepseek-flash content parts + optional preferred_kind)
+  → schema + editable puzzle structure validation
   → editable user confirmation
+  → strict puzzle validation
   → signed source/envelope/canonical receipt
-  → Sudoku gateway / existing complex SessionManager
+  → Sudoku / Nonogram gateway / existing complex SessionManager
 ```
 
+首页支持点击选择和拖拽图片，但两条路径共用同一套 MIME、magic、大小、像素与重编码安全门。题型可选
+auto/general/sudoku/nonogram；纸笔子页通过 allowlist query 预选，服务端再次校验。显式题型进入 normalizer
+prompt，输出 kind 不一致即失败关闭，不能静默落到通用 Agent。
+
+确认阶段按题型渲染编辑器，而不向玩家暴露 canonical JSON：Sudoku 使用可编辑 N×N 网格并依据
+`box_rows/box_cols`（标准 9×9 默认 3×3）绘制粗分宫线，Nonogram 使用行列线索表，general 使用文本框。
+Sudoku 编辑器实时检测行、列、宫内的重复数字并标红冲突格。编辑器只负责提示和收集输入，最终 canonical
+仍由服务端严格 validator 校验并绑定确认回执。
+
+普通 9×9 数独的视觉 prompt 明确忽略截图 UI，只抄录盘内印刷数字，不求解，并要求整数 1..9 / `null`
+矩阵。模型若只在 JSON 表示层产生无歧义噪声（数字字符串，或以 `0`、`.`、空字符串表示空格，或给出
+字符串 symbols），normalizer 在验证前收敛为标准 1..9 矩阵并追加 warning；无法证明属于标准数独的字符和
+错误尺寸在识别阶段拒绝。重复 clue 或候选矛盾不由程序猜测修补，而是携带 warning 进入可视化确认；未被
+玩家修正时，确认端的严格 Sudoku validator 拒绝签发回执。
+
 普通数独组件维护 N×N grid 与逐格 candidates，按固定顺序循环裸单、行隐单、列隐单和宫隐单。每次赋值
-包含 technique、target、value、premises 及前后 state fingerprint；replay verifier 从 givens 重新生成同一
-确定性步骤。固定点未解完即 `STALLED`，自由模型建议只能标记为 `UNVERIFIED_ADVISORY`，不能修改盘面。
+包含 technique、target、value、premises、中文观察说明及前后 state fingerprint；replay verifier 从 givens
+重新生成同一确定性步骤。`solve_mode=next_step` 最多赋一个数并返回 `STEP_LIMIT`，不触发停滞建议；完整模式
+固定点未解完才是 `STALLED`，自由模型建议只能标记为 `UNVERIFIED_ADVISORY`，不能修改盘面。
 
 扫雷采用与数独不同的产品边界：它是本地互动游戏，不经过 DeepSeek normalization，也不自动求解。服务端
 保存权威雷位，首次 reveal 后才布雷；浏览器只取得 covered/flagged/revealed 状态，终局才显示雷。引擎支持
@@ -49,13 +72,14 @@ cell assignment 都会被裁掉。
 
 ```text
 PuzzleInput
-  → CipherWorkbench
+  → cipher keyword reference index + CipherWorkbench
   → build_messages
   → OfflineProvider / DeepSeekProvider（一次）
   → SolveResult
 ```
 
-simple mode 仍遵守：输入无效零调用；有效输入一次调用；API/JSON/schema 错误不自动重试。
+simple mode 仍遵守：输入无效零调用；有效输入一次调用；API/JSON/schema 错误不自动重试。关键词索引只把
+匹配资料的名称、规则和注意事项放进 prompt，不注入完整表格，也不把命中本身当成密码成立的证据。
 
 ## 4. Complex StateGraph
 
@@ -82,6 +106,12 @@ INTAKE
 
 八类 LLM node 都调用同一个 `DeepSeekProvider.complete()`，每次是 stateless single-turn Chat Completions 请求。本地 state 被裁剪成当前节点所需 JSON 后注入下一次请求，不依赖 DeepSeek 服务端会话。正常路径八次调用；一次 evidence-driven replan 或一次 pre-plan semantic refinement 使用十次，二者不会在同一运行中叠加。
 
+Web 的通用 Agent 运行支持玩家协作终止。页面先调用受 capability/Host/Origin/JSON 门保护的 stop API，再用
+`AbortController` 立即结束浏览器等待；`SessionManager` 把停止请求原子写入 session 的 `stop.json`，并由
+provider wrapper 在当前调用前后检查。若请求发生在一次非流式 DeepSeek 调用中，不能安全强杀该线程或撤回
+远端请求，但返回后会立刻停止，不进入下一节点，最终状态为 `CANCELLED`。SQLite 保留最后一个完整节点，
+事件流分别记录 `session_stop_requested` 与 `session_cancelled`。
+
 ### 强制阶段纪律
 
 - 观察轮只能写事实、异常和有触发词的风味联想，不提交答案。
@@ -102,7 +132,7 @@ INTAKE
 
 框架中立 state 是 JSON 兼容映射，主要分区为：
 
-- immutable `puzzle`、`artifacts`、`required_artifacts`
+- immutable `puzzle`、`artifacts`、`required_artifacts`，以及从题面关键词确定性生成的 `cipher_reference_hints`
 - `observations`、`flavor_associations`、`structure_model`、`subproblems`、`subproblem_results`、`validated_subproblem_results` 与 `subproblem_validation`
 - `hypotheses`、`plan`、`attempts`、`evidence`
 - `intermediate_answers`、`validated_intermediate_answers`、`intermediate_validation`、`extractions`、`answer_candidates`
@@ -136,11 +166,21 @@ INTAKE
 
 ## 7. 工具层
 
-`CipherWorkbench` 负责高召回密码候选；`ToolRegistry` 负责模型可计划调用的确定性工具：
+`CipherWorkbench` 负责高召回密码候选，并包含现代 26 字母 Bacon 与十进制 ASCII 的确定性识别；
+`cipher_reference.py` 是 Web 古典密码资料与转换的单一服务端入口，提供培根、猪圈、凯撒、栅栏、ASCII
+资料搜索以及 Caesar 全移位、Bacon、A1Z26、ASCII、盲文点位和 2/3/10 进制有界转换。资料页面使用
+10/5 列响应式紧凑格；猪圈同时提供 GPT 生成的黑白结构图和确定性位置/点位数据，盲文以六点图覆盖
+A–Z/0–9，旗语以接收者视角的双臂八方向数据绘制 A–Z。生成图不参与解码逻辑，猪圈也不会从不稳定
+Unicode 图形猜字母。`ToolRegistry` 负责模型可计划调用的确定性工具：
+
+同一模块也负责 Agent 路由：题面明确出现凯撒/ROT、培根、猪圈、栅栏、ASCII、盲文、旗语或 A1Z26
+关键词时，simple prompt 与 complex state 自动获得不含大表的紧凑 hint；复杂 Agent 需要映射时再调用
+`cipher_reference_lookup(query)` 取得至多四项完整资料。无关文本得到空 hint，空/超长/无匹配查询失败关闭。
 
 | 工具 | 契约 |
 |---|---|
 | `cipher_workbench` | 有限候选、字符预算、已知 key 才运行 Vigenère |
+| `cipher_reference_lookup` | 明确密码关键词查询；返回同一资料库中的规则、注意事项和有界对照表 |
 | `extract_nth` | 1-based 逐行索引，越界失败 |
 | `anagram_delta` | multiset subset 校验，保留源顺序 |
 | `read_grid_path` | 矩形网格、坐标边界、四邻接校验 |
@@ -182,6 +222,8 @@ INTAKE
 | `cycle_scheduler.py` | T+3h…T+24h 可恢复调度、冻结/发布门与 perfect-score hard gate |
 | `hard_runner.py` | 49 道非-meta官方题的一次性临时转换、限并发执行、脱敏报告与缓存清理 |
 | `providers/deepseek.py` | DeepSeek 官方 Chat Completions 适配器 |
+| `cipher_reference.py` | 古典密码参考库、搜索和 Web 有界转换 |
+| `web/app.py` | 本地安全门、DeepSeek 配置状态、题目/纸笔/密码页面与 API |
 | `cli.py` | simple、session、benchmark 与 automation CLI |
 
 ### Git 自动发布边界

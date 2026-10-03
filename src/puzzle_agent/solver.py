@@ -3,6 +3,7 @@ import json
 from typing import Protocol
 
 from .cipher_workbench import CipherWorkbench
+from .cipher_reference import index_cipher_references
 from .domain import PuzzleInput, SolveResult
 from .prompt import build_messages
 
@@ -19,7 +20,11 @@ class PuzzleSolver:
     def solve(self, puzzle: PuzzleInput, keys: tuple[str, ...] = ()) -> SolveResult:
         puzzle.validate()
         candidates = self.workbench.analyze(puzzle, keys)
-        raw_response = self.provider.complete(build_messages(puzzle, candidates))
+        reference_text = "\n".join(filter(None, (
+            puzzle.title, puzzle.flavor_text, puzzle.content, puzzle.notes or "",
+        )))
+        references = index_cipher_references(reference_text)
+        raw_response = self.provider.complete(build_messages(puzzle, candidates, references))
         try:
             data = json.loads(raw_response)
         except (json.JSONDecodeError, TypeError) as error:

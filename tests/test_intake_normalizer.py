@@ -80,6 +80,113 @@ class IntakeNormalizerTests(unittest.TestCase):
                 "canonical": {"row_clues": [[0]], "column_clues": [[1]]},
             })
 
+    def test_preferred_kind_is_prompted_and_must_match_model_output(self):
+        provider = FakeProvider({
+            "kind": "sudoku",
+            "title": "数独",
+            "confidence": 1.0,
+            "warnings": [],
+            "canonical": {"size": 9, "grid": [[None] * 9 for _ in range(9)]},
+        })
+        result = DeepSeekNormalizer(provider).normalize(text="识别题面", preferred_kind="sudoku")
+        self.assertEqual(result["envelope"]["kind"], "sudoku")
+        prompt_text = json.dumps(provider.calls[0], ensure_ascii=False)
+        self.assertIn("玩家明确选择", prompt_text)
+        self.assertIn("sudoku", prompt_text)
+
+        mismatch = FakeProvider({
+            "kind": "general",
+            "title": "错误分类",
+            "confidence": 1.0,
+            "warnings": [],
+            "canonical": {"text": "not sudoku"},
+        })
+        with self.assertRaisesRegex(NormalizationError, "selected.*sudoku"):
+            DeepSeekNormalizer(mismatch).normalize(text="识别题面", preferred_kind="sudoku")
+
+        with self.assertRaisesRegex(NormalizationError, "preferred_kind"):
+            DeepSeekNormalizer(provider).normalize(text="识别题面", preferred_kind="kakuro")
+
+    def test_standard_sudoku_repairs_unambiguous_vision_json_noise(self):
+        expected_grid = [
+            [None, None, 4, 3, None, 6, 7, None, None],
+            [9, 5, None, None, None, None, None, 4, 6],
+            [None, None, None, 9, None, 5, None, None, None],
+            [1, 3, None, 6, None, 9, None, 7, 8],
+            [None] * 9,
+            [6, 4, None, 8, None, 3, None, 9, 1],
+            [None, None, None, 2, None, 7, None, None, None],
+            [2, 6, None, None, None, None, None, 1, 7],
+            [None, None, 3, 5, None, 1, 8, None, None],
+        ]
+        noisy_grid = [
+            ["0" if value is None else str(value) for value in row]
+            for row in expected_grid
+        ]
+        noisy_grid[0][0] = 0
+        provider = FakeProvider({
+            "kind": "sudoku",
+            "title": "截图数独",
+            "confidence": 0.91,
+            "warnings": [],
+            "canonical": {
+                "size": 9,
+                "symbols": ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+                "grid": noisy_grid,
+            },
+        })
+
+        result = DeepSeekNormalizer(provider).normalize(
+            image=png_bytes(), image_mime="image/png", preferred_kind="sudoku",
+        )
+
+        envelope = result["envelope"]
+        self.assertEqual(envelope["canonical"]["symbols"], list(range(1, 10)))
+        self.assertEqual(envelope["canonical"]["grid"], expected_grid)
+        self.assertTrue(any("格式" in warning for warning in envelope["warnings"]))
+        prompt_text = json.dumps(provider.calls[0], ensure_ascii=False)
+        self.assertIn("ordinary 9×9", prompt_text)
+        self.assertIn("ignore dates, timers, titles, number pads", prompt_text)
+
+    def test_sudoku_repair_does_not_hide_an_ambiguous_or_conflicting_grid(self):
+        bad_grid = [[None] * 9 for _ in range(9)]
+        bad_grid[0][0] = "X"
+        provider = FakeProvider({
+            "kind": "sudoku",
+            "title": "坏转写",
+            "confidence": 0.5,
+            "warnings": [],
+            "canonical": {
+                "size": 9,
+                "symbols": ["1"] * 9,
+                "grid": bad_grid,
+            },
+        })
+
+        with self.assertRaisesRegex(NormalizationError, "symbols|grid"):
+            DeepSeekNormalizer(provider).normalize(text="数独", preferred_kind="sudoku")
+
+    def test_ocr_duplicate_reaches_confirmation_with_warning_but_strict_validation_rejects_it(self):
+        grid = [[None] * 9 for _ in range(9)]
+        grid[0][5] = 3
+        grid[1][5] = 3
+        envelope = {
+            "kind": "sudoku",
+            "title": "待人工修正的数独",
+            "confidence": 0.7,
+            "warnings": [],
+            "canonical": {"size": 9, "grid": grid},
+        }
+
+        normalized = DeepSeekNormalizer(FakeProvider(envelope)).normalize(
+            text="识别截图", preferred_kind="sudoku",
+        )
+
+        self.assertEqual(normalized["envelope"]["canonical"]["grid"], grid)
+        self.assertTrue(any("冲突" in warning for warning in normalized["envelope"]["warnings"]))
+        with self.assertRaisesRegex(NormalizationError, "duplicate value in column 6"):
+            DeepSeekNormalizer._validate_envelope(normalized["envelope"])
+
     def test_upload_checks_declared_type_magic_and_pixel_limit(self):
         normalized = validate_image_upload(png_bytes(), "image/png", filename="grid.png")
         self.assertEqual(normalized.mime, "image/png")

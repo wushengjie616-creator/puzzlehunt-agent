@@ -4,6 +4,7 @@ from dataclasses import asdict
 from typing import Any
 
 from .domain import PuzzleInput
+from .cipher_reference import index_cipher_references
 
 
 def new_puzzle_state(
@@ -16,8 +17,12 @@ def new_puzzle_state(
     puzzle.validate()
     if max_calls < 1:
         raise ValueError("max_calls must be at least 1")
+    reference_text = "\n".join(filter(None, (
+        puzzle.title, puzzle.flavor_text, puzzle.content, puzzle.notes or "",
+    )))
     return {
         "puzzle": asdict(puzzle),
+        "cipher_reference_hints": index_cipher_references(reference_text),
         "artifacts": dict(artifacts or {}),
         "required_artifacts": list(required_artifacts),
         "missing_artifacts": [],

@@ -79,6 +79,37 @@ def decode_a1z26(text: str) -> str | None:
     return "".join(chr(ord("A") + number - 1) for number in numbers)
 
 
+def decode_bacon(text: str) -> str | None:
+    words = re.split(r"\s*/\s*", text.strip().lower())
+    decoded: list[str] = []
+    for word in words:
+        compact = re.sub(r"\s+", "", word)
+        if not compact or set(compact) - {"a", "b"} or len(compact) % 5:
+            return None
+        letters: list[str] = []
+        for index in range(0, len(compact), 5):
+            value = int(compact[index:index + 5].replace("a", "0").replace("b", "1"), 2)
+            if value >= 26:
+                return None
+            letters.append(chr(ord("A") + value))
+        decoded.append("".join(letters))
+    return " ".join(decoded)
+
+
+def decode_ascii_decimal(text: str) -> str | None:
+    if re.search(r"(^|[\s,;|/])-\d", text):
+        return None
+    if re.sub(r"[\d\s,;:/|.-]+", "", text):
+        return None
+    tokens = re.findall(r"\d+", text)
+    if not tokens:
+        return None
+    values = [int(token) for token in tokens]
+    if any(value < 0 or value > 127 for value in values):
+        return None
+    return "".join(chr(value) for value in values)
+
+
 def vigenere_decode(text: str, key: str) -> str:
     clean_key = "".join(char.upper() for char in key if char.isascii() and char.isalpha())
     if not clean_key:
@@ -184,6 +215,8 @@ class CipherWorkbench:
             add("binary", source, _binary_to_text(source))
             add("morse", source, decode_morse(source))
             add("a1z26", source, decode_a1z26(source))
+            add("bacon", source, decode_bacon(source))
+            add("ascii_decimal", source, decode_ascii_decimal(source))
             for key in keys:
                 try:
                     add("vigenere", source, vigenere_decode(source, key), {"key": key})
