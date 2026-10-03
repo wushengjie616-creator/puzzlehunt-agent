@@ -32,15 +32,16 @@ text / image / mixed
   → editable user confirmation
   → strict puzzle validation
   → signed source/envelope/canonical receipt
-  → Sudoku / Nonogram gateway / existing complex SessionManager
+  → Sudoku / Nonogram / RulePuzzle gateway / existing complex SessionManager
 ```
 
 首页支持点击选择和拖拽图片，但两条路径共用同一套 MIME、magic、大小、像素与重编码安全门。题型可选
-auto/general/sudoku/nonogram；纸笔子页通过 allowlist query 预选，服务端再次校验。显式题型进入 normalizer
+auto/general/sudoku/nonogram/rule_puzzle；纸笔子页通过 allowlist query 预选，服务端再次校验。显式题型进入 normalizer
 prompt，输出 kind 不一致即失败关闭，不能静默落到通用 Agent。
 
 确认阶段按题型渲染编辑器，而不向玩家暴露 canonical JSON：Sudoku 使用可编辑 N×N 网格并依据
-`box_rows/box_cols`（标准 9×9 默认 3×3）绘制粗分宫线，Nonogram 使用行列线索表，general 使用文本框。
+`box_rows/box_cols`（标准 9×9 默认 3×3）绘制粗分宫线，Nonogram 使用行列线索表，rule_puzzle 使用规则、
+实体和线索编辑器，general 使用文本框。
 Sudoku 编辑器实时检测行、列、宫内的重复数字并标红冲突格。编辑器只负责提示和收集输入，最终 canonical
 仍由服务端严格 validator 校验并绑定确认回执。方向键使用纯函数计算相邻坐标并在边界 clamp，不环绕、
 不改值；Tab、数字和删除不被拦截。
@@ -68,6 +69,21 @@ Sudoku 编辑器实时检测行、列、宫内的重复数字并标红冲突格�
 整盘 DFS、回溯或猜格路径。每个 line step 保存线索、兼容模式数、共同结论、实际变更和前后 fingerprint；
 replay 从 canonical 重新生成同一步。停滞后的模型输出只保留 `UNVERIFIED_ADVISORY` 分析与技巧名，任何
 cell assignment 都会被裁掉。
+
+未知规则型纸笔题采用两段式可信边界。`NORMALIZE_INPUT` 只转写为 `RulePuzzleSource`，不设计解法；用户确认后，
+`METHOD_SYNTHESIS` 才从同一 source 生成受限 `DeductionProgram`。程序只能引用白名单约束
+`all_different / less_than / sum_equals / visibility` 和已注册传播策略，所有字段、引用、来源 coverage 与资源
+预算均严格校验。任何未知字段（包括代码文本）都不会获得执行语义。
+
+共享 rule-based engine 不按 Futoshiki、Kakuro 或 Skyscrapers 分支，而按约束类型做固定点传播。和值与可见数
+只在一条显式约束内部枚举支持 tuple/permutation，最多 100,000 个，不跨约束回溯。每步保存 constraint、
+rule/clue provenance、domain before/after、中文观察和 fingerprint；`replay_trace` 从 source 重算。全部实体单值且
+所有约束复核通过才是 `SOLVED`，单步模式为 `STEP_LIMIT`，固定点未解为 `STALLED`。方法合成 provider 缺失时
+Web 明确返回 503，不静默降级为通用 Agent。
+
+`examples/paper-puzzle-demos/` 是运营演示与回归夹具的共同入口。五个原创 case 都包含 PNG、规则、source、
+program、expected result 与 walkthrough；生成脚本只负责可重建 PNG。离线测试证明资产可解码、程序可执行和
+trace 可重放，不把 scripted fixture 误报成真实 DeepSeek 图片识别证据。
 
 ## 3. Simple 数据流
 
@@ -245,6 +261,8 @@ blocker；旧 session 缺少新字段时按空集合显示。
 | `providers/deepseek.py` | DeepSeek 官方 Chat Completions 适配器 |
 | `cipher_reference.py` | 古典密码参考库、搜索和 Web 有界转换 |
 | `reasoning_reference.py` | 中文文字、规范语料、模板与状态题的无答案信号路由卡 |
+| `paper_puzzle/components/rule_based/` | 受限规则程序合同、方法合成适配器、确定性传播与 replay |
+| `scripts/generate_paper_demo_images.py` | 生成原创纸笔演示题 PNG；JSON 与讲解仍是版本化 source |
 | `.agents/skills/puzzle-reasoning-sop/` | 跨 Agent surface 的证据优先 SOP；只引用 canonical runtime |
 | `web/app.py` | 本地安全门、DeepSeek 配置状态、题目/纸笔/密码页面与 API |
 | `cli.py` | simple、session、benchmark 与 automation CLI |
@@ -307,8 +325,8 @@ validator 递归拒绝 input 中的 `answer/solution/oracle` 字段，并检查�
 
 ## 10. 当前边界
 
-- DeepSeek API text-only；图片、音频、版式与交互必须先转写为 artifact。
-- 当前确定性 grid/CSP 能力是基础组件，不等于完整填字/数独/图像识别引擎。
+- complex graph 当前仍以文本/artifact 为主；本地 Web 的 NORMALIZE_INPUT 已支持单张 PNG/JPEG/WebP 视觉输入。
+- 当前确定性 grid/CSP 与 rule-based 白名单是基础组件，不等于任意纸笔题、完整填字或通用图像理解引擎。
 - 49 道 CCBC16 非 Meta 已完成表面分类：第一阶段冻结 10 道直接文本、14 道 source-hashed 人工转写，共 24 道可运行官方文本题；23 道无法仅用文本忠实表达。十页栅格 PDF #30 与三段音频 #36 理论上可在额外人工转写后加入，但用户已明确不作为第一阶段准入要求，当前不再列为未完成项。转写 final feeders 时仍必须带入人类在解锁该题时已经拥有的上游 Meta 答案、网格或操作符，不能只抄当前图片。
 - knowledge research subgraph 尚未接外部搜索 provider；没有可靠事实时保持 unknown。
 - offline provider 只验证系统流，不代表真实复杂解题能力。

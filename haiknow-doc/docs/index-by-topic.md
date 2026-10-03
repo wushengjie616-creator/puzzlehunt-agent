@@ -18,3 +18,5 @@
 - [T0004 · 八小时执行记录](../tasks/T0004-ccbc16-hourly-text-evaluation.md)
 - [P0015 · CCBC 研究精髓全面产品化](../plans/P0015-ccbc-reasoning-operationalization.md)
 - [T0014 · CCBC 研究精髓全面产品化执行记录](../tasks/T0014-ccbc-reasoning-operationalization.md)
+- [P0016 · 从题目规则归纳可执行纸笔推理方法](../plans/P0016-rule-derived-paper-puzzle-methods.md)
+- [T0015 · 从题目规则归纳可执行纸笔推理方法执行记录](../tasks/T0015-rule-derived-paper-puzzle-methods.md)
