@@ -51,21 +51,23 @@ acceptance_contract: v1
 
 ## 验收逐项处置
 
-| Plan ID | 状态 | 证据 | 下一步 |
-|---|---|---|---|
-| A01 | pass | P0014 A01–A08 已完成，commit `c41692e`；其 A09 付费模型证据仍按原 task 保持 unknown | 无 |
-| A02 | pass | `new_puzzle_state`、TypedDict、可见 state 与 evaluate persistence 测试覆盖全部新账本 | 无 |
-| A03 | pass | 五个新工具可由 ToolRegistry 调用，含正例、歧义、错误引用、缺来源及总 payload 上限测试 | 无 |
-| A04 | pass | `reasoning_reference.py` 提供五类无答案卡；simple/complex 路由与无答案断言通过 | 无 |
-| A05 | pass | artifact inventory、observe、tool dispatch、evaluate、verify 均消费新契约；三门 mutation probe 有效 | 无 |
-| A06 | pass | `.agents/skills/puzzle-reasoning-sop/` 可发现且 quick validator 通过 | 无 |
-| A07 | pass | Web trace 的 canonical state fixture 通过，旧字段为空时仍兼容；真实浏览器 surface 不可用已记录 | 可在下次浏览器可用时补人工 smoke，非完成阻塞 |
-| A08 | pass | 七类课程 manifest、四阶段计分、lucky-answer 和既有 leak validator 测试通过 | 无 |
-| A09 | pass | README、架构、学习日志与主题索引同步；明确 offline research/runtime answer-bank 边界 | 无 |
-| A10 | pass | 213 项全量、JS syntax、Skill validator、mutation probe、diff check 全绿；未做项明确列出 | 无 |
+| ID | 结果 | 证据引用 | 适用身份 | 承接或授权 |
+|---|---|---|---|---|
+| A01 | pass | P0014 A01–A08 已完成，commit `c41692e`；其 A09 付费模型证据仍按原 task 保持 unknown | P0015 本地前置依赖 | 不适用 |
+| A02 | pass | `new_puzzle_state`、TypedDict、可见 state 与 evaluate persistence 测试覆盖全部新账本 | complex runtime 与旧 checkpoint consumer | 不适用 |
+| A03 | pass | 五个新工具可由 ToolRegistry 调用，含正例、歧义、错误引用、缺来源及总 payload 上限测试 | 本地确定性 ToolRegistry | 不适用 |
+| A04 | pass | `reasoning_reference.py` 提供五类无答案卡；simple/complex 路由与无答案断言通过 | simple/complex 本地入口 | 不适用 |
+| A05 | pass | artifact inventory、observe、tool dispatch、evaluate、verify 均消费新契约；三门 mutation probe 有效 | complex graph 终局门 | 不适用 |
+| A06 | pass | `.agents/skills/puzzle-reasoning-sop/` 可发现且 quick validator 通过 | Codex 项目 Skill surface | 不适用 |
+| A07 | pass | Web trace 的 canonical state fixture 通过，旧字段为空时仍兼容；真实浏览器 surface 不可用已记录 | Web API 与 Node 状态投影 | 浏览器恢复后可选补人工 smoke |
+| A08 | pass | 七类课程 manifest、四阶段计分、lucky-answer 和既有 leak validator 测试通过 | 离线 benchmark evaluator | 不适用 |
+| A09 | pass | README、架构、学习日志与主题索引同步；明确 offline research/runtime answer-bank 边界 | 当前仓库文档消费者 | 不适用 |
+| A10 | pass | 213 项全量、JS syntax、Skill validator、mutation probe、diff check 全绿；未做项明确列出 | macOS 本地 Python/Node 测试环境 | 不适用 |
 
 ## 范围结论
 
+- task_scope: complete
+- overall_goal: complete
 - P0015 的本地实现、测试、文档与 commit 已完成。真实付费模型盲测和浏览器人工 smoke 未执行，未被计作本地实现的完成证据。
 
 ## 后续 todo
