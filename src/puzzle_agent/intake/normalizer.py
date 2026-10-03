@@ -7,6 +7,7 @@ from typing import Any
 
 from puzzle_agent.paper_puzzle.components.sudoku import build_state, validate_spec
 from puzzle_agent.paper_puzzle.components.nonogram import build_state as build_nonogram_state
+from puzzle_agent.paper_puzzle.components.rule_based import RulePuzzleError, validate_source
 
 from .contracts import canonical_hash
 
@@ -16,10 +17,11 @@ class NormalizationError(ValueError):
 
 
 _SYSTEM_PROMPT = """You are the mandatory NORMALIZE_INPUT stage for a puzzle agent.
-Return one JSON object only. Classify kind as sudoku, nonogram, or general. Preserve all supplied clues.
+Return one JSON object only. Classify kind as sudoku, nonogram, rule_puzzle, or general. Preserve all supplied clues.
 For sudoku, canonical must contain size, grid using null for blanks, and optional symbols/regions/box shape.
 For an ordinary 9×9 Sudoku image, omit symbols (the default is integer 1 through 9), return exactly 9 rows of 9 cells, use JSON integers 1..9 for printed clues and null for blanks. Never use strings, 0, empty strings, or dots for cells. Read only the large printed digits inside the board: ignore dates, timers, titles, number pads, pencil buttons, and other interface controls. Do not fill inferred answers. Recheck every row and column against the image before returning.
 For a black-and-white nonogram, canonical must contain row_clues and column_clues as arrays of positive-integer arrays; use [] for an empty line. It may contain a grid using null for unknown, 1 for filled, and 0 for empty.
+For rule_puzzle, extract the supplied rules and board without solving. canonical must contain: rules [{id,text}], unique integer symbols, entities [{id,label,value,row?,column?}], clues [{id,text,entity_ids}], and optional display {type:"grid",rows,columns}. Use null for unknown entity values. Every clue must name the entities it affects. Do not design the solving method; method synthesis is a separate stage.
 For general puzzles, canonical must contain text and may contain title/artifact_notes.
 Always include title, confidence (0..1), warnings (array), kind, and canonical.
 Never solve the puzzle in this stage."""
@@ -102,8 +104,10 @@ class DeepSeekNormalizer:
         image_mime: str | None = None,
         preferred_kind: str | None = None,
     ) -> dict[str, Any]:
-        if preferred_kind not in {None, "sudoku", "nonogram", "general"}:
-            raise NormalizationError("preferred_kind must be sudoku, nonogram, general, or null")
+        if preferred_kind not in {None, "sudoku", "nonogram", "rule_puzzle", "general"}:
+            raise NormalizationError(
+                "preferred_kind must be sudoku, nonogram, rule_puzzle, general, or null"
+            )
         text = text.strip()
         if not text and image is None:
             raise NormalizationError("text or image is required")
@@ -168,8 +172,12 @@ class DeepSeekNormalizer:
     def _validate_envelope(
         envelope: Any, *, allow_sudoku_conflicts: bool = False,
     ) -> None:
-        if not isinstance(envelope, dict) or envelope.get("kind") not in {"sudoku", "nonogram", "general"}:
-            raise NormalizationError("normalized kind must be sudoku, nonogram, or general")
+        if not isinstance(envelope, dict) or envelope.get("kind") not in {
+            "sudoku", "nonogram", "rule_puzzle", "general",
+        }:
+            raise NormalizationError(
+                "normalized kind must be sudoku, nonogram, rule_puzzle, or general"
+            )
         canonical = envelope.get("canonical")
         if not isinstance(canonical, dict):
             raise NormalizationError("normalized canonical input must be an object")
@@ -196,5 +204,10 @@ class DeepSeekNormalizer:
                 build_nonogram_state(canonical)
             except ValueError as exc:
                 raise NormalizationError(f"invalid normalized Nonogram: {exc}") from exc
+        elif envelope["kind"] == "rule_puzzle":
+            try:
+                validate_source(canonical)
+            except RulePuzzleError as exc:
+                raise NormalizationError(f"invalid normalized Rule puzzle: {exc}") from exc
         elif not isinstance(canonical.get("text"), str) or not canonical["text"].strip():
             raise NormalizationError("general canonical input requires non-empty text")

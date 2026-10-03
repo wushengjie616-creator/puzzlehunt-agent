@@ -80,6 +80,37 @@ class IntakeNormalizerTests(unittest.TestCase):
                 "canonical": {"row_clues": [[0]], "column_clues": [[1]]},
             })
 
+    def test_rule_puzzle_preserves_rules_entities_and_clues_for_method_synthesis(self):
+        canonical = {
+            "rules": [{"id": "r1", "text": "A 与 B 是 1、2，且 A 小于 B。"}],
+            "symbols": [1, 2],
+            "entities": [
+                {"id": "A", "label": "A", "row": 0, "column": 0, "value": None},
+                {"id": "B", "label": "B", "row": 0, "column": 1, "value": None},
+            ],
+            "clues": [{"id": "c1", "text": "A < B", "entity_ids": ["A", "B"]}],
+            "display": {"type": "grid", "rows": 1, "columns": 2},
+        }
+        provider = FakeProvider({
+            "kind": "rule_puzzle", "title": "规则题", "confidence": 0.9,
+            "warnings": [], "canonical": canonical,
+        })
+        result = DeepSeekNormalizer(provider).normalize(
+            text="规则和题面", preferred_kind="rule_puzzle",
+        )
+        self.assertEqual(result["envelope"]["canonical"], canonical)
+        prompt = provider.calls[0][0]["content"]
+        self.assertIn("rule_puzzle", prompt)
+        self.assertIn("Do not design the solving method", prompt)
+
+        invalid = dict(canonical)
+        invalid["entities"] = [{"id": "A", "label": "A", "value": 3}]
+        with self.assertRaisesRegex(NormalizationError, "Rule puzzle"):
+            DeepSeekNormalizer._validate_envelope({
+                "kind": "rule_puzzle", "title": "bad", "confidence": 1,
+                "warnings": [], "canonical": invalid,
+            })
+
     def test_preferred_kind_is_prompted_and_must_match_model_output(self):
         provider = FakeProvider({
             "kind": "sudoku",

@@ -14,11 +14,12 @@
   </header>
   <main>
     <section class="paper-section">
-      <div class="section-title"><span>01</span><div><h2>解题组件</h2><p>数独和数织从题目入口经过 DeepSeek 整理；扫雷完全在本地游玩。</p></div></div>
+      <div class="section-title"><span>01</span><div><h2>解题组件</h2><p>数独、数织和规则题从统一入口经过 DeepSeek 整理；扫雷完全在本地游玩。</p></div></div>
       <div class="cards">
         <article class="puzzle-card enabled"><div class="badge">可用</div><h3>普通数独</h3><p>可选择只提示下一步或使用基础技巧完整做完；每一步说明如何观察。</p><a class="button-link" href="/?kind=sudoku">提交数独</a></article>
         <article class="puzzle-card enabled"><div class="badge">可用</div><h3>数织</h3><p>逐行逐列求合法排列交集；进入后会自动预选数织组件。</p><a class="button-link" href="/?kind=nonogram">提交数织</a></article>
         <article class="puzzle-card enabled"><div class="badge">可玩</div><h3>扫雷</h3><p>首次点击安全；提示只给能由当前公开数字证明的结论。</p><button id="open-minesweeper">开始扫雷</button></article>
+        <article class="puzzle-card enabled"><div class="badge">可用</div><h3>按规则推理</h3><p>适合不在内置列表中的规则型纸笔题；先自研受限方法，再用确定性脚本执行并留痕。</p><a class="button-link" href="/?kind=rule_puzzle">提交题目与规则</a></article>
         <article class="puzzle-card"><div class="badge">路线图</div><h3>数和</h3><p>交叉和约束与候选组合传播。</p></article>
       </div>
     </section>

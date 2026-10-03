@@ -112,6 +112,8 @@ class WebApiTests(unittest.TestCase):
         self.assertIn('dropZone.addEventListener(eventName,event=>', script)
         self.assertIn("function renderCanonicalEditor", script)
         self.assertIn("function collectCanonical", script)
+        self.assertIn('value="rule_puzzle"', response.text)
+        self.assertIn("renderRulePuzzle", script)
         self.assertIn("function updateSudokuConflicts", script)
         self.assertIn('classList.add("conflict")', script)
         self.assertIn("盘面仍有重复数字", script)
@@ -230,6 +232,93 @@ class WebApiTests(unittest.TestCase):
             "text": "x", "preferred_kind": "kakuro",
         })
         self.assertEqual(invalid.status_code, 400)
+
+    def test_rule_puzzle_completes_normalize_confirm_synthesize_and_solve_journey(self):
+        source = {
+            "rules": [{"id": "r1", "text": "A 与 B 使用 1、2，且 A 小于 B。"}],
+            "symbols": [1, 2],
+            "entities": [
+                {"id": "A", "label": "A", "value": None},
+                {"id": "B", "label": "B", "value": None},
+            ],
+            "clues": [{"id": "c1", "text": "A < B", "entity_ids": ["A", "B"]}],
+        }
+        program = {
+            "method_summary": "按严格小于关系保留有支持的候选。",
+            "strategy_order": ["less_than_support"],
+            "constraints": [{
+                "id": "lt", "type": "less_than", "variables": ["A", "B"],
+                "source_rule_ids": ["r1"], "source_clue_ids": ["c1"],
+            }],
+            "coverage": {"rule_ids": ["r1"], "clue_ids": ["c1"]},
+        }
+
+        class RuleNormalizer:
+            def normalize(self, **_kwargs):
+                return {
+                    "source_hash": "rule-source", "envelope_hash": "rule-envelope",
+                    "envelope": {"kind": "rule_puzzle", "title": "大小关系",
+                                 "confidence": 1.0, "warnings": [], "canonical": source},
+                }
+
+        class MethodProvider:
+            def complete(self, _messages):
+                return json.dumps(program, ensure_ascii=False)
+
+        client = TestClient(create_app(
+            normalizer=RuleNormalizer(), agent_provider=MethodProvider(),
+            receipt_secret=b"m" * 32, capability_token="rule-capability",
+        ))
+        headers = dict(self.headers, **{"X-Puzzle-Capability": "rule-capability"})
+        started = client.post("/api/intakes", headers=headers, json={
+            "text": "规则与题面", "preferred_kind": "rule_puzzle",
+        })
+        self.assertEqual(started.status_code, 202)
+        for _ in range(100):
+            intake = client.get(f"/api/intakes/{started.json()['intake_id']}").json()
+            if intake["status"] == "READY_FOR_CONFIRMATION":
+                break
+            time.sleep(0.01)
+        confirmed = client.post(
+            f"/api/intakes/{intake['intake_id']}/confirm", headers=headers,
+            json={"canonical": source},
+        )
+        self.assertEqual(confirmed.status_code, 200)
+        session = client.post("/api/sessions", headers=headers, json={
+            "intake_id": intake["intake_id"], "canonical": source,
+            "receipt": confirmed.json()["receipt"], "solve_mode": "full",
+        })
+        self.assertEqual(session.status_code, 201)
+        result = session.json()["result"]
+        self.assertEqual(result["values"], {"A": 1, "B": 2})
+        self.assertEqual(result["method_program"], program)
+        self.assertFalse(result["search_used"])
+
+        unavailable = TestClient(create_app(
+            normalizer=RuleNormalizer(), receipt_secret=b"u" * 32,
+            capability_token="unavailable-capability", env={},
+        ))
+        unavailable_headers = dict(
+            self.headers, **{"X-Puzzle-Capability": "unavailable-capability"},
+        )
+        started = unavailable.post("/api/intakes", headers=unavailable_headers, json={
+            "text": "规则与题面", "preferred_kind": "rule_puzzle",
+        })
+        for _ in range(100):
+            intake = unavailable.get(f"/api/intakes/{started.json()['intake_id']}").json()
+            if intake["status"] == "READY_FOR_CONFIRMATION":
+                break
+            time.sleep(0.01)
+        confirmed = unavailable.post(
+            f"/api/intakes/{intake['intake_id']}/confirm", headers=unavailable_headers,
+            json={"canonical": source},
+        ).json()
+        response = unavailable.post("/api/sessions", headers=unavailable_headers, json={
+            "intake_id": intake["intake_id"], "canonical": source,
+            "receipt": confirmed["receipt"],
+        })
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("provider", response.json()["detail"])
 
     def test_confirmation_rejects_an_unfixed_ocr_sudoku_conflict(self):
         class DuplicateNormalizer(FakeNormalizer):

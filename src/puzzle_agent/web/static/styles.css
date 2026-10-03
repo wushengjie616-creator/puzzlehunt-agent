@@ -36,6 +36,7 @@ button:disabled{cursor:not-allowed;opacity:.45}
 .sudoku-confirm-grid{display:grid;width:min(620px,100%);margin:18px auto;border:4px solid var(--ink);background:var(--ink);gap:1px}.sudoku-confirm-cell{min-width:0;aspect-ratio:1;border:0;border-radius:0;background:#fffdf7;text-align:center;font:800 clamp(18px,3.5vw,28px) Georgia,serif;padding:0}.sudoku-confirm-cell.filled{background:#edf4f0}.sudoku-confirm-cell:focus{position:relative;z-index:2;outline:3px solid var(--accent);outline-offset:-3px}.sudoku-confirm-cell.box-right{border-right:4px solid var(--ink)}.sudoku-confirm-cell.box-bottom{border-bottom:4px solid var(--ink)}
 .sudoku-confirm-cell.conflict{position:relative;z-index:1;background:#f8d7cf;color:#8f2d19;box-shadow:inset 0 0 0 3px var(--accent)}.conflict-note{padding:9px 12px;border-radius:8px;background:#f8e4dc;color:#9d351d;font-weight:800}
 .clue-editors{display:grid;grid-template-columns:1fr 1fr;gap:18px}.clue-editor{border:1px solid var(--line);border-radius:12px;padding:16px}.clue-editor h3{margin:0 0 10px;font:700 20px Georgia,serif}.clue-row{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:10px;margin:8px 0}.clue-row input{min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font:15px ui-monospace,monospace}.general-confirm-text{min-height:220px}
+.rule-editor-section{margin:16px 0;padding:16px;border:1px solid var(--line);border-radius:12px}.rule-editor-section h3{margin:0 0 12px;font:700 20px Georgia,serif}.rule-editor-section textarea{margin-bottom:10px}.rule-entity-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}.rule-entity-grid label{display:grid;gap:5px}.rule-entity-grid input,.rule-clue-row input{min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font:15px ui-monospace,monospace}.rule-clue-row{display:grid;grid-template-columns:70px 2fr 1fr;gap:10px;align-items:center;margin:8px 0}
 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .puzzle-card{position:relative;border:1px solid var(--line);border-radius:15px;padding:22px;opacity:.65}
 .puzzle-card.enabled{border-color:var(--green);opacity:1}
@@ -82,7 +83,7 @@ footer{text-align:center;color:var(--muted);padding:24px}
 .panel,.paper-section{border-radius:14px}
 .file-row{align-items:start;flex-direction:column}
 .route-controls{grid-template-columns:1fr}.mode-options{flex-direction:column;gap:8px}
-.clue-editors{grid-template-columns:1fr}.sudoku-confirm-grid{width:100%}
+ .clue-editors{grid-template-columns:1fr}.sudoku-confirm-grid{width:100%}.rule-clue-row{grid-template-columns:1fr}
 .mine-stats{gap:12px}
 .mine-cell{width:32px;height:32px}
 .site-nav{overflow:auto}.cipher-grid,.braille-grid{grid-template-columns:repeat(5,minmax(0,1fr))}.semaphore-grid{grid-template-columns:repeat(2,minmax(120px,1fr))}

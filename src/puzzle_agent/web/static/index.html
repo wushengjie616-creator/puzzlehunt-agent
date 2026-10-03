@@ -23,6 +23,7 @@
           <option value="general">普通谜题</option>
           <option value="sudoku">普通数独</option>
           <option value="nonogram">数织</option>
+          <option value="rule_puzzle">按规则推理</option>
         </select>
         <p id="entry-context" class="route-note">自动识别会让 DeepSeek 判断题型。</p>
       </div>
@@ -30,6 +31,11 @@
         <legend>数独推理方式</legend>
         <label><input type="radio" name="sudoku-mode" value="next_step" checked> 只提示下一步</label>
         <label><input type="radio" name="sudoku-mode" value="full"> 使用基础技巧完整做完</label>
+      </fieldset>
+      <fieldset id="rule-puzzle-options" class="mode-options hidden">
+        <legend>规则题推理方式</legend>
+        <label><input type="radio" name="rule-puzzle-mode" value="next_step" checked> 只演示下一步</label>
+        <label><input type="radio" name="rule-puzzle-mode" value="full"> 执行完整确定性推理</label>
       </fieldset>
       <label for="puzzle-text">题目文字</label>
       <textarea id="puzzle-text" rows="7" placeholder="粘贴题面、规则、提示……"></textarea>
@@ -83,6 +89,7 @@
         <article class="puzzle-card enabled"><div class="badge">可用</div><h3>普通数独</h3><p>裸单、行/列/宫隐单；停滞时明确交还给 Agent。</p></article>
         <article class="puzzle-card enabled"><div class="badge">可玩</div><h3>扫雷</h3><p>本地互动游戏；首次点击安全，提示只给确定性结论。</p><button id="open-minesweeper">打开扫雷</button></article>
         <article class="puzzle-card enabled"><div class="badge">可用</div><h3>数织</h3><p>逐行逐列取合法模式交集；显示每一步黑格与空格依据。</p><button id="open-nonogram">开始数织</button></article>
+        <article class="puzzle-card enabled"><div class="badge">可用</div><h3>按规则推理</h3><p>带上题目规则；Agent 先生成受限解法，再由脚本逐步验证。</p><a class="button-link" href="/?kind=rule_puzzle">提交规则题</a></article>
         <article class="puzzle-card"><div class="badge">路线图</div><h3>数和</h3><p>交叉和约束与候选组合传播。</p></article>
       </div>
       <p class="section-link"><a href="/paper-puzzles">进入纸笔谜题子页面 →</a></p>

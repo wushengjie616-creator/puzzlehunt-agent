@@ -8,6 +8,7 @@ from .components.nonogram import (
     replay_trace as replay_nonogram_trace,
     solve_nonogram,
 )
+from .components.rule_based import solve_rule_puzzle, synthesize_program
 
 
 class PaperPuzzleGateway:
@@ -36,10 +37,23 @@ class PaperPuzzleGateway:
                 "mode": "solver",
                 "description": "逐行逐列模式交集；完整可回放过程",
             },
+            {
+                "id": "rule_puzzle",
+                "name": "按规则推理",
+                "enabled": True,
+                "mode": "method_synthesis_solver",
+                "description": "先从题面规则生成受限推理方法，再由确定性引擎执行",
+            },
             {"id": "kakuro", "name": "数和", "enabled": False, "description": "路线图"},
         ]
 
-    def run(self, envelope: dict[str, Any], *, solve_mode: str = "full") -> dict[str, Any]:
+    def run(
+        self,
+        envelope: dict[str, Any],
+        *,
+        solve_mode: str = "full",
+        provider=None,
+    ) -> dict[str, Any]:
         if solve_mode not in {"full", "next_step"}:
             raise ValueError("solve_mode must be full or next_step")
         kind = envelope.get("kind")
@@ -52,6 +66,16 @@ class PaperPuzzleGateway:
             if solve_mode != "full":
                 raise ValueError("solve_mode next_step is only supported for sudoku")
             return solve_nonogram(envelope.get("canonical"))
+        if kind == "rule_puzzle":
+            if provider is None:
+                raise ValueError("rule_puzzle requires a method-synthesis provider")
+            source = envelope.get("canonical")
+            program = synthesize_program(source, provider)
+            result = solve_rule_puzzle(
+                source, program, max_steps=1 if solve_mode == "next_step" else None,
+            )
+            result["method_program"] = program
+            return result
         raise ValueError(f"Unsupported paper puzzle component: {kind}")
 
     def replay(

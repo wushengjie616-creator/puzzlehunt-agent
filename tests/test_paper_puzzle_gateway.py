@@ -40,6 +40,40 @@ class PaperPuzzleGatewayTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unsupported"):
             PaperPuzzleGateway().run({"kind": "kakuro", "canonical": {}})
 
+    def test_rule_puzzle_synthesizes_a_bounded_method_then_runs_shared_engine(self):
+        source = {
+            "rules": [{"id": "r1", "text": "A 与 B 使用 1、2，且 A 小于 B。"}],
+            "symbols": [1, 2],
+            "entities": [
+                {"id": "A", "label": "A", "value": None},
+                {"id": "B", "label": "B", "value": None},
+            ],
+            "clues": [{"id": "c1", "text": "A < B", "entity_ids": ["A", "B"]}],
+        }
+        program = {
+            "method_summary": "用严格小于关系筛除无支持候选。",
+            "strategy_order": ["less_than_support"],
+            "constraints": [{
+                "id": "lt", "type": "less_than", "variables": ["A", "B"],
+                "source_rule_ids": ["r1"], "source_clue_ids": ["c1"],
+            }],
+            "coverage": {"rule_ids": ["r1"], "clue_ids": ["c1"]},
+        }
+        class Provider:
+            def complete(self, _messages):
+                return json.dumps(program, ensure_ascii=False)
+
+        result = PaperPuzzleGateway().run(
+            {"kind": "rule_puzzle", "canonical": source}, provider=Provider(),
+        )
+        self.assertEqual(result["status"], "SOLVED")
+        self.assertEqual(result["values"], {"A": 1, "B": 2})
+        self.assertEqual(result["method_program"], program)
+        self.assertFalse(result["search_used"])
+
+        with self.assertRaisesRegex(ValueError, "provider"):
+            PaperPuzzleGateway().run({"kind": "rule_puzzle", "canonical": source})
+
     def test_sudoku_next_step_mode_is_explicit_and_not_available_to_nonogram(self):
         sudoku = PaperPuzzleGateway().run({
             "kind": "sudoku",

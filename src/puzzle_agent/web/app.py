@@ -274,8 +274,10 @@ def create_app(
         if not isinstance(text, str) or len(text) > 50_000:
             raise HTTPException(400, "text must be at most 50000 characters")
         preferred_kind = body.get("preferred_kind")
-        if preferred_kind not in {None, "sudoku", "nonogram", "general"}:
-            raise HTTPException(400, "preferred_kind must be sudoku, nonogram, general, or null")
+        if preferred_kind not in {None, "sudoku", "nonogram", "rule_puzzle", "general"}:
+            raise HTTPException(
+                400, "preferred_kind must be sudoku, nonogram, rule_puzzle, general, or null"
+            )
         image_data = None
         image_mime = None
         image = body.get("image")
@@ -372,13 +374,26 @@ def create_app(
         solve_mode = body.get("solve_mode", "full")
         if solve_mode not in {"full", "next_step"}:
             raise HTTPException(400, "solve_mode must be full or next_step")
-        if kind != "sudoku" and solve_mode != "full":
-            raise HTTPException(422, "solve_mode next_step is only supported for sudoku")
-        if kind in {"sudoku", "nonogram"}:
-            result = app.state.gateway.run(
-                {"kind": kind, "canonical": canonical}, solve_mode=solve_mode
+        if kind not in {"sudoku", "rule_puzzle"} and solve_mode != "full":
+            raise HTTPException(
+                422, "solve_mode next_step is only supported for sudoku and rule_puzzle"
             )
-            if result["status"] == "STALLED" and app.state.agent_provider is not None:
+        if kind in {"sudoku", "nonogram", "rule_puzzle"}:
+            if kind == "rule_puzzle" and app.state.agent_provider is None:
+                raise HTTPException(503, "rule_puzzle method synthesis provider is unavailable")
+            try:
+                result = app.state.gateway.run(
+                    {"kind": kind, "canonical": canonical},
+                    solve_mode=solve_mode,
+                    provider=app.state.agent_provider if kind == "rule_puzzle" else None,
+                )
+            except ValueError as exc:
+                raise HTTPException(422, str(exc)) from exc
+            if (
+                kind in {"sudoku", "nonogram"}
+                and result["status"] == "STALLED"
+                and app.state.agent_provider is not None
+            ):
                 try:
                     result["advisory"] = app.state.gateway.advise_stall(
                         result, app.state.agent_provider, kind=kind
