@@ -3,7 +3,9 @@ import os
 from pathlib import Path
 
 
-_SUPPORTED_KEYS = frozenset({"DEEPSEEK_API_KEY", "DEEPSEEK_MODEL", "DEEPSEEK_BASE_URL"})
+_SUPPORTED_KEYS = frozenset({
+    "DEEPSEEK_API_KEY", "DEEPSEEK_MODEL", "DEEPSEEK_VISION_MODEL", "DEEPSEEK_BASE_URL",
+})
 
 
 def load_env_local(

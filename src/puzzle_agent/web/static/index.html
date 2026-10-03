@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Puzzle Agent · 本地解谜台</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div><span class="eyebrow">LOCAL · NO LOGIN</span><h1>Puzzle Agent</h1></div>
+    <p>把凌乱的文字或题面图片交给 DeepSeek 整理，再由可验证组件逐步推理。</p>
+  </header>
+  <main>
+    <section class="panel intake-panel">
+      <div class="section-title"><span>01</span><div><h2>提交题目</h2><p>文字、图片或两者皆可。所有输入都会先经过 DeepSeek。</p></div></div>
+      <label for="puzzle-text">题目文字</label>
+      <textarea id="puzzle-text" rows="7" placeholder="粘贴题面、规则、提示……"></textarea>
+      <div class="file-row"><label class="file-button">选择题面图片<input id="puzzle-image" type="file" accept="image/png,image/jpeg,image/webp"></label><span id="file-name">PNG / JPEG / WebP，最大 10 MiB</span></div>
+      <button id="normalize" class="primary">DeepSeek 识别并整理</button>
+      <div id="progress" class="progress" aria-live="polite"></div>
+    </section>
+
+    <section id="preview" class="panel hidden">
+      <div class="section-title"><span>02</span><div><h2>确认识别结果</h2><p>模型可能看错数字，请在求解前检查并修改 JSON。</p></div></div>
+      <div id="meta" class="meta"></div>
+      <textarea id="canonical" rows="16" spellcheck="false"></textarea>
+      <button id="confirm" class="primary">确认并开始推理</button>
+    </section>
+
+    <section id="result" class="panel hidden">
+      <div class="section-title"><span>03</span><div><h2>做题过程</h2><p>每一步都能从原始 givens 重放验证。</p></div></div>
+      <div id="status" class="status"></div><div id="grid" class="sudoku-grid"></div><div id="nonogram-grid" class="nonogram-grid hidden" role="grid" aria-label="数织结果"></div><ol id="trace" class="trace"></ol>
+    </section>
+
+    <section id="minesweeper-game" class="panel hidden" aria-labelledby="minesweeper-title">
+      <div class="section-title"><span>✦</span><div><h2 id="minesweeper-title">本地扫雷</h2><p>先玩游戏；需要时再请脚本给一个不猜测的逻辑提示。</p></div></div>
+      <div class="mine-toolbar">
+        <label for="mine-difficulty">难度</label>
+        <select id="mine-difficulty">
+          <option value="beginner">初级 · 9×9 · 10 雷</option>
+          <option value="intermediate">中级 · 16×16 · 40 雷</option>
+          <option value="expert">高级 · 16×30 · 99 雷</option>
+        </select>
+        <button id="mine-new" class="primary">新游戏</button>
+        <button id="mine-hint">逻辑提示</button>
+      </div>
+      <div class="mine-stats" aria-live="polite">
+        <span>状态 <strong id="mine-status">准备</strong></span>
+        <span>剩余雷 <strong id="mine-remaining">—</strong></span>
+        <span>用时 <strong id="mine-time">0</strong>s</span>
+      </div>
+      <p id="mine-message" class="mine-message">左键翻格，右键插旗，双击数字快速展开。</p>
+      <div class="mine-board-wrap"><div id="mine-board" class="mine-board" role="grid" aria-label="扫雷棋盘"></div></div>
+    </section>
+
+    <section class="paper-section">
+      <div class="section-title"><span>∞</span><div><h2>纸笔谜题</h2><p>统一入口，逐种建立可解释、可验证的做题流程。</p></div></div>
+      <div class="cards">
+        <article class="puzzle-card enabled"><div class="badge">可用</div><h3>普通数独</h3><p>裸单、行/列/宫隐单；停滞时明确交还给 Agent。</p></article>
+        <article class="puzzle-card enabled"><div class="badge">可玩</div><h3>扫雷</h3><p>本地互动游戏；首次点击安全，提示只给确定性结论。</p><button id="open-minesweeper">打开扫雷</button></article>
+        <article class="puzzle-card enabled"><div class="badge">可用</div><h3>数织</h3><p>逐行逐列取合法模式交集；显示每一步黑格与空格依据。</p><button id="open-nonogram">开始数织</button></article>
+        <article class="puzzle-card"><div class="badge">路线图</div><h3>数和</h3><p>交叉和约束与候选组合传播。</p></article>
+      </div>
+    </section>
+  </main>
+  <footer>默认仅监听 127.0.0.1 · API Key 不会进入浏览器</footer>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

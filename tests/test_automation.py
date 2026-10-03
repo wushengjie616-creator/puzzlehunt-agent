@@ -1,4 +1,5 @@
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -94,7 +95,7 @@ class SafePublisherTests(unittest.TestCase):
 
             result = run_watch_cycle(
                 root,
-                test_command=["python", "-c", "raise SystemExit(7)"],
+                test_command=[sys.executable, "-c", "raise SystemExit(7)"],
                 push=False,
             )
 
@@ -114,7 +115,7 @@ class SafePublisherTests(unittest.TestCase):
 
             result = run_watch_cycle(
                 root,
-                test_command=["python", "-c", mutation],
+                test_command=[sys.executable, "-c", mutation],
                 push=False,
             )
 
@@ -128,7 +129,7 @@ class SafePublisherTests(unittest.TestCase):
 
             result = watch_repository(
                 root,
-                test_command=["python", "-c", "raise SystemExit(0)"],
+                test_command=[sys.executable, "-c", "raise SystemExit(0)"],
                 push=False,
                 interval_seconds=0,
                 max_cycles=1,

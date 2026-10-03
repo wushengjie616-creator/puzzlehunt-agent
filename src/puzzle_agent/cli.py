@@ -16,6 +16,10 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="puzzle-agent", description="CLI puzzle-solving agent")
     commands = parser.add_subparsers(dest="command", required=True)
 
+    web = commands.add_parser("web", help="Run the no-login local web interface")
+    web.add_argument("--host", choices=("127.0.0.1", "localhost"), default="127.0.0.1")
+    web.add_argument("--port", type=int, default=8000)
+
     solve = commands.add_parser("solve", help="Solve a puzzle from a JSON file")
     solve.add_argument("--file", required=True, type=Path)
     solve.add_argument("--offline", action="store_true", help="Use deterministic local analysis without network")
@@ -145,6 +149,16 @@ def main(argv: list[str] | None = None) -> int:
     load_env_local()
     args = _parser().parse_args(argv)
     try:
+        if args.command == "web":
+            if not 1 <= args.port <= 65535:
+                raise ValueError("--port must be in 1..65535")
+            try:
+                import uvicorn
+            except ModuleNotFoundError as exc:
+                raise RuntimeError('Web mode requires: pip install -e ".[web]"') from exc
+            uvicorn.run("puzzle_agent.web.app:app", host=args.host, port=args.port)
+            return 0
+
         if args.command == "cycle":
             from .cycle_runner import run_case_worker, run_cycle
             if args.cycle_command == "hard-once":

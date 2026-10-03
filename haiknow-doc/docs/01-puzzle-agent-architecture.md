@@ -1,6 +1,6 @@
 # Puzzle Agent 当前架构
 
-## 1. 双模式边界
+## 1. 三入口边界
 
 系统保留两个相互兼容的入口：
 
@@ -8,10 +8,44 @@
 |---|---|---|---|
 | simple | 文本题与常见密码的快速单次求解 | 有效输入恰好一次 | Python 标准库 |
 | complex | 长运行 PuzzleHunt、多阶段工具反馈、artifact 与 meta | 多个独立单轮节点，受预算限制 | 可选 LangGraph + SQLite checkpointer |
+| local web | 文字/图片统一规范化、确认、纸笔组件或 complex session | 至少一次 DeepSeek NORMALIZE_INPUT；后续按组件 | 可选 `[web]`（FastAPI/Uvicorn/Pillow + complex） |
 
 `PuzzleInput`、DeepSeek provider 和确定性工具不依赖 LangGraph。simple mode 不会因为 complex mode 增加基础依赖。
 
-## 2. Simple 数据流
+Web 默认仅监听 `127.0.0.1`。写请求同时受随机 capability token、Host、Origin、Content-Type 门保护，不提供
+账号系统，也不把 API Key、原图或 base64 放入浏览器响应和事件。原图只在内存中经过解码、像素限制与
+重编码，规范化线程结束后释放。
+
+## 2. Web 规范化与纸笔组件
+
+```text
+text / image / mixed
+  → upload safety gate
+  → DeepSeek NORMALIZE_INPUT (deepseek-flash content parts)
+  → schema + puzzle validation
+  → editable user confirmation
+  → signed source/envelope/canonical receipt
+  → Sudoku gateway / existing complex SessionManager
+```
+
+普通数独组件维护 N×N grid 与逐格 candidates，按固定顺序循环裸单、行隐单、列隐单和宫隐单。每次赋值
+包含 technique、target、value、premises 及前后 state fingerprint；replay verifier 从 givens 重新生成同一
+确定性步骤。固定点未解完即 `STALLED`，自由模型建议只能标记为 `UNVERIFIED_ADVISORY`，不能修改盘面。
+
+扫雷采用与数独不同的产品边界：它是本地互动游戏，不经过 DeepSeek normalization，也不自动求解。服务端
+保存权威雷位，首次 reveal 后才布雷；浏览器只取得 covered/flagged/revealed 状态，终局才显示雷。引擎支持
+零区 flood、flag、chord、胜负和计时；进程内 `MinesweeperStore` 最多保留 64 局，game ID 可在刷新后恢复，
+但服务重启即失效。逻辑提示只从公开数字做确定性八邻域传播，忽略玩家旗子的真实性，不读取隐藏雷位，且
+只返回建议、不改变棋盘。对应写 API 继续复用本地 capability、Host、Origin 与 JSON 安全门。
+
+数织继续使用统一的强制 normalization journey。canonical 由 `row_clues`、`column_clues` 与可选的三态
+`grid` 组成；引擎为每条行/列生成局部合法模式，按已知格过滤并取模式交集，只把所有兼容模式共同拥有的
+黑格/空格写入盘面。扫描顺序固定为行后列，每次有变化后从行重新开始，整轮无变化即 `STALLED`，没有
+整盘 DFS、回溯或猜格路径。每个 line step 保存线索、兼容模式数、共同结论、实际变更和前后 fingerprint；
+replay 从 canonical 重新生成同一步。停滞后的模型输出只保留 `UNVERIFIED_ADVISORY` 分析与技巧名，任何
+cell assignment 都会被裁掉。
+
+## 3. Simple 数据流
 
 ```text
 PuzzleInput
@@ -23,7 +57,7 @@ PuzzleInput
 
 simple mode 仍遵守：输入无效零调用；有效输入一次调用；API/JSON/schema 错误不自动重试。
 
-## 3. Complex StateGraph
+## 4. Complex StateGraph
 
 ```text
 INTAKE
@@ -64,7 +98,7 @@ INTAKE
 - 预算耗尽返回 `EXHAUSTED`，不继续调用或编造结果。
 - DeepSeek 的显式网络传输失败可从同一 checkpoint 重试同一节点一次。非法 JSON/非对象输出不重试、不猜补，记录长度与摘要指纹后安全终止为 `NEEDS_REVIEW`；未知子题引用和无 signal/缺契约的计划项被保守丢弃并写入 blocker。其他尚未总化的 schema 错误仍显式失败，避免把错误输出静默吞掉。
 
-## 4. PuzzleState
+## 5. PuzzleState
 
 框架中立 state 是 JSON 兼容映射，主要分区为：
 
@@ -78,7 +112,7 @@ INTAKE
 
 系统不保存私有思维链；只保存可协作的结论、证据、实验、失败记录和简洁推理摘要。
 
-## 5. 持久化与恢复
+## 6. 持久化与恢复
 
 每个 session 使用独立目录：
 
@@ -100,7 +134,7 @@ INTAKE
 
 分支建立时使用 `graph.update_state(..., as_node=last_node)` 在新 thread 中重建所选 snapshot 的执行游标，并核对新 snapshot 的 `next` 与原 checkpoint 完全一致；仅复制 state 而不复制游标会错误地从 `START` 重跑。
 
-## 6. 工具层
+## 7. 工具层
 
 `CipherWorkbench` 负责高召回密码候选；`ToolRegistry` 负责模型可计划调用的确定性工具：
 
