@@ -21,9 +21,12 @@ if HAS_LANGGRAPH:
     from langgraph.checkpoint.memory import InMemorySaver
     from puzzle_agent.complex_graph import (
         build_puzzle_graph,
+        _artifact_inventory,
+        _evaluate,
         _hypothesize,
         _observe,
         _route_subproblem_validation,
+        _tool_dispatch,
         _verify,
     )
 
@@ -352,6 +355,104 @@ class SemanticRecoveryProvider(ScriptedStageProvider):
 
 @unittest.skipUnless(HAS_LANGGRAPH, "complex extra is not installed")
 class ComplexGraphTests(unittest.TestCase):
+    def test_evaluation_persists_research_scope_conflicts_and_typed_blockers(self):
+        class EvaluationProvider:
+            def complete(self, _messages):
+                return json.dumps({
+                    "decision": "verify",
+                    "evidence_assessment": [],
+                    "intermediate_answers": [{
+                        "value": "READ DOWN", "role": "instruction",
+                        "intermediate_type": "instruction", "evidence_ids": ["e1"],
+                    }],
+                    "research_ledger": [{
+                        "id": "r1", "kind": "source_lookup", "query": "standard title",
+                        "source": "canonical corpus", "proves_answer": False,
+                    }],
+                    "source_conflicts": [{
+                        "id": "v1", "status": "unresolved", "sources": ["archive", "solution"],
+                    }],
+                    "verification_scope": {"level": "recomputed", "evidence_ids": ["e1"]},
+                    "blocker_details": [{"kind": "version_conflict", "status": "unresolved", "target": "v1"}],
+                    "open_questions": [], "unused_elements": [], "answer_candidates": [],
+                })
+
+        state = new_puzzle_state(PuzzleInput(content="x"), max_calls=2)
+        state["evidence"] = [{"id": "e1", "kind": "test"}]
+        update = _evaluate(EvaluationProvider(), state)
+        self.assertEqual(update["intermediate_answers"][0]["intermediate_type"], "instruction")
+        self.assertEqual(update["research_ledger"][0]["query"], "standard title")
+        self.assertEqual(update["source_conflicts"][0]["status"], "unresolved")
+        self.assertEqual(update["verification_scope"]["level"], "recomputed")
+        self.assertEqual(update["blocker_details"][0]["kind"], "version_conflict")
+    def test_artifact_inventory_records_input_sufficiency_and_typed_blockers(self):
+        state = new_puzzle_state(
+            PuzzleInput(content="按图读取"), required_artifacts=("grid",), artifacts={}
+        )
+        blocked = _artifact_inventory(state)
+        self.assertEqual(blocked["input_assessment"]["completeness"], "missing_required_artifacts")
+        self.assertEqual(blocked["input_assessment"]["missing_artifacts"], ["grid"])
+        self.assertEqual(blocked["blocker_details"][0]["kind"], "missing_input")
+
+        ready_state = dict(state)
+        ready_state["artifacts"] = {"grid": "AB\nCD"}
+        ready = _artifact_inventory(ready_state)
+        self.assertEqual(ready["input_assessment"]["completeness"], "complete_for_declared_inputs")
+        self.assertEqual(ready["blocker_details"], [])
+
+    def test_reference_lookup_is_recorded_as_routing_research_not_answer_evidence(self):
+        state = new_puzzle_state(PuzzleInput(content="培根密码"))
+        state.update({
+            "plan": [{
+                "id": "p1", "tool": "cipher_reference_lookup",
+                "arguments": {"query": "培根密码"}, "signal_ids": ["o1"],
+                "purpose": "read the referenced codebook", "prediction": "a five-bit rule",
+                "falsifier": "the reference does not match",
+            }],
+            "stage": "TOOL_DISPATCH",
+        })
+        update = _tool_dispatch(state)
+        self.assertEqual(update["research_ledger"][0]["kind"], "routing_hint")
+        self.assertEqual(update["research_ledger"][0]["query"], "培根密码")
+        self.assertFalse(update["research_ledger"][0]["proves_answer"])
+
+    def test_terminal_gate_rejects_incomplete_input_and_unresolved_source_conflict(self):
+        class VerifyProvider:
+            def complete(self, _messages):
+                return json.dumps({
+                    "answer": "OK", "confidence": "high",
+                    "checks": {
+                        "format": True, "evidence": True, "flavor_callback": True,
+                        "clue_coverage": True, "all_elements_consumed": True,
+                        "independent_derivation": True,
+                    },
+                })
+
+        base = new_puzzle_state(PuzzleInput(content="x"), max_calls=8)
+        base.update({
+            "input_assessment": {"completeness": "complete_for_declared_inputs"},
+            "intermediate_validation": {"passed": True},
+            "blockers": [], "open_questions": [], "unused_elements": [],
+        })
+        cases = (
+            (
+                {"input_assessment": {"completeness": "missing_required_artifacts"}},
+                "Input sufficiency is not confirmed",
+            ),
+            (
+                {"source_conflicts": [{"id": "v1", "status": "unresolved", "sources": ["a", "b"]}]},
+                "Source or version conflicts remain unresolved",
+            ),
+            (
+                {"blocker_details": [{"kind": "ambiguity", "status": "unresolved", "target": "route"}]},
+                "Typed blockers remain unresolved",
+            ),
+        )
+        for update, expected in cases:
+            with self.subTest(expected=expected):
+                result = _verify(VerifyProvider(), {**base, **update})
+                self.assertEqual(result["status"], "NEEDS_REVIEW")
+                self.assertIn(expected, result["blockers"])
     def test_representation_contract_flows_through_observation_and_planning(self):
         class RepresentationProvider:
             def complete(self, messages):
@@ -409,6 +510,7 @@ class ComplexGraphTests(unittest.TestCase):
 
         base = new_puzzle_state(PuzzleInput(content="tokens"), max_calls=4)
         base.update({
+            "input_assessment": {"completeness": "complete_for_declared_inputs"},
             "answer_constraints": [{"id": "c1", "kind": "length", "value": 2, "explicit": True}],
             "representation_hypotheses": [{"id": "r1"}],
             "representation_assessment": [{"representation_id": "r1", "effect": "supports"}],
@@ -457,6 +559,7 @@ class ComplexGraphTests(unittest.TestCase):
             item.startswith("AUTO_TERMINATED_INVALID_STAGE_JSON:OBSERVE_CLASSIFY:")
             for item in result["blockers"]
         ))
+        self.assertEqual(result["blocker_details"][-1]["kind"], "calculation_error")
 
     def test_semantic_recovery_ignores_results_for_unknown_subproblems(self):
         class UnknownRecoveryProvider(SemanticRecoveryProvider):
@@ -923,6 +1026,7 @@ class ComplexGraphTests(unittest.TestCase):
         self.assertEqual(result["status"], "EXHAUSTED")
         self.assertEqual(result["budget"]["calls_used"], 2)
         self.assertIsNone(result["final_answer"])
+        self.assertEqual(result["blocker_details"][-1]["kind"], "budget_exhausted")
 
     def test_evidence_can_trigger_one_budgeted_replan_before_verification(self):
         provider = ReplanningProvider()

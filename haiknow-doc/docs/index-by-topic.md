@@ -16,3 +16,5 @@
 - [HA-BRIDGE · CCBC12/15/16 人类联想路径](../../research/human-association-reasoning.md)
 - [P0005 · CCBC16 文本题八小时循环评测](../plans/_drafts/P0005-ccbc16-hourly-text-evaluation.md)
 - [T0004 · 八小时执行记录](../tasks/T0004-ccbc16-hourly-text-evaluation.md)
+- [P0015 · CCBC 研究精髓全面产品化](../plans/P0015-ccbc-reasoning-operationalization.md)
+- [T0014 · CCBC 研究精髓全面产品化执行记录](../tasks/T0014-ccbc-reasoning-operationalization.md)

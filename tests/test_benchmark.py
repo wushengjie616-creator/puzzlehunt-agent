@@ -15,6 +15,7 @@ from puzzle_agent.benchmark import (
 
 ROOT = Path(__file__).resolve().parents[1]
 BENCHMARKS = ROOT / "benchmarks" / "derived"
+CURRICULUM = ROOT / "benchmarks" / "reasoning-curriculum-v1.json"
 
 
 class DerivedBenchmarkTests(unittest.TestCase):
@@ -101,7 +102,12 @@ class DerivedBenchmarkTests(unittest.TestCase):
     def test_reasoning_evaluator_rejects_a_lucky_answer_without_a_reasoning_trace(self):
         lucky = evaluate_reasoning_state({"final_answer": "RIGHT"})
         self.assertFalse(lucky["reasoning_pass"])
+        self.assertTrue(lucky["lucky_answer"])
         self.assertEqual(lucky["passed_checks"], 0)
+        self.assertEqual(
+            set(lucky["stage_scores"]),
+            {"discovery", "mechanism", "extraction", "verification"},
+        )
         raw_only = evaluate_reasoning_state({
             "intermediate_answers": [{"value": "unguarded"}]
         })
@@ -130,7 +136,26 @@ class DerivedBenchmarkTests(unittest.TestCase):
             },
         })
         self.assertTrue(traced["reasoning_pass"])
+        self.assertFalse(traced["lucky_answer"])
         self.assertEqual(traced["passed_checks"], traced["total_checks"])
+        self.assertTrue(all(score == 1.0 for score in traced["stage_scores"].values()))
+
+    def test_reasoning_curriculum_has_seven_answer_free_robustness_families(self):
+        curriculum = json.loads(CURRICULUM.read_text(encoding="utf-8"))
+        cases = curriculum["robustness_cases"]
+        self.assertGreaterEqual(len(cases), 7)
+        self.assertEqual(len({case["id"] for case in cases}), len(cases))
+        self.assertEqual(
+            {case["category"] for case in cases},
+            {
+                "keyword_false_positive", "missing_artifact", "version_conflict",
+                "multi_solution_invariant", "intermediate_instruction",
+                "unconsumed_signal", "title_flavor_ablation",
+            },
+        )
+        serialized = json.dumps(curriculum, ensure_ascii=False).casefold()
+        for forbidden in ('"answer"', '"solution"', '"oracle"'):
+            self.assertNotIn(forbidden, serialized)
 
     def test_intermediate_evaluator_scores_validated_values_separately_from_final(self):
         with tempfile.TemporaryDirectory() as directory:

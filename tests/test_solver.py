@@ -73,6 +73,22 @@ class SolverTests(unittest.TestCase):
         self.assertIn('"id": "caesar"', prompt)
         self.assertNotIn('"id": "pigpen"', prompt)
 
+    def test_solver_injects_answer_free_reasoning_reference_hints(self):
+        response = json.dumps({
+            "answer": None, "confidence": "low", "reasoning_summary": [],
+            "key_evidence": [], "methods_tried": [], "alternatives": [],
+            "missing_information": ["authoritative pronunciation"],
+        })
+        provider = RecordingProvider(response)
+        PuzzleSolver(provider).solve(PuzzleInput(
+            title="拼音声调", content="根据多音字读音提取",
+        ))
+        prompt = provider.messages[-1]["content"]
+        self.assertIn("REASONING_REFERENCES_JSON", prompt)
+        self.assertIn('"id": "chinese_phonetics"', prompt)
+        self.assertIn("required_inputs", prompt)
+        self.assertNotIn("final_answer", prompt)
+
 
 
 if __name__ == "__main__":

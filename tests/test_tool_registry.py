@@ -366,6 +366,93 @@ class DeterministicPuzzleToolTests(unittest.TestCase):
         self.assertTrue(non_bacon["all_passed"])
         self.assertEqual(non_bacon["output"], ["-."])
 
+    def test_signal_coverage_and_explicit_variant_comparison_preserve_ambiguity(self):
+        registry = ToolRegistry()
+        coverage = registry.execute("audit_signal_coverage", {
+            "signals": ["title", "groups", "length"],
+            "claims": [
+                {"id": "c1", "signal_ids": ["title", "groups"]},
+                {"id": "c2", "signal_ids": ["groups", "unknown"]},
+            ],
+        })
+        self.assertEqual(coverage["consumed"], ["groups", "title"])
+        self.assertEqual(coverage["unconsumed"], ["length"])
+        self.assertEqual(coverage["unknown_references"], ["unknown"])
+        self.assertEqual(coverage["multiply_claimed"], {"groups": ["c1", "c2"]})
+        self.assertFalse(coverage["complete"])
+
+        comparison = registry.execute("compare_explicit_variants", {"variants": [
+            {"id": "v1", "output": "WORD", "constraints": {"width": True, "format": True}},
+            {"id": "v2", "output": "WORE", "constraints": {"width": True, "format": True}},
+            {"id": "v3", "output": "NO", "constraints": {"width": False}},
+        ]})
+        self.assertEqual(comparison["status"], "AMBIGUOUS")
+        self.assertEqual(comparison["passing_variant_ids"], ["v1", "v2"])
+        self.assertEqual(comparison["distinct_passing_outputs"], ["WORD", "WORE"])
+
+    def test_template_holdout_pronunciation_extraction_and_state_diff(self):
+        registry = ToolRegistry()
+        records = [
+            {"id": 1, "template": "math"}, {"id": 2, "template": "language"},
+            {"id": 3, "template": "math"}, {"id": 4, "template": "language"},
+        ]
+        validated = registry.execute("validate_template_holdout", {
+            "records": records,
+            "hypothesis": {"field": "template", "cycle": ["math", "language"], "index_origin": 1},
+            "holdout_ids": [3, 4],
+        })
+        self.assertTrue(validated["training_passed"])
+        self.assertTrue(validated["holdout_passed"])
+        self.assertEqual(validated["training_ids"], [1, 2])
+        self.assertEqual(validated["holdout_ids"], [3, 4])
+
+        pronunciation = registry.execute("extract_by_pronunciation_positions", {"items": [
+            {"text": "甲", "reading": "hǎo", "position": 3, "source": "dictionary-a"},
+            {"text": "乙", "reading": "míng", "position": 3, "source": "dictionary-b"},
+        ]})
+        self.assertEqual(pronunciation["output"], "on")
+        self.assertEqual([item["normalized_reading"] for item in pronunciation["items"]], ["hao", "ming"])
+
+        diff = registry.execute("state_snapshot_diff", {
+            "before": {"room": "dark", "key": False, "stable": 1},
+            "after": {"room": "light", "key": True, "stable": 1, "door": "open"},
+        })
+        self.assertEqual(diff["added"], {"door": "open"})
+        self.assertEqual(set(diff["changed"]), {"room", "key"})
+        self.assertEqual(diff["unchanged"], ["stable"])
+
+    def test_research_tools_reject_unknown_signals_bad_holdouts_and_unsourced_readings(self):
+        registry = ToolRegistry()
+        with self.assertRaisesRegex(ValueError, "unique"):
+            registry.execute("audit_signal_coverage", {"signals": ["x", "x"], "claims": []})
+        with self.assertRaisesRegex(ValueError, "unique"):
+            registry.execute("compare_explicit_variants", {"variants": [
+                {"id": "v", "output": "A", "constraints": {}},
+                {"id": "v", "output": "B", "constraints": {}},
+            ]})
+        with self.assertRaisesRegex(ValueError, "holdout"):
+            registry.execute("validate_template_holdout", {
+                "records": [{"id": 1, "template": "a"}, {"id": 3, "template": "a"}],
+                "hypothesis": {"field": "template", "cycle": ["a"], "index_origin": 1},
+                "holdout_ids": [2],
+            })
+        with self.assertRaisesRegex(ValueError, "source"):
+            registry.execute("extract_by_pronunciation_positions", {"items": [
+                {"text": "甲", "reading": "jia", "position": 1, "source": ""},
+            ]})
+        with self.assertRaisesRegex(ValueError, "payload"):
+            registry.execute("state_snapshot_diff", {
+                "before": {"nested": "x" * 2_000_001}, "after": {},
+            })
+
+    def test_reasoning_reference_lookup_routes_without_embedding_answers(self):
+        result = ToolRegistry().execute("reasoning_reference_lookup", {"query": "拼音声调 多音字"})
+        self.assertEqual(result["match_count"], 1)
+        item = result["output"][0]
+        self.assertEqual(item["id"], "chinese_phonetics")
+        self.assertIn("source", " ".join(item["cautions"]))
+        self.assertNotIn("answer", item)
+
 
 if __name__ == "__main__":
     unittest.main()

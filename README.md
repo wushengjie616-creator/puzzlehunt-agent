@@ -242,7 +242,14 @@ CCBC16 只作为离线方法学习来源，不会把官方题面或题解交给 
   → input/oracle 隔离与泄漏检查
 ```
 
-当前包含 8 个原创 dev case 和 2 个原创 blind case，覆盖对象映射、异常联想图、子题 DAG、缺信息反推、逆向提取、递归 meta、机制回调、约束组合、分层提取和 artifact gate。
+当前包含 8 个原创 dev case 和 2 个原创 blind case，覆盖对象映射、异常联想图、子题 DAG、缺信息反推、逆向提取、递归 meta、机制回调、约束组合、分层提取和 artifact gate。另有
+`benchmarks/reasoning-curriculum-v1.json` 保存不含答案的鲁棒性课程：关键词假阳性、缺 artifact、版本冲突、
+多解不变量、中间指令、未消费线索和 title/flavor ablation。推理评测将 discovery、mechanism、extraction、
+verification 分开计分；只有答案而没有证据链会标记为 `lucky_answer`，不能通过 reasoning gate。
+
+项目本地 Skill `$puzzle-reasoning-sop` 把研究所得固化为可复用流程：先检查输入充分性，再区分线索角色、
+提出竞争假设、做最小可证伪实验、分离识别/求解/排序/提取，最后审计剩余线索和来源版本。Skill 调用
+项目 canonical 工具，不复制算法，也不把 CCBC 研究资料当答案库。
 
 ```powershell
 & $pa benchmark validate --suite dev

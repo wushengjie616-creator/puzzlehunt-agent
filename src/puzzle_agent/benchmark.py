@@ -73,9 +73,22 @@ def evaluate_reasoning_state(state: dict[str, Any]) -> dict[str, Any]:
         and all(checks.values()),
     }
     passed = sum(criteria.values())
+    stage_checks = {
+        "discovery": ("association_beam", "falsifiable_bridges"),
+        "mechanism": ("competing_hypotheses", "experiment_and_evidence"),
+        "extraction": ("intermediate_materialized",),
+        "verification": ("coverage_audited",),
+    }
+    stage_scores = {
+        stage: sum(bool(criteria[name]) for name in names) / len(names)
+        for stage, names in stage_checks.items()
+    }
+    reasoning_pass = passed == len(criteria)
     return {
-        "reasoning_pass": passed == len(criteria),
+        "reasoning_pass": reasoning_pass,
+        "lucky_answer": bool(state.get("final_answer") or state.get("answer")) and not reasoning_pass,
         "score": passed / len(criteria),
+        "stage_scores": stage_scores,
         "passed_checks": passed,
         "total_checks": len(criteria),
         "checks": criteria,

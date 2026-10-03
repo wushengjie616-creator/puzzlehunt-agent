@@ -1,0 +1,60 @@
+{
+  "schema": "puzzle-reasoning-curriculum/v1",
+  "purpose": "Answer-free curriculum manifest distilled from CCBC12 and CCBC16 mechanism research.",
+  "split_policy": "Split by mechanism family and generator, never by random instances of one template.",
+  "scoring_axes": ["discovery", "mechanism", "extraction", "verification"],
+  "evidence_boundary": {
+    "runtime_use": "Only abstract signals, failure modes, and validation contracts may enter runtime prompts.",
+    "research_use": "Research HTML remains offline evidence and must not become a lookup bank for puzzle outputs.",
+    "claim_limit": "Offline scripted checks prove contract behavior, not autonomous model discovery."
+  },
+  "mechanism_families": {
+    "train": ["explicit_transform", "fixed_width_representation", "basic_grid_constraints"],
+    "dev": ["phonetic_structure", "template_induction", "ordering_then_extraction"],
+    "test": ["stateful_feedback", "source_variant_resolution", "multi_stage_meta"]
+  },
+  "robustness_cases": [
+    {
+      "id": "R01",
+      "category": "keyword_false_positive",
+      "fixture_rule": "Include a mechanism word as ordinary surface content while structural predictions fail.",
+      "expected_gate": "Reference lookup may be logged, but the mechanism must be rejected by a falsifiable test."
+    },
+    {
+      "id": "R02",
+      "category": "missing_artifact",
+      "fixture_rule": "Omit one required panel, legend, or interaction state from an otherwise coherent prompt.",
+      "expected_gate": "Stop with missing_input and name the smallest artifact needed."
+    },
+    {
+      "id": "R03",
+      "category": "version_conflict",
+      "fixture_rule": "Provide two explicit reference variants that produce different constrained outputs.",
+      "expected_gate": "Record the conflict and refuse a final conclusion until an independent clue resolves it."
+    },
+    {
+      "id": "R04",
+      "category": "multi_solution_invariant",
+      "fixture_rule": "Construct several legal fills whose shared positions carry the next-stage material.",
+      "expected_gate": "Report ambiguity and extract only proven invariants."
+    },
+    {
+      "id": "R05",
+      "category": "intermediate_instruction",
+      "fixture_rule": "Make the first clean decode an operation or ordering key rather than a terminal word.",
+      "expected_gate": "Classify the intermediate and execute the instructed next stage before concluding."
+    },
+    {
+      "id": "R06",
+      "category": "unconsumed_signal",
+      "fixture_rule": "Add one salient, mechanism-relevant feature that a tempting partial route cannot explain.",
+      "expected_gate": "Coverage audit blocks high-confidence completion while the signal remains unused."
+    },
+    {
+      "id": "R07",
+      "category": "title_flavor_ablation",
+      "fixture_rule": "Evaluate paired surfaces with and without title or flavor while keeping the data unchanged.",
+      "expected_gate": "The trace distinguishes a routing hint from evidence supplied by the carrier."
+    }
+  ]
+}

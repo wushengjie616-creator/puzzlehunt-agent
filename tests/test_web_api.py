@@ -157,13 +157,20 @@ class WebApiTests(unittest.TestCase):
         self.assertEqual(script.status_code, 200)
         state = {
             "observations": [{"id": "o1", "text": "three uneven groups"}],
+            "input_assessment": {"completeness": "complete_for_declared_inputs", "missing_artifacts": []},
+            "clue_roles": [{"signal_id": "o1", "role": "decoder", "basis": "fixed-width tension"}],
             "answer_constraints": [{"kind": "length", "value": 2}],
             "association_candidates": [{"ontology": "binary code", "prediction": "fixed width"}],
             "cipher_reference_hints": [{"name": "培根密码"}],
+            "reasoning_reference_hints": [{"name": "模板归纳"}],
+            "research_ledger": [{"query": "固定宽度编码", "purpose": "routing", "proves_answer": False}],
             "representation_hypotheses": [{"id": "r1", "prediction": "all groups have width five"}],
             "evidence": [{"tool": "expand_symbol_groups", "all_passed": True}],
             "representation_assessment": [{"representation_id": "r1", "effect": "supports"}],
             "verification_checks": {"format": True},
+            "verification_scope": {"level": "recomputed", "evidence_ids": ["e1"]},
+            "source_conflicts": [{"id": "alphabet variant", "status": "resolved", "sources": ["modern26", "classic24"]}],
+            "blocker_details": [],
             "blockers": [], "open_questions": [], "unused_elements": [],
         }
         probe = subprocess.run(
@@ -184,7 +191,13 @@ class WebApiTests(unittest.TestCase):
             ["看到什么", "联想到什么", "查了什么", "怎么验证", "为什么接受或停下"],
         )
         self.assertIn("three uneven groups", sections[0]["items"][0])
+        self.assertTrue(any("输入完整性" in item for item in sections[0]["items"]))
+        self.assertTrue(any("decoder" in item for item in sections[1]["items"]))
+        self.assertTrue(any("模板归纳" in item for item in sections[2]["items"]))
+        self.assertTrue(any("proves_answer=false" in item for item in sections[2]["items"]))
         self.assertTrue(any("r1" in item and "supports" in item for item in sections[3]["items"]))
+        self.assertTrue(any("核验等级：recomputed" in item for item in sections[3]["items"]))
+        self.assertTrue(any("版本冲突已解决" in item for item in sections[4]["items"]))
         app_script = self.client.get("/static/app.js").text
         self.assertIn("buildAgentTraceSections", app_script)
         self.assertIn("renderAgentTrace", app_script)

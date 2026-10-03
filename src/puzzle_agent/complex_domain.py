@@ -5,6 +5,7 @@ from typing import Any
 
 from .domain import PuzzleInput
 from .cipher_reference import index_cipher_references
+from .reasoning_reference import index_reasoning_references
 
 
 def new_puzzle_state(
@@ -23,15 +24,24 @@ def new_puzzle_state(
     return {
         "puzzle": asdict(puzzle),
         "cipher_reference_hints": index_cipher_references(reference_text),
+        "reasoning_reference_hints": index_reasoning_references(reference_text),
         "artifacts": dict(artifacts or {}),
         "required_artifacts": list(required_artifacts),
         "missing_artifacts": [],
+        "input_assessment": {
+            "completeness": "unknown",
+            "media": ["text"],
+            "missing_artifacts": [],
+            "source_mode": "user_supplied",
+            "transcription_risk": "unknown",
+        },
         "status": "READY",
         "stage": "INTAKE",
         "revision": 0,
         "observations": [],
         "answer_constraints": [],
         "tensions": [],
+        "clue_roles": [],
         "flavor_associations": [],
         "association_candidates": [],
         "subproblems": [],
@@ -43,6 +53,9 @@ def new_puzzle_state(
         "hypotheses": [],
         "representation_hypotheses": [],
         "representation_assessment": [],
+        "research_ledger": [],
+        "source_conflicts": [],
+        "verification_scope": {"level": "unknown", "evidence_ids": []},
         "plan": [],
         "attempts": [],
         "evidence": [],
@@ -54,6 +67,7 @@ def new_puzzle_state(
         "open_questions": [],
         "unused_elements": [],
         "blockers": [],
+        "blocker_details": [],
         "budget": {"max_calls": max_calls, "calls_used": 0},
         "last_node": None,
         "next_node": "intake",

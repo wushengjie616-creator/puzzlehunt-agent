@@ -17,15 +17,26 @@ from .cipher_workbench import (
     vigenere_decode as _vigenere_decode,
 )
 from .cipher_reference import BACON_VARIANTS, lookup_cipher_reference
+from .reasoning_reference import lookup_reasoning_reference
 
 
 _MAX_TOOL_TEXT = 10_000
+_MAX_RESEARCH_PAYLOAD = 2_000_000
 
 
 def _bounded_text(text: str) -> str:
     if not isinstance(text, str) or not text or len(text) > _MAX_TOOL_TEXT:
         raise ValueError(f"text must be a non-empty string bounded to {_MAX_TOOL_TEXT} characters")
     return text
+
+
+def _bounded_research_payload(value: Any) -> None:
+    try:
+        size = len(json.dumps(value, ensure_ascii=False, sort_keys=True))
+    except (TypeError, ValueError) as error:
+        raise ValueError("research tool payload must be JSON-compatible") from error
+    if size > _MAX_RESEARCH_PAYLOAD:
+        raise ValueError(f"research tool payload is bounded to {_MAX_RESEARCH_PAYLOAD} characters")
 
 
 def atbash_transform(text: str) -> str:
@@ -702,6 +713,197 @@ def decode_bacon_groups(groups: list[str], variant: str) -> dict[str, Any]:
     }
 
 
+def audit_signal_coverage(
+    signals: list[str], claims: list[dict[str, Any]]
+) -> dict[str, Any]:
+    _bounded_research_payload({"signals": signals, "claims": claims})
+    if not isinstance(signals, list) or not all(isinstance(item, str) and item for item in signals):
+        raise ValueError("signals must be a list of non-empty strings")
+    if not signals or len(signals) > 2_000 or len(set(signals)) != len(signals):
+        raise ValueError("signals must contain 1..2000 unique values")
+    if not isinstance(claims, list) or len(claims) > 2_000 or not all(isinstance(item, dict) for item in claims):
+        raise ValueError("claims must be a bounded list of objects")
+    claim_ids = [item.get("id") for item in claims]
+    if any(not isinstance(item, str) or not item for item in claim_ids) or len(set(claim_ids)) != len(claim_ids):
+        raise ValueError("claims must have unique non-empty ids")
+    signal_set = set(signals)
+    consumers: dict[str, list[str]] = {signal: [] for signal in signals}
+    unknown: set[str] = set()
+    for claim in claims:
+        references = claim.get("signal_ids")
+        if not isinstance(references, list) or not all(isinstance(item, str) and item for item in references):
+            raise ValueError("claim signal_ids must be a list of non-empty strings")
+        for reference in references:
+            if reference in signal_set:
+                consumers[reference].append(claim["id"])
+            else:
+                unknown.add(reference)
+    consumed = sorted(signal for signal, ids in consumers.items() if ids)
+    unconsumed = sorted(signal for signal, ids in consumers.items() if not ids)
+    multiply_claimed = {
+        signal: ids for signal, ids in sorted(consumers.items()) if len(ids) > 1
+    }
+    return {
+        "output": consumed,
+        "consumed": consumed,
+        "unconsumed": unconsumed,
+        "unknown_references": sorted(unknown),
+        "multiply_claimed": multiply_claimed,
+        "complete": not unconsumed and not unknown,
+        "input_fingerprint": _fingerprint({"signals": signals, "claims": claims}),
+    }
+
+
+def compare_explicit_variants(variants: list[dict[str, Any]]) -> dict[str, Any]:
+    _bounded_research_payload(variants)
+    if not isinstance(variants, list) or not 1 <= len(variants) <= 32 or not all(
+        isinstance(item, dict) for item in variants
+    ):
+        raise ValueError("variants must contain 1..32 objects")
+    identifiers = [item.get("id") for item in variants]
+    if any(not isinstance(item, str) or not item for item in identifiers) or len(set(identifiers)) != len(identifiers):
+        raise ValueError("variants must have unique non-empty ids")
+    rows: list[dict[str, Any]] = []
+    for variant in variants:
+        constraints = variant.get("constraints")
+        if not isinstance(variant.get("output"), str) or not isinstance(constraints, dict) or not all(
+            isinstance(name, str) and name and isinstance(value, bool)
+            for name, value in constraints.items()
+        ):
+            raise ValueError("each variant requires string output and boolean constraints")
+        rows.append({
+            "id": variant["id"],
+            "output": variant["output"],
+            "constraints": dict(constraints),
+            "passed": all(constraints.values()),
+        })
+    passing = [item for item in rows if item["passed"]]
+    outputs = sorted({item["output"] for item in passing})
+    status = "UNSAT" if not passing else "AMBIGUOUS" if len(outputs) > 1 else "SAT"
+    return {
+        "output": rows,
+        "status": status,
+        "passing_variant_ids": [item["id"] for item in passing],
+        "distinct_passing_outputs": outputs,
+        "invariant_output": outputs[0] if len(outputs) == 1 else None,
+        "input_fingerprint": _fingerprint(variants),
+    }
+
+
+def validate_template_holdout(
+    records: list[dict[str, Any]],
+    hypothesis: dict[str, Any],
+    holdout_ids: list[int],
+) -> dict[str, Any]:
+    _bounded_research_payload({
+        "records": records, "hypothesis": hypothesis, "holdout_ids": holdout_ids,
+    })
+    if not isinstance(records, list) or not 2 <= len(records) <= 10_000 or not all(
+        isinstance(item, dict) for item in records
+    ):
+        raise ValueError("records must contain 2..10000 objects")
+    identifiers = [item.get("id") for item in records]
+    if any(not isinstance(item, int) or isinstance(item, bool) for item in identifiers) or len(set(identifiers)) != len(identifiers):
+        raise ValueError("record ids must be unique integers")
+    if not isinstance(holdout_ids, list) or not holdout_ids or len(set(holdout_ids)) != len(holdout_ids):
+        raise ValueError("holdout_ids must contain unique record ids")
+    unknown_holdouts = set(holdout_ids).difference(identifiers)
+    if unknown_holdouts:
+        raise ValueError(f"holdout_ids reference unknown records: {sorted(unknown_holdouts)}")
+    if not isinstance(hypothesis, dict):
+        raise ValueError("hypothesis must be an object")
+    field = hypothesis.get("field")
+    cycle = hypothesis.get("cycle")
+    origin = hypothesis.get("index_origin", 1)
+    if not isinstance(field, str) or not field or not isinstance(cycle, list) or not cycle or len(cycle) > 256:
+        raise ValueError("hypothesis requires a field and bounded non-empty cycle")
+    if not isinstance(origin, int) or isinstance(origin, bool):
+        raise ValueError("index_origin must be an integer")
+    rows: list[dict[str, Any]] = []
+    for record in records:
+        identifier = record["id"]
+        expected = cycle[(identifier - origin) % len(cycle)]
+        actual = record.get(field)
+        rows.append({
+            "id": identifier, "expected": expected, "actual": actual,
+            "passed": actual == expected, "partition": "holdout" if identifier in holdout_ids else "training",
+        })
+    training = [item for item in rows if item["partition"] == "training"]
+    holdout = [item for item in rows if item["partition"] == "holdout"]
+    if not training:
+        raise ValueError("holdout split must leave at least one training record")
+    return {
+        "output": rows,
+        "training_ids": [item["id"] for item in training],
+        "holdout_ids": [item["id"] for item in holdout],
+        "training_passed": all(item["passed"] for item in training),
+        "holdout_passed": all(item["passed"] for item in holdout),
+        "mismatches": [item for item in rows if not item["passed"]],
+        "input_fingerprint": _fingerprint({
+            "records": records, "hypothesis": hypothesis, "holdout_ids": holdout_ids,
+        }),
+    }
+
+
+def extract_by_pronunciation_positions(items: list[dict[str, Any]]) -> dict[str, Any]:
+    _bounded_research_payload(items)
+    if not isinstance(items, list) or not 1 <= len(items) <= 2_000 or not all(
+        isinstance(item, dict) for item in items
+    ):
+        raise ValueError("items must contain 1..2000 pronunciation records")
+    rows: list[dict[str, Any]] = []
+    output: list[str] = []
+    for item in items:
+        text, reading, position, source = (
+            item.get("text"), item.get("reading"), item.get("position"), item.get("source")
+        )
+        if not isinstance(text, str) or not text or not isinstance(reading, str) or not reading:
+            raise ValueError("each item requires text and reading")
+        if not isinstance(source, str) or not source.strip():
+            raise ValueError("each pronunciation requires an explicit source")
+        if not isinstance(position, int) or isinstance(position, bool) or position < 1:
+            raise ValueError("position must be a positive 1-based integer")
+        decomposed = unicodedata.normalize("NFD", reading)
+        normalized = "".join(
+            character.lower() for character in decomposed
+            if character.isascii() and character.isalpha()
+        )
+        if not normalized or position > len(normalized):
+            raise ValueError("position is outside the normalized pronunciation")
+        character = normalized[position - 1]
+        output.append(character)
+        rows.append({
+            "text": text, "reading": reading, "normalized_reading": normalized,
+            "position": position, "character": character, "source": source,
+        })
+    return {
+        "output": "".join(output),
+        "items": rows,
+        "input_fingerprint": _fingerprint(items),
+    }
+
+
+def state_snapshot_diff(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+    _bounded_research_payload({"before": before, "after": after})
+    if not isinstance(before, dict) or not isinstance(after, dict):
+        raise ValueError("before and after must be objects")
+    if len(before) > 2_000 or len(after) > 2_000:
+        raise ValueError("state snapshots must be bounded to 2000 top-level fields")
+    before_keys, after_keys = set(before), set(after)
+    added = {key: after[key] for key in sorted(after_keys - before_keys)}
+    removed = {key: before[key] for key in sorted(before_keys - after_keys)}
+    changed = {
+        key: {"before": before[key], "after": after[key]}
+        for key in sorted(before_keys & after_keys) if before[key] != after[key]
+    }
+    unchanged = sorted(key for key in before_keys & after_keys if before[key] == after[key])
+    return {
+        "output": {"added": added, "removed": removed, "changed": changed},
+        "added": added, "removed": removed, "changed": changed, "unchanged": unchanged,
+        "input_fingerprint": _fingerprint({"before": before, "after": after}),
+    }
+
+
 def minesweeper_propagate(grid: list[str]) -> dict[str, Any]:
     if not isinstance(grid, list) or not grid or not all(isinstance(row, str) and row for row in grid):
         raise ValueError("grid must be a non-empty rectangular list of strings")
@@ -810,6 +1012,7 @@ class ToolRegistry:
                 ToolSpec("vigenere_decode", vigenere_decode, contract="key is known and explicit; this tool does not guess keys"),
                 ToolSpec("rail_fence_decode", rail_fence_decode, contract="rails is known and explicit integer 2..100; this tool does not guess rail count"),
                 ToolSpec("cipher_reference_lookup", lookup_cipher_reference, contract="query is an explicit cipher keyword; returns the matching rule and bounded reference table"),
+                ToolSpec("reasoning_reference_lookup", lookup_reasoning_reference, contract="query is an explicit Chinese wordplay, canonical corpus, template, or stateful-puzzle signal; references guide validation and never prove an answer"),
                 ToolSpec("a1z26_decode", a1z26_decode, contract="values is non-empty list[int] in 1..26"),
                 ToolSpec("interleave_sequences", interleave_sequences, contract="sequences is list of at least two equal-length strings"),
                 ToolSpec("grid_trace", grid_trace, contract="grid is list[str], start is 0-based [row,col], directions uses N|E|S|W"),
@@ -828,6 +1031,11 @@ class ToolRegistry:
                 ToolSpec("unicode_inspect", unicode_inspect, contract="text returns codepoint/name/category records; it does not decode semantics"),
                 ToolSpec("expand_symbol_groups", expand_symbol_groups, contract="groups and mapping are explicit; optional allowed_symbols and expected_width are mechanically checked without guessing mappings"),
                 ToolSpec("decode_bacon_groups", decode_bacon_groups, contract="groups are explicit five-symbol A/B strings; variant is modern26|classic24 and is never guessed"),
+                ToolSpec("audit_signal_coverage", audit_signal_coverage, contract="signals are unique ids; claims cite signal_ids; returns unconsumed and unknown references without semantic guessing"),
+                ToolSpec("compare_explicit_variants", compare_explicit_variants, contract="variants provide explicit outputs and boolean constraints; distinct passing outputs remain AMBIGUOUS"),
+                ToolSpec("validate_template_holdout", validate_template_holdout, contract="records use integer ids; hypothesis declares field/cycle/index_origin; holdout_ids are validated separately"),
+                ToolSpec("extract_by_pronunciation_positions", extract_by_pronunciation_positions, contract="each item supplies explicit reading, 1-based position, and non-empty source; tool does not guess pronunciation"),
+                ToolSpec("state_snapshot_diff", state_snapshot_diff, contract="before/after are bounded JSON objects; returns top-level added/removed/changed/unchanged fields"),
                 ToolSpec("minesweeper_propagate", minesweeper_propagate, contract="grid is <=2500 rectangular cells using 0-8|?|*; returns only deterministic 8-neighbor deductions"),
             )
         }

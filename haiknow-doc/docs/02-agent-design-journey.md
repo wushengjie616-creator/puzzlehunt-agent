@@ -354,3 +354,19 @@ cycle worker 因此只对明确的 transport exception 做一次同 checkpoint�
 
 Web 同步改为从持久证据生成五段 trace，而不是让模型在答案后补写一篇合理故事。显式答案长度、表示不变量
 和未决变体由机器终局门复核；自然语言可读性仍只是信号。
+
+## 第 45 站：研究材料应变成运行契约，而不是答案记忆
+
+对 CCBC12/CCBC16 的五份研究资料做跨题归纳后，最稳定的共同点不是某种密码，而是证据管理：先确认题面
+是否完整，再把标题、风味、异常、数据、排序和提取分别登记；只对有信号支持的方向查资料；先用最小样本
+提出会失败的预测，再全量验证。一个漂亮的中间词也必须标成 answer、instruction、parameter、ordering key
+或 transformed artifact，不能默认就是终点。
+
+这些原则被落成三层同义契约：complex state 保存输入、角色、查询、版本、核验范围和 typed blocker；
+ToolRegistry 执行覆盖审计、显式变体比较、模板留出验证、读音位置提取和状态差；项目 Skill
+`puzzle-reasoning-sop` 教其他 Agent surface 复用同一流程。中文语音和拆字仍由模型或用户提出候选，脚本只
+验证显式读音/部件，避免把一个不完整字典伪装成权威知识库。
+
+评测也不再把“最后字符串相同”视为全部成功。`reasoning-curriculum-v1.json` 用原创、无答案的规则覆盖七种
+鲁棒性风险，evaluator 分别报告 discovery、mechanism、extraction 和 verification；有答案但缺证据链时
+明确标记 `lucky_answer`。研究 HTML 保持离线证据，不进入生产 prompt 或关键词到答案映射。

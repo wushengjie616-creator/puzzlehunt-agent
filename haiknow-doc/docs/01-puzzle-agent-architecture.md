@@ -80,7 +80,9 @@ PuzzleInput
 ```
 
 simple mode 仍遵守：输入无效零调用；有效输入一次调用；API/JSON/schema 错误不自动重试。关键词索引只把
-匹配资料的名称、规则和注意事项放进 prompt，不注入完整表格，也不把命中本身当成密码成立的证据。
+匹配资料的名称、规则和注意事项放进 prompt，不注入完整表格，也不把命中本身当成密码成立的证据。除密码
+索引外，运行时还可按题面信号注入中文语音、汉字结构、规范语料、模板归纳和状态交互的无答案方法卡；方法卡
+只提供必要输入、歧义和验证方式。
 
 ## 4. Complex StateGraph
 
@@ -137,11 +139,13 @@ provider wrapper 在当前调用前后检查。若请求发生在一次非流式
 
 框架中立 state 是 JSON 兼容映射，主要分区为：
 
-- immutable `puzzle`、`artifacts`、`required_artifacts`，以及从题面关键词确定性生成的 `cipher_reference_hints`
+- immutable `puzzle`、`artifacts`、`required_artifacts`，以及从题面关键词确定性生成的 `cipher_reference_hints` / `reasoning_reference_hints`
+- `input_assessment` 保存输入完整性、媒介、缺失 artifact、来源模式与转写风险
 - `observations`、`answer_constraints`、`flavor_associations`、`structure_model`、`subproblems`、`subproblem_results`、`validated_subproblem_results` 与 `subproblem_validation`
+- `clue_roles` 区分 theme/parameter/ordering/decoder/extractor/instruction；`research_ledger` 明确查询用途且 lookup 永不单独证明答案
 - `hypotheses`、`representation_hypotheses`、`representation_assessment`、`plan`、`attempts`、`evidence`
 - `intermediate_answers`、`validated_intermediate_answers`、`intermediate_validation`、`extractions`、`answer_candidates`
-- `open_questions`、`missing_artifacts`、`blockers`
+- `source_conflicts`、`verification_scope`、`open_questions`、`missing_artifacts`、`blockers`、`blocker_details`
 - `budget`、`semantic_refinement_used`、`stage`、`status`、`last_node`、`next_node`
 - `final_answer`
 
@@ -204,6 +208,12 @@ Unicode 图形猜字母。`ToolRegistry` 负责模型可计划调用的确定性
 | `palindrome_mismatch` / `unicode_inspect` | 回文镜像错位载体；保留易混 Unicode 字符的码位、名称和类别 |
 | `expand_symbol_groups` | 显式 token 映射、允许字符集和固定宽度验证；输出逐 token 展开与输入指纹，不枚举映射 |
 | `decode_bacon_groups` | 显式 `modern26` / `classic24` 变体；24 字母版保留 I/J、U/V 歧义，不自动选优 |
+| `audit_signal_coverage` | 对显式 signal/claim 关系返回已消费、未消费、多重归属与未知引用 |
+| `compare_explicit_variants` | 并列比较调用者给出的版本及约束结果，不按语言可读性自动选优 |
+| `validate_template_holdout` | 将训练记录与留出记录分账，验证显式周期/字段规则是否外推 |
+| `extract_by_pronunciation_positions` | 只按调用者给出的规范读音和位置机械提取；缺来源或越界失败 |
+| `state_snapshot_diff` | 比较互动题前后状态，返回新增、移除、变化与不变字段 |
+| `reasoning_reference_lookup` | 按显式信号读取无答案方法卡；查询记录进 research ledger 且 `proves_answer=false` |
 
 每次调用用 tool+arguments fingerprint 去重，replan 中相同调用记录为 `duplicate_skipped` 而不再次执行。未知工具或参数错误形成 failed attempt，不进入成功 evidence。
 
@@ -212,7 +222,8 @@ Unicode 图形猜字母。`ToolRegistry` 负责模型可计划调用的确定性
 阶段 memory 不是对话历史，而是结构化状态：`observations` 与 `flavor_associations` 保存题面事实和可检验联想，`attempts/evidence/extractions` 保存机械实验账本，`intermediate_answers` 保存候选载体，`validated_intermediate_answers` 只保存通过独立证据门的中间结果，`open_questions` 与 `unused_elements` 保存尚未闭合的推理债务。没有验证过的中间结果、或后两项非空时，机器终局门都不能接受 `SOLVED`。
 
 Web 不请求模型另写“思维过程”，而是将上述 state 投影为五段可审计 trace：看到、联想、资料路由、表示/
-工具验证以及接受或停下原因。旧 session 缺少新字段时按空集合显示。
+工具验证以及接受或停下原因。其中同时展示输入充分性、线索角色、查询用途、留出验证、版本冲突与 typed
+blocker；旧 session 缺少新字段时按空集合显示。
 
 周期报告不读取模型私有思维链。每个节点 trace 额外记录可观察效果：观察/联想数量、假设与计划数量、工具成功/失败和 extraction 增量、评价的 verify/replan 决策、阶段 memory 债务，以及终局是否接受答案。错误题的因果 usefulness 仍标 `UNASSESSABLE`，但报告会显示实际行为及 `FAILED_TOOL_CALLS`、`EMPTY_PLAN`、`PROVIDER_ERROR` 等问题，不再只给空泛激活率。
 
@@ -233,6 +244,8 @@ Web 不请求模型另写“思维过程”，而是将上述 state 投影为五
 | `hard_runner.py` | 49 道非-meta官方题的一次性临时转换、限并发执行、脱敏报告与缓存清理 |
 | `providers/deepseek.py` | DeepSeek 官方 Chat Completions 适配器 |
 | `cipher_reference.py` | 古典密码参考库、搜索和 Web 有界转换 |
+| `reasoning_reference.py` | 中文文字、规范语料、模板与状态题的无答案信号路由卡 |
+| `.agents/skills/puzzle-reasoning-sop/` | 跨 Agent surface 的证据优先 SOP；只引用 canonical runtime |
 | `web/app.py` | 本地安全门、DeepSeek 配置状态、题目/纸笔/密码页面与 API |
 | `cli.py` | simple、session、benchmark 与 automation CLI |
 

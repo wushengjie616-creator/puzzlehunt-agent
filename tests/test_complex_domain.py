@@ -38,8 +38,14 @@ class ComplexStateTests(unittest.TestCase):
             "answer_constraints",
             "representation_hypotheses",
             "representation_assessment",
+            "clue_roles",
+            "research_ledger",
+            "source_conflicts",
+            "blocker_details",
         ):
             self.assertEqual(state.get(collection), [])
+        self.assertEqual(state["input_assessment"]["completeness"], "unknown")
+        self.assertEqual(state["verification_scope"]["level"], "unknown")
         json.dumps(state, ensure_ascii=False)
 
     def test_invalid_call_budget_is_rejected(self):
@@ -62,6 +68,18 @@ class ComplexStateTests(unittest.TestCase):
         self.assertEqual([item["id"] for item in state["cipher_reference_hints"]], ["bacon"])
         self.assertEqual(state["evidence"], [])
         self.assertIsNone(state["final_answer"])
+
+    def test_initial_state_indexes_chinese_wordplay_and_template_reasoning_hints(self):
+        state = new_puzzle_state(PuzzleInput(
+            title="声调与拆字",
+            content="按拼音声调取字母，再观察偏旁部件；这是一组重复生成题。",
+        ))
+        self.assertEqual(
+            [item["id"] for item in state["reasoning_reference_hints"]],
+            ["chinese_phonetics", "hanzi_structure", "template_induction"],
+        )
+        self.assertTrue(all("required_inputs" in item for item in state["reasoning_reference_hints"]))
+        self.assertTrue(all("examples" not in item for item in state["reasoning_reference_hints"]))
 
 
 

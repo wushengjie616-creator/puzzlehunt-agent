@@ -1,0 +1,4 @@
+interface:
+  display_name: "Puzzle Reasoning SOP"
+  short_description: "Evidence-first puzzle solving with falsifiable tests"
+  default_prompt: "Use $puzzle-reasoning-sop to analyze this puzzle, verify the mechanism and extraction, and report typed blockers instead of guessing."

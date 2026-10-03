@@ -19,15 +19,18 @@ class StageProvider(Protocol):
 class PuzzleGraphState(TypedDict, total=False):
     puzzle: dict[str, Any]
     cipher_reference_hints: list[dict[str, Any]]
+    reasoning_reference_hints: list[dict[str, Any]]
     artifacts: dict[str, Any]
     required_artifacts: list[str]
     missing_artifacts: list[str]
+    input_assessment: dict[str, Any]
     status: str
     stage: str
     revision: int
     observations: list[dict[str, Any]]
     answer_constraints: list[dict[str, Any]]
     tensions: list[dict[str, Any]]
+    clue_roles: list[dict[str, Any]]
     flavor_associations: list[dict[str, Any]]
     association_candidates: list[dict[str, Any]]
     subproblems: list[dict[str, Any]]
@@ -39,6 +42,9 @@ class PuzzleGraphState(TypedDict, total=False):
     hypotheses: list[dict[str, Any]]
     representation_hypotheses: list[dict[str, Any]]
     representation_assessment: list[dict[str, Any]]
+    research_ledger: list[dict[str, Any]]
+    source_conflicts: list[dict[str, Any]]
+    verification_scope: dict[str, Any]
     plan: list[dict[str, Any]]
     attempts: list[dict[str, Any]]
     evidence: list[dict[str, Any]]
@@ -50,6 +56,7 @@ class PuzzleGraphState(TypedDict, total=False):
     open_questions: list[str]
     unused_elements: list[str]
     blockers: list[str]
+    blocker_details: list[dict[str, Any]]
     budget: dict[str, int]
     last_node: str | None
     next_node: str | None
@@ -65,6 +72,8 @@ _STAGE_INSTRUCTIONS = {
     "OBSERVE_CLASSIFY": (
         'Output {"observations":[{"id":"...","text":"...","source":"title|flavor_text|content|artifact"}],'
         '"tensions":[{"id":"...","signal_ids":["..."],"question":"why is this unnatural?"}],'
+        '"clue_roles":[{"signal_id":"...","role":"theme|parameter|ordering|decoder|extractor|instruction",'
+        '"status":"candidate|explicit","basis":"..."}],'
         '"answer_constraints":[{"id":"...","kind":"length|pattern|group_count",'
         '"value":7,"signal_ids":["..."],"explicit":true}]}. '
         "Record directly visible facts, formatting, repetitions, anomalies, missing/conflicting information, "
@@ -133,6 +142,8 @@ _STAGE_INSTRUCTIONS = {
         "Do not use a generic cipher tool unless the observations contain a specific encoding signal. "
         "Treat cipher_reference_hints as routing hints rather than evidence. When a matching hint applies and its "
         "mapping is needed, call cipher_reference_lookup with the provided lookup_query instead of relying on memory. "
+        "Treat reasoning_reference_hints the same way: use reasoning_reference_lookup only when its observable signals "
+        "match, keep required inputs and cautions visible, and never count the lookup itself as answer evidence. "
         "Use exact parameter names and satisfy the input contracts; do not invent aliases. Tools: "
         f"{_TOOL_CATALOG}."
     ),
@@ -141,7 +152,15 @@ _STAGE_INSTRUCTIONS = {
         '{"hypothesis_id":"...","effect":"supports|weakens|rejects"}],'
         '"representation_assessment":[{"representation_id":"...",'
         '"effect":"supports|weakens|rejects","reason":"..."}],'
-        '"intermediate_answers":[{"value":"...","role":"carrier|candidate","evidence_ids":["..."]}],'
+        '"intermediate_answers":[{"value":"...","role":"carrier|candidate|instruction|parameter|ordering_key|transformed_artifact",'
+        '"intermediate_type":"answer|instruction|parameter|ordering_key|transformed_artifact","evidence_ids":["..."]}],'
+        '"research_ledger":[{"id":"...","kind":"routing_hint|source_lookup",'
+        '"query":"...","source":"...","proves_answer":false}],'
+        '"source_conflicts":[{"id":"...","status":"resolved|unresolved","sources":["..."]}],'
+        '"verification_scope":{"level":"blind_solved|recomputed|checked_against_source|reconstructed|unknown",'
+        '"evidence_ids":["..."]},'
+        '"blocker_details":[{"kind":"missing_input|missing_knowledge|missing_rule|calculation_error|ambiguity|version_conflict|budget_exhausted",'
+        '"status":"resolved|unresolved","target":"..."}],'
         '"open_questions":["..."],"unused_elements":["..."],'
         '"answer_candidates":[{"answer":"...","confidence":"low|medium|high","evidence_ids":["..."]}]}. '
         "Evaluate puzzle, association, tool, or human evidence; explicitly reject failed attempts and do not invent tool results. "
@@ -198,10 +217,13 @@ def _messages(stage: str, state: PuzzleGraphState) -> list[dict[str, str]]:
     visible_state = {
         "puzzle": state["puzzle"],
         "cipher_reference_hints": state.get("cipher_reference_hints", []),
+        "reasoning_reference_hints": state.get("reasoning_reference_hints", []),
         "artifacts": state.get("artifacts", {}),
+        "input_assessment": state.get("input_assessment", {}),
         "observations": state.get("observations", []),
         "answer_constraints": state.get("answer_constraints", []),
         "tensions": state.get("tensions", []),
+        "clue_roles": state.get("clue_roles", []),
         "flavor_associations": state.get("flavor_associations", []),
         "association_candidates": state.get("association_candidates", []),
         "structure_model": state.get("structure_model", {}),
@@ -213,6 +235,9 @@ def _messages(stage: str, state: PuzzleGraphState) -> list[dict[str, str]]:
         "hypotheses": state.get("hypotheses", []),
         "representation_hypotheses": state.get("representation_hypotheses", []),
         "representation_assessment": state.get("representation_assessment", []),
+        "research_ledger": state.get("research_ledger", []),
+        "source_conflicts": state.get("source_conflicts", []),
+        "verification_scope": state.get("verification_scope", {}),
         "plan": state.get("plan", []),
         "attempts": state.get("attempts", []),
         "evidence": state.get("evidence", []),
@@ -224,6 +249,7 @@ def _messages(stage: str, state: PuzzleGraphState) -> list[dict[str, str]]:
         "open_questions": state.get("open_questions", []),
         "unused_elements": state.get("unused_elements", []),
         "blockers": state.get("blockers", []),
+        "blocker_details": state.get("blocker_details", []),
     }
     if stage == "MATERIALIZE_SUBPROBLEMS" and state.get("semantic_refinement_used", 0):
         system += (
@@ -281,6 +307,12 @@ def _stopped_stage(
         "next_node": None,
         "final_answer": None,
         "blockers": list(state.get("blockers", [])) + [protocol_issue],
+        "blocker_details": list(state.get("blocker_details", [])) + [{
+            "kind": "calculation_error",
+            "status": "unresolved",
+            "target": node,
+            "detail": protocol_issue,
+        }],
     }
 
 
@@ -315,6 +347,17 @@ def _artifact_inventory(state: PuzzleGraphState) -> PuzzleGraphState:
         return {
             "missing_artifacts": missing,
             "blockers": [f"Missing artifact: {name}" for name in missing],
+            "blocker_details": [
+                {"kind": "missing_input", "target": name, "status": "unresolved"}
+                for name in missing
+            ],
+            "input_assessment": {
+                "completeness": "missing_required_artifacts",
+                "media": ["text", *[f"artifact:{name}" for name in sorted(available)]],
+                "missing_artifacts": missing,
+                "source_mode": "user_supplied",
+                "transcription_risk": "unknown",
+            },
             "status": "BLOCKED_INPUT",
             "stage": "ARTIFACT_INVENTORY",
             "last_node": "artifact_inventory",
@@ -322,6 +365,14 @@ def _artifact_inventory(state: PuzzleGraphState) -> PuzzleGraphState:
         }
     return {
         "missing_artifacts": [],
+        "blocker_details": [],
+        "input_assessment": {
+            "completeness": "complete_for_declared_inputs",
+            "media": ["text", *[f"artifact:{name}" for name in sorted(available)]],
+            "missing_artifacts": [],
+            "source_mode": "user_supplied",
+            "transcription_risk": "unknown",
+        },
         "stage": "OBSERVE_CLASSIFY",
         "last_node": "artifact_inventory",
         "next_node": "observe_classify",
@@ -342,6 +393,7 @@ def _human_interrupt(state: PuzzleGraphState) -> PuzzleGraphState:
         "artifacts": artifacts,
         "status": "RUNNING",
         "blockers": [],
+        "blocker_details": [],
         "last_node": "human_interrupt",
         "next_node": "artifact_inventory",
     }
@@ -351,9 +403,14 @@ def _observe(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphSta
     data, budget, protocol_issue = _call_stage(provider, "OBSERVE_CLASSIFY", state)
     if data is None:
         return _stopped_stage("observe_classify", budget, state, protocol_issue)
+    clue_roles = _array(data, "clue_roles")
+    allowed_roles = {"theme", "parameter", "ordering", "decoder", "extractor", "instruction"}
+    if any(item.get("role") not in allowed_roles for item in clue_roles):
+        raise ValueError("clue roles must use the declared role vocabulary")
     return {
         "observations": _array(data, "observations"),
         "tensions": _array(data, "tensions"),
+        "clue_roles": clue_roles,
         "answer_constraints": _array(data, "answer_constraints"),
         "budget": budget,
         "stage": "ASSOCIATE_THEME",
@@ -676,6 +733,7 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
     evidence = list(state.get("evidence", []))
     attempts = list(state.get("attempts", []))
     extractions = list(state.get("extractions", []))
+    research_ledger = list(state.get("research_ledger", []))
     previous_fingerprints = {item.get("fingerprint") for item in attempts}
     registry = ToolRegistry()
     plans = state.get("plan", [])
@@ -724,6 +782,19 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
                 **({"representation_id": representation_id} if representation_id else {}),
                 **result,
             })
+            if tool in {"cipher_reference_lookup", "reasoning_reference_lookup"}:
+                research_ledger.append({
+                    "id": f"research-{plan_serial}",
+                    "kind": "routing_hint",
+                    "query": arguments.get("query"),
+                    "source": (
+                        "builtin_cipher_reference" if tool == "cipher_reference_lookup"
+                        else "builtin_reasoning_reference"
+                    ),
+                    "purpose": plan.get("purpose", ""),
+                    "evidence_id": evidence_id,
+                    "proves_answer": False,
+                })
             if tool in {
                 "extract_nth", "anagram_delta", "read_grid_path", "a1z26_decode",
                 "interleave_sequences", "grid_trace", "decode_bit_patterns",
@@ -750,6 +821,7 @@ def _tool_dispatch(state: PuzzleGraphState) -> PuzzleGraphState:
         "evidence": evidence,
         "attempts": attempts,
         "extractions": extractions,
+        "research_ledger": research_ledger,
         "stage": "EVALUATE_EVIDENCE",
         "last_node": "tool_dispatch",
         "next_node": "evaluate_evidence",
@@ -783,6 +855,15 @@ def _evaluate(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphSt
         _array(data, "intermediate_answers")
         if "intermediate_answers" in data else list(state.get("intermediate_answers", []))
     )
+    allowed_intermediate_types = {
+        "answer", "instruction", "parameter", "ordering_key", "transformed_artifact"
+    }
+    if any(
+        item.get("intermediate_type") is not None
+        and item.get("intermediate_type") not in allowed_intermediate_types
+        for item in intermediate_answers
+    ):
+        raise ValueError("intermediate_type uses an unknown value")
     open_questions = (
         _string_array(data, "open_questions")
         if "open_questions" in data else list(state.get("open_questions", []))
@@ -805,12 +886,62 @@ def _evaluate(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphSt
         for item in representation_assessment
     ):
         raise ValueError("representation assessment references an unknown hypothesis or effect")
+    research_ledger = list(state.get("research_ledger", []))
+    if "research_ledger" in data:
+        incoming_research = _array(data, "research_ledger")
+        if any(
+            not isinstance(item.get("query"), str)
+            or not isinstance(item.get("source"), str)
+            or item.get("proves_answer") is not False
+            for item in incoming_research
+        ):
+            raise ValueError("research ledger entries require query/source and cannot prove an answer")
+        known_research_ids = {item.get("id") for item in research_ledger}
+        research_ledger.extend(
+            item for item in incoming_research if item.get("id") not in known_research_ids
+        )
+    source_conflicts = (
+        _array(data, "source_conflicts")
+        if "source_conflicts" in data else list(state.get("source_conflicts", []))
+    )
+    if any(
+        item.get("status") not in {"resolved", "unresolved"}
+        or not isinstance(item.get("sources"), list)
+        for item in source_conflicts
+    ):
+        raise ValueError("source conflicts require sources and resolved|unresolved status")
+    verification_scope = data.get(
+        "verification_scope", state.get("verification_scope", {"level": "unknown", "evidence_ids": []})
+    )
+    allowed_scope_levels = {
+        "blind_solved", "recomputed", "checked_against_source", "reconstructed", "unknown"
+    }
+    if not isinstance(verification_scope, dict) or verification_scope.get("level") not in allowed_scope_levels:
+        raise ValueError("verification scope uses an unknown level")
+    blocker_details = (
+        _array(data, "blocker_details")
+        if "blocker_details" in data else list(state.get("blocker_details", []))
+    )
+    allowed_blocker_kinds = {
+        "missing_input", "missing_knowledge", "missing_rule", "calculation_error",
+        "ambiguity", "version_conflict", "budget_exhausted",
+    }
+    if any(
+        item.get("kind") not in allowed_blocker_kinds
+        or item.get("status") not in {"resolved", "unresolved"}
+        for item in blocker_details
+    ):
+        raise ValueError("blocker details use an unknown kind or status")
     return {
         "evidence": evidence,
         "intermediate_answers": intermediate_answers,
         "open_questions": open_questions,
         "unused_elements": unused_elements,
         "representation_assessment": representation_assessment,
+        "research_ledger": research_ledger,
+        "source_conflicts": source_conflicts,
+        "verification_scope": verification_scope,
+        "blocker_details": blocker_details,
         "answer_candidates": _array(data, "answer_candidates"),
         "budget": budget,
         "evaluation_decision": decision,
@@ -982,6 +1113,17 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
     )
     intermediate_gate = not bool(state.get("intermediate_validation", {}).get("passed"))
     blocker_gate = bool(state.get("blockers", []))
+    input_gate = state.get("input_assessment", {}).get("completeness") not in {
+        "complete_for_declared_inputs", "not_applicable"
+    }
+    conflict_gate = any(
+        item.get("status", "unresolved") != "resolved"
+        for item in state.get("source_conflicts", [])
+    )
+    typed_blocker_gate = any(
+        item.get("status", "unresolved") != "resolved"
+        for item in state.get("blocker_details", [])
+    )
     constraint_gate = False
     for constraint in state.get("answer_constraints", []):
         if constraint.get("explicit") is not True:
@@ -1026,6 +1168,9 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         and not unresolved_memory_gate
         and not intermediate_gate
         and not blocker_gate
+        and not input_gate
+        and not conflict_gate
+        and not typed_blocker_gate
         and not constraint_gate
         and not representation_gate
         and not variant_ambiguity_gate
@@ -1045,7 +1190,10 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         + (["No evidence-backed intermediate was validated"] if intermediate_gate else [])
         + (["Explicit answer constraints failed"] if constraint_gate else [])
         + (["No representation hypothesis passed its machine-checkable invariant"] if representation_gate else [])
-        + (["Explicit variants remain ambiguous"] if variant_ambiguity_gate else []),
+        + (["Explicit variants remain ambiguous"] if variant_ambiguity_gate else [])
+        + (["Input sufficiency is not confirmed"] if input_gate else [])
+        + (["Source or version conflicts remain unresolved"] if conflict_gate else [])
+        + (["Typed blockers remain unresolved"] if typed_blocker_gate else []),
     }
 
 
@@ -1057,6 +1205,11 @@ def _exhausted(node: str, budget: dict[str, int]) -> PuzzleGraphState:
         "last_node": node,
         "next_node": None,
         "final_answer": None,
+        "blocker_details": [{
+            "kind": "budget_exhausted",
+            "status": "unresolved",
+            "target": node,
+        }],
     }
 
 

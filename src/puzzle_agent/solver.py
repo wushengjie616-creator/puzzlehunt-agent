@@ -6,6 +6,7 @@ from .cipher_workbench import CipherWorkbench
 from .cipher_reference import index_cipher_references
 from .domain import PuzzleInput, SolveResult
 from .prompt import build_messages
+from .reasoning_reference import index_reasoning_references
 
 
 class CompletionProvider(Protocol):
@@ -24,7 +25,10 @@ class PuzzleSolver:
             puzzle.title, puzzle.flavor_text, puzzle.content, puzzle.notes or "",
         )))
         references = index_cipher_references(reference_text)
-        raw_response = self.provider.complete(build_messages(puzzle, candidates, references))
+        reasoning_references = index_reasoning_references(reference_text)
+        raw_response = self.provider.complete(build_messages(
+            puzzle, candidates, references, reasoning_references
+        ))
         try:
             data = json.loads(raw_response)
         except (json.JSONDecodeError, TypeError) as error:
