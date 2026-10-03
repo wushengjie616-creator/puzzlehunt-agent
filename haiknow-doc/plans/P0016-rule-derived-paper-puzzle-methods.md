@@ -1,8 +1,9 @@
 ---
 id: P0016
 title: 从题目规则归纳可执行纸笔推理方法
-status: approved-skip-review
+status: completed
 created_at: 2026-10-04
+plan_completed_at: 2026-10-04
 paired_task: T0015
 acceptance_contract: v1
 related_docs:
