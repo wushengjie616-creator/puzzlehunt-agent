@@ -20,7 +20,7 @@
 
 测试通过证明保存的工具调用与 oracle 自洽，不证明 DeepSeek 每次都能自主发现机制或正确识别图片。稳定验收应提交 `puzzle.txt`；图片只适合单独展示视觉解析能力，并应与文本和 walkthrough 对照。
 
-重新生成图片：
+仅在开发占位图时重新生成图片（**会覆盖当前三张人工制作的正式 `puzzle.png`，运营演示前不要运行**）：
 
 ```bash
 .venv/bin/python scripts/generate_general_demo_images.py
