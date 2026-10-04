@@ -2,7 +2,7 @@
 
 ## 1. 三入口边界
 
-系统保留两个相互兼容的入口：
+系统保留三个相互兼容的入口：
 
 | 模式 | 目标 | 模型调用 | 依赖 |
 |---|---|---|---|
@@ -17,8 +17,9 @@ Web 默认仅监听 `127.0.0.1`。站点把题目入口、`/paper-puzzles` 纸�
 账号系统，也不把 API Key、原图或 base64 放入浏览器响应和事件。原图只在内存中经过解码、像素限制与
 重编码，规范化线程结束后释放。
 
-`/api/bootstrap` 只返回 DeepSeek 是否已配置、视觉/Agent 模型名和非敏感提示，不返回 Key。未配置时首页
-在提交前禁用规范化并提示创建 `.env.local`；“已配置”仅表示 Key 存在，不代表网络、余额或凭据已通过
+`/api/bootstrap` 只返回 DeepSeek 是否已配置、视觉/Agent 模型名和非敏感提示，不返回 Key。启动时按
+进程环境 > `.env.local` > `.env` 加载 allowlisted `DEEPSEEK_*` 配置；未配置时首页在提交前禁用规范化并
+提示创建 `.env` 或 `.env.local`。“已配置”仅表示 Key 存在，不代表网络、余额或凭据已通过
 付费探测。当前默认视觉模型为 `deepseek-flash`，使用官方 OpenAI-compatible Chat Completions 的
 `image_url` data URL 输入。
 

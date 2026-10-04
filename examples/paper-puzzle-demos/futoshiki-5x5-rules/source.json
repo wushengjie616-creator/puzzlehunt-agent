@@ -1,0 +1,17 @@
+{
+  "rules":[{"id":"r1","text":"每行每列恰好使用 1、2、3、4、5 且不重复。"},{"id":"r2","text":"每个小于号两侧满足尖端一侧数字更小。"}],
+  "symbols":[1,2,3,4,5],
+  "entities":[
+    {"id":"R1C1","label":"R1C1","row":0,"column":0,"value":null},{"id":"R1C2","label":"R1C2","row":0,"column":1,"value":null},{"id":"R1C3","label":"R1C3","row":0,"column":2,"value":null},{"id":"R1C4","label":"R1C4","row":0,"column":3,"value":null},{"id":"R1C5","label":"R1C5","row":0,"column":4,"value":null},
+    {"id":"R2C1","label":"R2C1","row":1,"column":0,"value":null},{"id":"R2C2","label":"R2C2","row":1,"column":1,"value":null},{"id":"R2C3","label":"R2C3","row":1,"column":2,"value":null},{"id":"R2C4","label":"R2C4","row":1,"column":3,"value":null},{"id":"R2C5","label":"R2C5","row":1,"column":4,"value":2},
+    {"id":"R3C1","label":"R3C1","row":2,"column":0,"value":null},{"id":"R3C2","label":"R3C2","row":2,"column":1,"value":null},{"id":"R3C3","label":"R3C3","row":2,"column":2,"value":null},{"id":"R3C4","label":"R3C4","row":2,"column":3,"value":null},{"id":"R3C5","label":"R3C5","row":2,"column":4,"value":4},
+    {"id":"R4C1","label":"R4C1","row":3,"column":0,"value":null},{"id":"R4C2","label":"R4C2","row":3,"column":1,"value":null},{"id":"R4C3","label":"R4C3","row":3,"column":2,"value":null},{"id":"R4C4","label":"R4C4","row":3,"column":3,"value":null},{"id":"R4C5","label":"R4C5","row":3,"column":4,"value":null},
+    {"id":"R5C1","label":"R5C1","row":4,"column":0,"value":4},{"id":"R5C2","label":"R5C2","row":4,"column":1,"value":null},{"id":"R5C3","label":"R5C3","row":4,"column":2,"value":1},{"id":"R5C4","label":"R5C4","row":4,"column":3,"value":null},{"id":"R5C5","label":"R5C5","row":4,"column":4,"value":null}
+  ],
+  "clues":[
+    {"id":"c1","text":"R2C4 < R1C4","entity_ids":["R2C4","R1C4"]},{"id":"c2","text":"R1C2 < R1C3","entity_ids":["R1C2","R1C3"]},{"id":"c3","text":"R4C2 < R4C3","entity_ids":["R4C2","R4C3"]},{"id":"c4","text":"R1C4 < R1C5","entity_ids":["R1C4","R1C5"]},{"id":"c5","text":"R1C1 < R2C1","entity_ids":["R1C1","R2C1"]},{"id":"c6","text":"R3C4 < R4C4","entity_ids":["R3C4","R4C4"]},
+    {"id":"c7","text":"R5C4 < R5C5","entity_ids":["R5C4","R5C5"]},{"id":"c8","text":"R3C3 < R4C3","entity_ids":["R3C3","R4C3"]},{"id":"c9","text":"R1C2 < R2C2","entity_ids":["R1C2","R2C2"]},{"id":"c10","text":"R5C3 < R5C4","entity_ids":["R5C3","R5C4"]},{"id":"c11","text":"R2C4 < R3C4","entity_ids":["R2C4","R3C4"]},{"id":"c12","text":"R4C1 < R4C2","entity_ids":["R4C1","R4C2"]},
+    {"id":"c13","text":"R4C3 < R4C4","entity_ids":["R4C3","R4C4"]},{"id":"c14","text":"R4C5 < R4C4","entity_ids":["R4C5","R4C4"]},{"id":"c15","text":"R5C3 < R5C2","entity_ids":["R5C3","R5C2"]},{"id":"c16","text":"R5C1 < R5C2","entity_ids":["R5C1","R5C2"]},{"id":"c17","text":"R3C2 < R3C3","entity_ids":["R3C2","R3C3"]},{"id":"c18","text":"R2C5 < R3C5","entity_ids":["R2C5","R3C5"]}
+  ],
+  "display":{"type":"grid","rows":5,"columns":5}
+}

@@ -67,47 +67,107 @@ def draw_grid(draw, grid, *, x=190, y=180, cell=120, box_rows=None, box_cols=Non
 
 
 def sudoku(case: Path, source):
-    image, draw = canvas("4 x 4 Sudoku", "Fill 1-4; no repeats in rows, columns, or 2 x 2 boxes")
-    draw_grid(draw, source["grid"], x=210, y=170, cell=120, box_rows=2, box_cols=2)
+    size = source["size"]
+    cell = min(52, 468 // size)
+    width = cell * size
+    image, draw = canvas(
+        f"{size} x {size} Sudoku",
+        f"Fill 1-{size}; no repeats in rows, columns, or {source['box_rows']} x {source['box_cols']} boxes",
+    )
+    draw_grid(
+        draw, source["grid"], x=(WIDTH - width) // 2, y=170, cell=cell,
+        box_rows=source["box_rows"], box_cols=source["box_cols"],
+    )
     image.save(case / "puzzle.png", optimize=False)
 
 
 def nonogram(case: Path, source):
-    image, draw = canvas("5 x 5 Nonogram", "Shade cells to satisfy every row and column clue")
-    x, y, cell = 260, 230, 72
-    grid = [[None] * 5 for _ in range(5)]
+    rows, columns = len(source["row_clues"]), len(source["column_clues"])
+    image, draw = canvas(f"{columns} x {rows} Nonogram", "Shade cells to satisfy every row and column clue")
+    cell = min(39, 390 // max(rows, columns))
+    x, y = 325, 235
+    grid = [[None] * columns for _ in range(rows)]
     draw_grid(draw, grid, x=x, y=y, cell=cell)
     for index, clue in enumerate(source["row_clues"]):
-        centered(draw, (130, y + index * cell, x - 18, y + (index + 1) * cell), " ".join(map(str, clue)), face=BODY)
+        centered(draw, (80, y + index * cell, x - 15, y + (index + 1) * cell), " ".join(map(str, clue)), face=SMALL)
     for index, clue in enumerate(source["column_clues"]):
-        centered(draw, (x + index * cell, 160, x + (index + 1) * cell, y - 12), " ".join(map(str, clue)), face=BODY)
+        centered(draw, (x + index * cell, 150, x + (index + 1) * cell, y - 8), "\n".join(map(str, clue)), face=SMALL)
     image.save(case / "puzzle.png", optimize=False)
 
 
-def rule_grid(case: Path, source, title: str, subtitle: str, extras=()):
+def rule_grid(case: Path, source, title: str, subtitle: str):
     image, draw = canvas(title, subtitle)
     display = source["display"]
     grid = [[None] * display["columns"] for _ in range(display["rows"])]
     for entity in source["entities"]:
         grid[entity["row"]][entity["column"]] = entity["value"]
-    size = 100 if display["rows"] == 4 else 120
+    size = min(92, 460 // max(display["rows"], display["columns"]))
     width = display["columns"] * size
     x = (WIDTH - width) // 2
     draw_grid(draw, grid, x=x, y=190, cell=size)
-    for text, position in extras:
-        draw.text(position, text, fill=ACCENT, font=BODY)
+    return image, draw, x, 190, size
+
+
+def futoshiki(case: Path, source):
+    image, draw, x, y, size = rule_grid(
+        case, source, "5 x 5 Futoshiki",
+        "Rows and columns use 1-5; each symbol points toward the smaller value",
+    )
+    positions = {entity["id"]: (entity["row"], entity["column"]) for entity in source["entities"]}
+    for clue in source["clues"]:
+        smaller, larger = clue["entity_ids"]
+        sr, sc = positions[smaller]
+        lr, lc = positions[larger]
+        if sr == lr:
+            left_is_smaller = sc < lc
+            symbol = "<" if left_is_smaller else ">"
+            boundary = max(sc, lc)
+            centered(draw, (x + boundary * size - 13, y + sr * size + 28,
+                            x + boundary * size + 13, y + (sr + 1) * size - 28),
+                     symbol, fill=ACCENT, face=SMALL)
+        else:
+            top_is_smaller = sr < lr
+            symbol = "∧" if top_is_smaller else "∨"
+            boundary = max(sr, lr)
+            centered(draw, (x + sc * size + 28, y + boundary * size - 13,
+                            x + (sc + 1) * size - 28, y + boundary * size + 13),
+                     symbol, fill=ACCENT, face=SMALL)
+    image.save(case / "puzzle.png", optimize=False)
+
+
+def skyscrapers(case: Path, source, program):
+    image, draw, x, y, size = rule_grid(
+        case, source, "4 x 4 Skyscrapers",
+        "Edge clues count visible towers; higher towers hide lower ones",
+    )
+    targets = {
+        constraint["source_clue_ids"][0]: constraint["target"]
+        for constraint in program["constraints"] if constraint["type"] == "visibility"
+    }
+    n = source["display"]["rows"]
+    for index in range(n):
+        centered(draw, (x + index * size, y - 45, x + (index + 1) * size, y - 5), targets[f"c{index + 1}t"], face=BODY)
+        centered(draw, (x + index * size, y + n * size + 5, x + (index + 1) * size, y + n * size + 45), targets[f"c{index + 1}b"], face=BODY)
+        centered(draw, (x - 45, y + index * size, x - 5, y + (index + 1) * size), targets[f"r{index + 1}l"], face=BODY)
+        centered(draw, (x + n * size + 5, y + index * size, x + n * size + 45, y + (index + 1) * size), targets[f"r{index + 1}r"], face=BODY)
     image.save(case / "puzzle.png", optimize=False)
 
 
 def kakuro(case: Path, source):
-    image, draw = canvas("Cross Sums", "Digits 1-4; digits in each sum are distinct")
-    boxes = {"A": (300, 220), "B": (440, 220), "C": (300, 360), "D": (440, 360)}
-    for label, (x, y) in boxes.items():
-        draw.rounded_rectangle((x, y, x + 110, y + 110), radius=12, outline=INK, width=4)
-        centered(draw, (x, y, x + 110, y + 110), label)
-    draw.text((570, 238), "A + B = 4", fill=ACCENT, font=BODY)
-    draw.text((570, 305), "A + C = 3", fill=ACCENT, font=BODY)
-    draw.text((570, 372), "B + D = 7", fill=ACCENT, font=BODY)
+    image, draw = canvas("3 x 3 Cross Sums", "Fill 1-9; digits are distinct within every row and column sum")
+    x, y, cell = 300, 220, 105
+    grid = [[None] * 3 for _ in range(3)]
+    for entity in source["entities"]:
+        grid[entity["row"]][entity["column"]] = entity["value"]
+    draw_grid(draw, grid, x=x, y=y, cell=cell)
+    row_sums = [11, 23, 15]
+    column_sums = [20, 10, 19]
+    for index, value in enumerate(row_sums):
+        centered(draw, (x - 70, y + index * cell, x - 12, y + (index + 1) * cell), value, fill=ACCENT, face=BODY)
+    for index, value in enumerate(column_sums):
+        centered(draw, (x + index * cell, y - 60, x + (index + 1) * cell, y - 10), value, fill=ACCENT, face=BODY)
+    draw.text((625, 285), "row sums →", fill=MUTED, font=SMALL)
+    draw.text((365, 555), "↑ column sums", fill=MUTED, font=SMALL)
     image.save(case / "puzzle.png", optimize=False)
 
 
@@ -116,18 +176,15 @@ def main():
     for item in manifest["cases"]:
         case = ROOT / item["id"]
         source = json.loads((case / "source.json").read_text(encoding="utf-8"))
+        program = json.loads((case / "program.json").read_text(encoding="utf-8"))
         if item["engine"] == "sudoku":
             sudoku(case, source)
         elif item["engine"] == "nonogram":
             nonogram(case, source)
         elif item["puzzle_type"] == "futoshiki":
-            rule_grid(case, source, "4 x 4 Futoshiki", "Rows and columns use 1-4; obey the inequality", [("R1C1 < R1C2", (340, 155))])
+            futoshiki(case, source)
         elif item["puzzle_type"] == "skyscrapers":
-            rule_grid(case, source, "3 x 3 Skyscrapers", "Edge clues: visible towers from that direction", [
-                ("3  2  1", (365, 155)), ("1  2  2", (365, 570)),
-                ("3", (230, 235)), ("2", (230, 355)), ("1", (230, 475)),
-                ("1", (650, 235)), ("2", (650, 355)), ("2", (650, 475)),
-            ])
+            skyscrapers(case, source, program)
         elif item["puzzle_type"] == "kakuro":
             kakuro(case, source)
 

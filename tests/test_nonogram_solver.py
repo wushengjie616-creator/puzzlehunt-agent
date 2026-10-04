@@ -107,6 +107,13 @@ class NonogramSolverTests(unittest.TestCase):
                 "grid": [[0]],
             })
 
+    def test_row_and_column_clues_must_describe_the_same_filled_cell_total(self):
+        with self.assertRaisesRegex(NonogramError, "filled-cell totals differ"):
+            build_state({
+                "row_clues": [[2], [1]],
+                "column_clues": [[1], [1]],
+            })
+
     def test_trace_tampering_is_rejected(self):
         payload = {"row_clues": FRAME_CLUES, "column_clues": FRAME_CLUES}
         result = solve_nonogram(payload)

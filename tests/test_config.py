@@ -8,9 +8,57 @@ from unittest.mock import patch
 
 from puzzle_agent import cli
 from puzzle_agent.config import load_env_local
+from puzzle_agent.web.app import create_app
 
 
 class EnvLocalTests(unittest.TestCase):
+    def test_default_loader_accepts_dotenv_and_local_override_without_beating_shell(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".env").write_text(
+                "DEEPSEEK_API_KEY=from-env\nDEEPSEEK_MODEL=env-model\n"
+                "DEEPSEEK_BASE_URL=https://env.example\n",
+                encoding="utf-8",
+            )
+            (root / ".env.local").write_text(
+                "DEEPSEEK_API_KEY=from-local\nDEEPSEEK_VISION_MODEL=local-vision\n",
+                encoding="utf-8",
+            )
+            previous = Path.cwd()
+            try:
+                os.chdir(root)
+                environment = {"DEEPSEEK_MODEL": "shell-model"}
+                load_env_local(environ=environment)
+                app = create_app(env={})
+            finally:
+                os.chdir(previous)
+
+        self.assertEqual(environment["DEEPSEEK_API_KEY"], "from-local")
+        self.assertEqual(environment["DEEPSEEK_MODEL"], "shell-model")
+        self.assertEqual(environment["DEEPSEEK_VISION_MODEL"], "local-vision")
+        self.assertEqual(environment["DEEPSEEK_BASE_URL"], "https://env.example")
+        self.assertTrue(app.state.deepseek_status["configured"])
+        self.assertNotIn("from-env", str(app.state.deepseek_status))
+        self.assertNotIn("from-local", str(app.state.deepseek_status))
+
+    def test_web_bootstrap_accepts_dotenv_when_local_file_is_absent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".env").write_text(
+                "DEEPSEEK_API_KEY=dotenv-secret\nDEEPSEEK_VISION_MODEL=dotenv-vision\n",
+                encoding="utf-8",
+            )
+            previous = Path.cwd()
+            try:
+                os.chdir(root)
+                app = create_app(env={})
+            finally:
+                os.chdir(previous)
+
+        self.assertTrue(app.state.deepseek_status["configured"])
+        self.assertEqual(app.state.deepseek_status["vision_model"], "dotenv-vision")
+        self.assertNotIn("dotenv-secret", str(app.state.deepseek_status))
+
     def test_loader_allows_only_deepseek_settings_and_preserves_shell_precedence(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / ".env.local"

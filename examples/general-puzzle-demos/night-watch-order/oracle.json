@@ -1,0 +1,15 @@
+{
+  "answer": "LANTERN",
+  "order": ["Moth", "Crow", "Hare", "Owl", "Lynx", "Fox", "Stag"],
+  "intermediate": "ODQWHUQ",
+  "required_inferences": [
+    "Translate the narrative handoffs into a unique duty order before extracting anything.",
+    "Use each lantern count as the 1-based beat in that guard's password, then correct the slow alphabet dial."
+  ],
+  "rejected_hypotheses": [
+    "Reading the cards in printed order produces no useful text and ignores all five handoff records."
+  ],
+  "signals": ["scattered-cards", "opening-and-locking", "direct-handoffs", "lantern-beats", "slow-three-dial", "missing-equipment-length"],
+  "consumed_signals": ["scattered-cards", "opening-and-locking", "direct-handoffs", "lantern-beats", "slow-three-dial", "missing-equipment-length"],
+  "independent_check": "The handoff constraints have one order; lantern-count extraction gives ODQWHUQ, and correcting a dial three places slow gives LANTERN."
+}

@@ -74,7 +74,7 @@ function collectCanonical(){
   throw new Error(`不支持确认题型：${activeEnvelopeKind}`)
 }
 
-async function boot(){applyEntryPreset();const data=await fetch("/api/bootstrap",{cache:"no-store"}).then(r=>r.json());capability=data.capability_token;const state=byId("deepseek-state");state.classList.remove("pending");state.classList.add(data.deepseek.configured?"available":"unavailable");state.textContent=data.deepseek.configured?`DeepSeek 已配置 · 图片 ${data.deepseek.vision_model} · Agent ${data.deepseek.agent_model}`:`DeepSeek 暂不可用：${data.deepseek.message}`;if(!data.deepseek.configured){byId("normalize").disabled=true;byId("normalize").title="配置 .env.local 并重启服务后可用"}await restoreMinesweeper()}
+async function boot(){applyEntryPreset();const data=await fetch("/api/bootstrap",{cache:"no-store"}).then(r=>r.json());capability=data.capability_token;const state=byId("deepseek-state");state.classList.remove("pending");state.classList.add(data.deepseek.configured?"available":"unavailable");state.textContent=data.deepseek.configured?`DeepSeek 已配置 · 图片 ${data.deepseek.vision_model} · Agent ${data.deepseek.agent_model}`:`DeepSeek 暂不可用：${data.deepseek.message}`;if(!data.deepseek.configured){byId("normalize").disabled=true;byId("normalize").title="配置 .env 或 .env.local 并重启服务后可用"}await restoreMinesweeper()}
 byId("puzzle-kind").addEventListener("change",updateKindControls);
 byId("puzzle-image").addEventListener("change",event=>setImageFile(event.target.files[0]||null));
 const dropZone=byId("image-drop-zone");

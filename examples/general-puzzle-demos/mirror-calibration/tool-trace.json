@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "final_answer": "SECRET",
+  "steps": [
+    {"id": "row-1", "tool": "palindrome_mismatch", "arguments": {"text": "GBCDCBA"}, "expected": {"output": "GA", "mismatches": [{"left_position": 1, "left": "G", "right_position": 7, "right": "A"}], "is_palindrome": false}},
+    {"id": "row-2", "tool": "palindrome_mismatch", "arguments": {"text": "QPTRTAQ"}, "expected": {"output": "PA", "mismatches": [{"left_position": 2, "left": "P", "right_position": 6, "right": "A"}], "is_palindrome": false}},
+    {"id": "row-3", "tool": "palindrome_mismatch", "arguments": {"text": "QRMUARQ"}, "expected": {"output": "MA", "mismatches": [{"left_position": 3, "left": "M", "right_position": 5, "right": "A"}], "is_palindrome": false}},
+    {"id": "row-4", "tool": "palindrome_mismatch", "arguments": {"text": "MDEYEDA"}, "expected": {"output": "MA", "mismatches": [{"left_position": 1, "left": "M", "right_position": 7, "right": "A"}], "is_palindrome": false}},
+    {"id": "row-5", "tool": "palindrome_mismatch", "arguments": {"text": "HPJKJAH"}, "expected": {"output": "PA", "mismatches": [{"left_position": 2, "left": "P", "right_position": 6, "right": "A"}], "is_palindrome": false}},
+    {"id": "row-6", "tool": "palindrome_mismatch", "arguments": {"text": "LMXNAML"}, "expected": {"output": "XA", "mismatches": [{"left_position": 3, "left": "X", "right_position": 5, "right": "A"}], "is_palindrome": false}},
+    {"id": "read-ruler-distances", "tool": "a1z26_decode", "arguments": {"values": [6, 15, 12, 12, 15, 23]}, "expected": {"output": "FOLLOW"}},
+    {"id": "follow-copper-arrows", "tool": "grid_trace", "arguments": {"grid": ["QAZWS", "XSECV", "P★MRO", "KJTEB", "NHGFD"], "start": [2, 1], "directions": ["N", "E", "E", "S", "S", "W"]}, "expected": {"output": "SECRET", "path": [[2, 1], [1, 1], [1, 2], [1, 3], [2, 3], [3, 3], [3, 2]]}}
+  ]
+}

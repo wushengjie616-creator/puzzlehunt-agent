@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "description": "Three original medium general-puzzle demos inspired by CCBC-style layered reasoning.",
+  "cases": [
+    {
+      "id": "case-shift-change",
+      "title": "风暴灯语",
+      "origin": "original",
+      "difficulty": "medium",
+      "layers": 3,
+      "mechanism": "surface-case-binary-then-caesar"
+    },
+    {
+      "id": "night-watch-order",
+      "title": "最后一班守灯人",
+      "origin": "original",
+      "difficulty": "medium",
+      "layers": 3,
+      "mechanism": "constraint-order-index-extraction-then-caesar"
+    },
+    {
+      "id": "mirror-calibration",
+      "title": "镜廊失窃案",
+      "origin": "original",
+      "difficulty": "medium",
+      "layers": 3,
+      "mechanism": "palindrome-distance-instruction-grid-path"
+    }
+  ]
+}

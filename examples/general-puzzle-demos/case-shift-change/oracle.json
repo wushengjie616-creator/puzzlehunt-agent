@@ -1,0 +1,14 @@
+{
+  "answer": "HARBOR",
+  "intermediate": ["TURNBACKTHREE", "KDUERU"],
+  "required_inferences": [
+    "Treat uppercase/lowercase as lit/dark states and read each five-letter card as one value.",
+    "Interpret TURNBACKTHREE as an operation on the still-unused dial text, not as the final answer."
+  ],
+  "rejected_hypotheses": [
+    "Reading lowercase as lit or reversing the five positions fails to produce a grammatical instruction."
+  ],
+  "signals": ["night-lit-uppercase", "five-windows", "westmost-first", "rusted-dial", "wrong-side", "answer-length"],
+  "consumed_signals": ["night-lit-uppercase", "five-windows", "westmost-first", "rusted-dial", "wrong-side", "answer-length"],
+  "independent_check": "Uppercase-as-1 with the west/left position most significant yields TURNBACKTHREE; shifting KDUERU backward three gives the six-letter port HARBOR."
+}

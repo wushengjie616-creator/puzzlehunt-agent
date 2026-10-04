@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "final_answer": "LANTERN",
+  "steps": [
+    {
+      "id": "prove-unique-order",
+      "tool": "constrained_order",
+      "arguments": {
+        "items": ["Owl", "Fox", "Stag", "Moth", "Hare", "Lynx", "Crow"],
+        "constraints": [
+          {"type": "start", "item": "Moth"},
+          {"type": "end", "item": "Stag"},
+          {"type": "immediately_before", "left": "Crow", "right": "Hare"},
+          {"type": "before", "left": "Hare", "right": "Owl"},
+          {"type": "before", "left": "Owl", "right": "Lynx"},
+          {"type": "immediately_before", "left": "Lynx", "right": "Fox"}
+        ]
+      },
+      "expected": {"output": {"status": "SAT", "solutions": [["Moth", "Crow", "Hare", "Owl", "Lynx", "Fox", "Stag"]], "solution_count": 1, "truncated": false}}
+    },
+    {"id": "strike-lit-beats", "tool": "extract_nth", "arguments": {"lines": ["SHORE", "ADORE", "EQUAL", "TOWER", "GHOST", "GUARD", "SQUALL"], "indices": [3, 2, 2, 3, 2, 2, 2]}, "expected": {"output": "ODQWHUQ"}},
+    {"id": "correct-slow-dial", "tool": "caesar_shift", "arguments": {"text": "ODQWHUQ", "shift": -3}, "expected": {"output": "LANTERN"}}
+  ]
+}

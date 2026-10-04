@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "final_answer": "HARBOR",
+  "steps": [
+    {
+      "id": "decode-lit-windows",
+      "tool": "decode_bit_patterns",
+      "arguments": {
+        "patterns": ["10100", "10101", "10010", "01110", "00010", "00001", "00011", "01011", "10100", "01000", "10010", "00101", "00101"],
+        "bit_order": "msb"
+      },
+      "expected": {
+        "output": "TURNBACKTHREE",
+        "items": [
+          {"bits": "10100", "value": 20, "symbol": "T"},
+          {"bits": "10101", "value": 21, "symbol": "U"},
+          {"bits": "10010", "value": 18, "symbol": "R"},
+          {"bits": "01110", "value": 14, "symbol": "N"},
+          {"bits": "00010", "value": 2, "symbol": "B"},
+          {"bits": "00001", "value": 1, "symbol": "A"},
+          {"bits": "00011", "value": 3, "symbol": "C"},
+          {"bits": "01011", "value": 11, "symbol": "K"},
+          {"bits": "10100", "value": 20, "symbol": "T"},
+          {"bits": "01000", "value": 8, "symbol": "H"},
+          {"bits": "10010", "value": 18, "symbol": "R"},
+          {"bits": "00101", "value": 5, "symbol": "E"},
+          {"bits": "00101", "value": 5, "symbol": "E"}
+        ],
+        "bit_order": "msb"
+      }
+    },
+    {"id": "falsify-wrong-direction", "tool": "caesar_shift", "arguments": {"text": "KDUERU", "shift": 3}, "expected": {"output": "NGXHUX"}},
+    {"id": "turn-back-three", "tool": "caesar_shift", "arguments": {"text": "KDUERU", "shift": -3}, "expected": {"output": "HARBOR"}}
+  ]
+}

@@ -53,10 +53,15 @@ def validate_spec(payload: dict[str, Any]) -> NonogramSpec:
         raise NonogramError(f"row and column counts must be in 1..{MAX_LINES}")
     if rows * columns > MAX_CELLS:
         raise NonogramError(f"Nonogram grid must contain at most {MAX_CELLS} cells")
-    return NonogramSpec(
-        _parse_clues(raw_rows, line_length=columns, name="row_clues"),
-        _parse_clues(raw_columns, line_length=rows, name="column_clues"),
-    )
+    row_clues = _parse_clues(raw_rows, line_length=columns, name="row_clues")
+    column_clues = _parse_clues(raw_columns, line_length=rows, name="column_clues")
+    row_total = sum(sum(clue) for clue in row_clues)
+    column_total = sum(sum(clue) for clue in column_clues)
+    if row_total != column_total:
+        raise NonogramError(
+            f"row and column filled-cell totals differ: {row_total} != {column_total}"
+        )
+    return NonogramSpec(row_clues, column_clues)
 
 
 def build_state(payload: dict[str, Any]) -> NonogramState:

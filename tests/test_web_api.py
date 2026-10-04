@@ -296,7 +296,7 @@ class WebApiTests(unittest.TestCase):
 
         unavailable = TestClient(create_app(
             normalizer=RuleNormalizer(), receipt_secret=b"u" * 32,
-            capability_token="unavailable-capability", env={},
+            capability_token="unavailable-capability", env={"DEEPSEEK_API_KEY": ""},
         ))
         unavailable_headers = dict(
             self.headers, **{"X-Puzzle-Capability": "unavailable-capability"},
@@ -404,10 +404,10 @@ class WebApiTests(unittest.TestCase):
             agent_provider=None,
             receipt_secret=b"u" * 32,
             capability_token="unavailable-capability",
-            env={},
+            env={"DEEPSEEK_API_KEY": ""},
         )).get("/api/bootstrap").json()
         self.assertFalse(unavailable["deepseek"]["configured"])
-        self.assertIn(".env.local", unavailable["deepseek"]["message"])
+        self.assertIn(".env", unavailable["deepseek"]["message"])
         self.assertEqual(unavailable["deepseek"]["vision_model"], "deepseek-flash")
         self.assertNotIn("replace-with", str(unavailable))
 

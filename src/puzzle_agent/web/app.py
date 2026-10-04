@@ -31,7 +31,7 @@ _ALLOWED_HOSTS = {"127.0.0.1", "localhost", "testserver", "::1"}
 
 
 class _UnavailableNormalizer:
-    reason = "DEEPSEEK_API_KEY 未配置；请在项目根目录创建 .env.local 后重启服务"
+    reason = "DEEPSEEK_API_KEY 未配置；请在项目根目录配置 .env 或 .env.local 后重启服务"
 
     def normalize(self, **kwargs):
         raise RuntimeError(self.reason)

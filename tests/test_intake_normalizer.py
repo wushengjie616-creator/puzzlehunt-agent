@@ -79,6 +79,17 @@ class IntakeNormalizerTests(unittest.TestCase):
                 "warnings": [],
                 "canonical": {"row_clues": [[0]], "column_clues": [[1]]},
             })
+        with self.assertRaisesRegex(NormalizationError, "filled-cell totals differ"):
+            DeepSeekNormalizer._validate_envelope({
+                "kind": "nonogram",
+                "title": "列线索错位",
+                "confidence": 0.98,
+                "warnings": [],
+                "canonical": {
+                    "row_clues": [[2], [1]],
+                    "column_clues": [[1], [1]],
+                },
+            })
 
     def test_rule_puzzle_preserves_rules_entities_and_clues_for_method_synthesis(self):
         canonical = {

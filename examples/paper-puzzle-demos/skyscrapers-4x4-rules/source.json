@@ -1,0 +1,17 @@
+{
+  "rules":[{"id":"r1","text":"每行每列恰好使用 1、2、3、4 且不重复。"},{"id":"r2","text":"边缘数字表示从该方向能看到的楼房数；更高楼会挡住后面的矮楼。"}],
+  "symbols":[1,2,3,4],
+  "entities":[
+    {"id":"R1C1","label":"R1C1","row":0,"column":0,"value":null},{"id":"R1C2","label":"R1C2","row":0,"column":1,"value":null},{"id":"R1C3","label":"R1C3","row":0,"column":2,"value":null},{"id":"R1C4","label":"R1C4","row":0,"column":3,"value":null},
+    {"id":"R2C1","label":"R2C1","row":1,"column":0,"value":null},{"id":"R2C2","label":"R2C2","row":1,"column":1,"value":null},{"id":"R2C3","label":"R2C3","row":1,"column":2,"value":null},{"id":"R2C4","label":"R2C4","row":1,"column":3,"value":null},
+    {"id":"R3C1","label":"R3C1","row":2,"column":0,"value":null},{"id":"R3C2","label":"R3C2","row":2,"column":1,"value":null},{"id":"R3C3","label":"R3C3","row":2,"column":2,"value":null},{"id":"R3C4","label":"R3C4","row":2,"column":3,"value":null},
+    {"id":"R4C1","label":"R4C1","row":3,"column":0,"value":null},{"id":"R4C2","label":"R4C2","row":3,"column":1,"value":null},{"id":"R4C3","label":"R4C3","row":3,"column":2,"value":null},{"id":"R4C4","label":"R4C4","row":3,"column":3,"value":null}
+  ],
+  "clues":[
+    {"id":"r1l","text":"row 1 left = 4","entity_ids":["R1C1","R1C2","R1C3","R1C4"]},{"id":"r1r","text":"row 1 right = 1","entity_ids":["R1C4","R1C3","R1C2","R1C1"]},{"id":"r2l","text":"row 2 left = 3","entity_ids":["R2C1","R2C2","R2C3","R2C4"]},{"id":"r2r","text":"row 2 right = 2","entity_ids":["R2C4","R2C3","R2C2","R2C1"]},
+    {"id":"r3l","text":"row 3 left = 2","entity_ids":["R3C1","R3C2","R3C3","R3C4"]},{"id":"r3r","text":"row 3 right = 2","entity_ids":["R3C4","R3C3","R3C2","R3C1"]},{"id":"r4l","text":"row 4 left = 1","entity_ids":["R4C1","R4C2","R4C3","R4C4"]},{"id":"r4r","text":"row 4 right = 2","entity_ids":["R4C4","R4C3","R4C2","R4C1"]},
+    {"id":"c1t","text":"column 1 top = 4","entity_ids":["R1C1","R2C1","R3C1","R4C1"]},{"id":"c1b","text":"column 1 bottom = 1","entity_ids":["R4C1","R3C1","R2C1","R1C1"]},{"id":"c2t","text":"column 2 top = 3","entity_ids":["R1C2","R2C2","R3C2","R4C2"]},{"id":"c2b","text":"column 2 bottom = 2","entity_ids":["R4C2","R3C2","R2C2","R1C2"]},
+    {"id":"c3t","text":"column 3 top = 2","entity_ids":["R1C3","R2C3","R3C3","R4C3"]},{"id":"c3b","text":"column 3 bottom = 2","entity_ids":["R4C3","R3C3","R2C3","R1C3"]},{"id":"c4t","text":"column 4 top = 1","entity_ids":["R1C4","R2C4","R3C4","R4C4"]},{"id":"c4b","text":"column 4 bottom = 2","entity_ids":["R4C4","R3C4","R2C4","R1C4"]}
+  ],
+  "display":{"type":"grid","rows":4,"columns":4}
+}

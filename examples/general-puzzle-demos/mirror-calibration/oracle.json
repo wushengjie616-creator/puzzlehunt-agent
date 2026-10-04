@@ -1,0 +1,16 @@
+{
+  "answer": "SECRET",
+  "mismatch_pairs": ["G/A", "P/A", "M/A", "M/A", "P/A", "X/A"],
+  "distances": [6, 15, 12, 12, 15, 23],
+  "intermediate": "FOLLOW",
+  "required_inferences": [
+    "Locate exactly one mirrored mismatch per calibration stripe and measure alphabet-position distance rather than copying letters.",
+    "Treat FOLLOW as an instruction to start at the star and traverse the copper-frame arrows through the letter grid."
+  ],
+  "rejected_hypotheses": [
+    "Concatenating mismatch letters gives GAPAMAMAPAXA and fails both the instruction clue and answer length."
+  ],
+  "signals": ["mirror-symmetry", "one-crack-per-line", "az-ruler", "read-marks-as-letters", "follow-intermediate", "star-start", "copper-arrows", "answer-length"],
+  "consumed_signals": ["mirror-symmetry", "one-crack-per-line", "az-ruler", "read-marks-as-letters", "follow-intermediate", "star-start", "copper-arrows", "answer-length"],
+  "independent_check": "The six unique mirrored mismatches have distances 6,15,12,12,15,23 = FOLLOW; following the six arrows from the star reads SECRET."
+}
