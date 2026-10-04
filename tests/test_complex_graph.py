@@ -538,6 +538,39 @@ class ComplexGraphTests(unittest.TestCase):
         ambiguous = _verify(VerifyProvider("OK"), ambiguous_state)
         self.assertEqual(ambiguous["status"], "NEEDS_REVIEW")
         self.assertIn("Explicit variants remain ambiguous", ambiguous["blockers"])
+
+    def test_machine_gate_accepts_representation_supported_by_deterministic_decoder(self):
+        class VerifyProvider:
+            def complete(self, _messages):
+                return json.dumps({
+                    "answer": "SECRET", "confidence": "high",
+                    "checks": {
+                        "format": True, "evidence": True, "flavor_callback": True,
+                        "clue_coverage": True, "all_elements_consumed": True,
+                        "independent_derivation": True,
+                    },
+                })
+
+        state = new_puzzle_state(PuzzleInput(content="mirror grid"), max_calls=4)
+        state.update({
+            "input_assessment": {"completeness": "complete_for_declared_inputs"},
+            "answer_constraints": [{"kind": "length", "value": 6, "explicit": True}],
+            "representation_hypotheses": [{"id": "r1"}],
+            "representation_assessment": [{"representation_id": "r1", "effect": "supports"}],
+            "plan": [{"representation_id": "r1"}],
+            "attempts": [{"tool": "a1z26_decode", "outcome": "completed", "representation_id": "r1"}],
+            "evidence": [{
+                "id": "tool-1", "kind": "deterministic_tool_result",
+                "tool": "a1z26_decode", "representation_id": "r1", "output": "FOLLOW",
+            }],
+            "intermediate_validation": {"passed": True},
+            "blockers": [], "open_questions": [], "unused_elements": [],
+        })
+
+        result = _verify(VerifyProvider(), state)
+
+        self.assertEqual(result["status"], "SOLVED")
+        self.assertEqual(result["final_answer"], "SECRET")
     def test_invalid_stage_json_terminates_as_needs_review_instead_of_worker_error(self):
         class InvalidObservationProvider(ScriptedStageProvider):
             def complete(self, messages):

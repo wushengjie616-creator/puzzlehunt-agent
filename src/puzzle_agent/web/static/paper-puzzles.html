@@ -13,7 +13,20 @@
     <p>解法器展示可验证过程；互动游戏保留玩家操作，不替你暗中猜测。</p>
   </header>
   <main>
-    <section class="paper-section">
+    <section class="guide-panel" aria-labelledby="paper-guide-title">
+      <div class="guide-heading">
+        <div><span class="eyebrow">CHOOSE A MODE</span><h2 id="paper-guide-title">纸笔区怎么选</h2></div>
+        <p>这里既有会展示推理过程的解法器，也有保留玩家操作的小游戏。</p>
+      </div>
+      <div class="guide-grid">
+        <article class="guide-card static"><span class="guide-kicker">需要 DeepSeek</span><strong>解题组件</strong><p>数独和数织：先识别题面，再由确定性脚本给下一步或完整过程。</p><a href="#paper-solvers">查看组件 ↓</a></article>
+        <article class="guide-card static"><span class="guide-kicker local">不调用 DeepSeek</span><strong>本地游戏</strong><p>扫雷直接游玩；“逻辑提示”只使用当前棋盘上能证明的信息。</p><a href="#paper-solvers">开始扫雷 ↓</a></article>
+        <article class="guide-card static"><span class="guide-kicker">需要 DeepSeek</span><strong>按规则推理</strong><p>题型未内置时，把题目和完整规则一起交给 Agent 归纳解法。</p><a href="/?kind=rule_puzzle">提交规则题 →</a></article>
+      </div>
+      <p class="guide-note"><strong>图片提示：</strong>识别后务必核对；稳定测试和展示优先提交清晰文字与规则。</p>
+    </section>
+
+    <section id="paper-solvers" class="paper-section">
       <div class="section-title"><span>01</span><div><h2>解题组件</h2><p>数独、数织和规则题从统一入口经过 DeepSeek 整理；扫雷完全在本地游玩。</p></div></div>
       <div class="cards">
         <article class="puzzle-card enabled"><div class="badge">可用</div><h3>普通数独</h3><p>可选择只提示下一步或使用基础技巧完整做完；每一步说明如何观察。</p><a class="button-link" href="/?kind=sudoku">提交数独</a></article>

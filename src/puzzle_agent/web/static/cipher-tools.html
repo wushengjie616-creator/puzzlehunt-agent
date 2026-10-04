@@ -13,7 +13,20 @@
     <p>先用确定性转换整理线索，再结合题目标题、格式和独立提示判断候选。</p>
   </header>
   <main>
-    <section class="panel tool-panel">
+    <section class="guide-panel" aria-labelledby="cipher-guide-title">
+      <div class="guide-heading">
+        <div><span class="eyebrow">HOW TO USE</span><h2 id="cipher-guide-title">密码区怎么用</h2></div>
+        <p>所有工具都在本地确定性运行。它们帮助验证假设，但候选不是答案。</p>
+      </div>
+      <div class="guide-grid">
+        <a class="guide-card" href="#quick-transform"><span class="guide-kicker local">有密文时</span><strong>快速转换</strong><p>已怀疑某种编码时，直接编码、解码或枚举凯撒移位。</p></a>
+        <a class="guide-card" href="#reference-library"><span class="guide-kicker local">不懂规则时</span><strong>搜索密码规则</strong><p>按名称、别名或特征查询古典密码的识别方法与注意事项。</p></a>
+        <a class="guide-card" href="#visual-tables"><span class="guide-kicker local">看到图形时</span><strong>对照视觉表</strong><p>用盲文、旗语等图形表逐个抄录，再回到题面做交叉验证。</p></a>
+      </div>
+      <p class="guide-note"><strong>判断原则：</strong>转换结果还要同时符合标题、分组、答案长度和其他独立线索。</p>
+    </section>
+
+    <section id="quick-transform" class="panel tool-panel">
       <div class="section-title"><span>01</span><div><h2>快速转换</h2><p>转换结果是证据候选，不自动宣称谜题答案。</p></div></div>
       <div class="tool-controls">
         <label for="operation">转换方式</label>
@@ -28,13 +41,13 @@
       <button id="transform" class="primary">转换</button><p id="transform-error" class="error-text" aria-live="polite"></p><div id="transform-result" class="result-box"></div>
     </section>
 
-    <section class="panel">
+    <section id="reference-library" class="panel">
       <div class="section-title"><span>02</span><div><h2>古典密码搜索库</h2><p>收录培根、猪圈、凯撒、栅栏、ASCII 和旗语。</p></div></div>
       <label for="reference-search">搜索名称、别名或规则</label><div class="search-row"><input id="reference-search" type="search" placeholder="例如 猪圈、ROT、ASCII"><button id="search">搜索</button></div>
       <div id="reference-results" class="reference-list" aria-live="polite"></div>
     </section>
 
-    <section class="panel">
+    <section id="visual-tables" class="panel">
       <div class="section-title"><span>03</span><div><h2>盲文速查表</h2><p>六点盲文点位：左列从上到下为 1、2、3，右列为 4、5、6。</p></div></div>
       <p class="reference-note">数字需要先发送数字标志 <code>3456</code>，随后 1–0 分别复用 A–J 的点位。</p>
       <div id="braille-table" class="braille-grid"></div>

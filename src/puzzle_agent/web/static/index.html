@@ -13,7 +13,25 @@
     <p>把凌乱的文字或题面图片交给 DeepSeek 整理，再由可验证组件逐步推理。</p>
   </header>
   <main>
-    <section class="panel intake-panel">
+    <section class="guide-panel" aria-labelledby="home-guide-title">
+      <div class="guide-heading">
+        <div><span class="eyebrow">START HERE</span><h2 id="home-guide-title">第一次使用</h2></div>
+        <p>先按目的选板块；需要 Agent 解题时，再走下方四步。</p>
+      </div>
+      <div class="guide-grid guide-routes">
+        <a class="guide-card" href="#intake"><span class="guide-kicker">需要 DeepSeek</span><strong>题目入口</strong><p>提交普通谜题、数独、数织或自带规则的纸笔题，让 Agent 整理并推理。</p></a>
+        <a class="guide-card" href="/paper-puzzles"><span class="guide-kicker local">部分本地</span><strong>纸笔谜题</strong><p>选择数独、数织、规则题解法器，或直接玩完全本地的扫雷。</p></a>
+        <a class="guide-card" href="/cipher-tools"><span class="guide-kicker local">完全本地</span><strong>密码工具</strong><p>做凯撒、培根、ASCII 等转换，查询古典密码、盲文与旗语。</p></a>
+      </div>
+      <ol class="guide-steps" aria-label="Agent 解题四步">
+        <li><span>1</span><div><strong>选择题型</strong><small>不确定时可用自动识别。</small></div></li>
+        <li><span>2</span><div><strong>提交文字或图片</strong><small>稳定演示优先粘贴文字。</small></div></li>
+        <li><span>3</span><div><strong>核对识别结果</strong><small>图片和复杂排版可能识别错误。</small></div></li>
+        <li><span>4</span><div><strong>查看推理过程</strong><small>需要时可主动终止。</small></div></li>
+      </ol>
+    </section>
+
+    <section id="intake" class="panel intake-panel">
       <div class="section-title"><span>01</span><div><h2>提交题目</h2><p>文字、图片或两者皆可。所有输入都会先经过 DeepSeek。</p></div></div>
       <div id="deepseek-state" class="service-state pending" aria-live="polite">正在检查 DeepSeek 配置……</div>
       <div class="route-controls">
@@ -57,7 +75,7 @@
 
     <section id="result" class="panel hidden">
       <div class="section-title"><span>03</span><div><h2>做题过程</h2><p>每一步都能从原始 givens 重放验证。</p></div></div>
-      <div id="status" class="status"></div>
+      <div id="status" class="status" role="status" aria-live="polite"></div>
       <button id="stop-reasoning" class="danger hidden" type="button">终止推理</button>
       <div id="grid" class="sudoku-grid"></div><div id="nonogram-grid" class="nonogram-grid hidden" role="grid" aria-label="数织结果"></div><ol id="trace" class="trace"></ol>
     </section>
@@ -83,7 +101,7 @@
       <div class="mine-board-wrap"><div id="mine-board" class="mine-board" role="grid" aria-label="扫雷棋盘"></div></div>
     </section>
 
-    <section class="paper-section">
+    <section id="paper-catalog" class="paper-section">
       <div class="section-title"><span>∞</span><div><h2>纸笔谜题</h2><p>统一入口，逐种建立可解释、可验证的做题流程。</p></div></div>
       <div class="cards">
         <article class="puzzle-card enabled"><div class="badge">可用</div><h3>普通数独</h3><p>裸单、行/列/宫隐单；停滞时明确交还给 Agent。</p></article>
@@ -95,7 +113,7 @@
       <p class="section-link"><a href="/paper-puzzles">进入纸笔谜题子页面 →</a></p>
     </section>
 
-    <section class="paper-section">
+    <section id="cipher-catalog" class="paper-section">
       <div class="section-title"><span>↔</span><div><h2>密码工具</h2><p>检索古典密码规则，使用确定性的转换表辅助解题。</p></div></div>
       <p class="section-link"><a href="/cipher-tools">打开密码搜索库与转换表 →</a></p>
     </section>
@@ -103,6 +121,7 @@
   <footer>默认仅监听 127.0.0.1 · API Key 不会进入浏览器</footer>
   <script src="/static/sudoku-navigation.js" defer></script>
   <script src="/static/agent-trace.js" defer></script>
+  <script src="/static/response-error.js" defer></script>
   <script src="/static/app.js" defer></script>
 </body>
 </html>

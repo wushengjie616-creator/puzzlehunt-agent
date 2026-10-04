@@ -17,11 +17,13 @@ class NormalizationError(ValueError):
 
 
 _SYSTEM_PROMPT = """You are the mandatory NORMALIZE_INPUT stage for a puzzle agent.
-Return one JSON object only. Classify kind as sudoku, nonogram, rule_puzzle, or general. Preserve all supplied clues.
+Return one valid JSON object only (no Markdown fences or surrounding prose). Classify kind as sudoku, nonogram, rule_puzzle, or general. Preserve all supplied clues.
+The JSON object must use this envelope shape: {"kind":"general","title":"...","confidence":0.9,"warnings":[],"canonical":{"text":"..."}}. Replace the example values with the actual classification and faithfully transcribed puzzle.
 For sudoku, canonical must contain size, grid using null for blanks, and optional symbols/regions/box shape.
 For an ordinary 9×9 Sudoku image, omit symbols (the default is integer 1 through 9), return exactly 9 rows of 9 cells, use JSON integers 1..9 for printed clues and null for blanks. Never use strings, 0, empty strings, or dots for cells. Read only the large printed digits inside the board: ignore dates, timers, titles, number pads, pencil buttons, and other interface controls. Do not fill inferred answers. Recheck every row and column against the image before returning.
 For a black-and-white nonogram, canonical must contain row_clues and column_clues as arrays of positive-integer arrays; use [] for an empty line. Read row clues left-to-right, one horizontal clue group per grid row. Read column clues top-to-bottom, one vertical clue stack per grid column; keep the printed order within each stack. Count the grid rows and columns before transcribing, and return exactly one clue array for each. Recheck that the sum of all row clue numbers equals the sum of all column clue numbers; if the image is ambiguous, report that in warnings instead of inventing clues. It may contain a grid using null for unknown, 1 for filled, and 0 for empty.
-For rule_puzzle, extract the supplied rules and board without solving. canonical must contain: rules [{id,text}], unique integer symbols, entities [{id,label,value,row?,column?}], clues [{id,text,entity_ids}], and optional display {type:"grid",rows,columns}. Use null for unknown entity values. Every clue must name the entities it affects. Do not design the solving method; method synthesis is a separate stage.
+Use rule_puzzle only when the puzzle has a finite set of explicit symbolic entities and a finite integer domain that can be represented in the required schema. Merely having written instructions, rules, or clues does not make a puzzle a rule_puzzle. For an unstructured word, cipher, or other ordinary puzzle, use general and preserve its full text.
+For rule_puzzle, extract the supplied rules and board without solving. canonical must contain: rules [{id,text}], unique integer symbols, entities [{id,label,value,row?,column?}], clues [{id,text,entity_ids}], and optional display {type:"grid",rows,columns}. Infer symbols only from an explicit finite domain/range in the supplied rules; never return an empty symbols list for a rule_puzzle and never invent a domain. If no finite integer domain is stated, classify as general unless the user explicitly selected rule_puzzle. Use null for unknown entity values. Every clue must name the entities it affects. Do not design the solving method; method synthesis is a separate stage.
 For general puzzles, canonical must contain text and may contain title/artifact_notes.
 Always include title, confidence (0..1), warnings (array), kind, and canonical.
 Never solve the puzzle in this stage."""
@@ -124,20 +126,98 @@ class DeepSeekNormalizer:
                 raise NormalizationError("unsupported image MIME")
             encoded = base64.b64encode(image).decode("ascii")
             parts.append({"type": "image_url", "image_url": {"url": f"data:{image_mime};base64,{encoded}"}})
-        content = self.provider.complete([
+        messages = [
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": parts},
-        ])
+        ]
         try:
+            content = self.provider.complete(messages)
             envelope = json.loads(content)
-        except (json.JSONDecodeError, TypeError) as exc:
-            raise NormalizationError("DeepSeek did not return valid JSON") from exc
+        except (json.JSONDecodeError, TypeError):
+            # DeepSeek JSON mode can occasionally produce malformed/empty output.
+            # Retry once with an explicit format reminder; never salvage guessed JSON.
+            retry_messages = [
+                messages[0],
+                {
+                    "role": "system",
+                    "content": (
+                        "Your previous response could not be parsed. Return one valid JSON object only; "
+                        "no Markdown fences or prose. Use the required envelope keys kind, title, "
+                        "confidence, warnings, canonical. Example: "
+                        '{"kind":"general","title":"...","confidence":0.9,"warnings":[],"canonical":{"text":"..."}}'
+                    ),
+                },
+                messages[1],
+            ]
+            try:
+                content = self.provider.complete(retry_messages)
+                envelope = json.loads(content)
+            except (json.JSONDecodeError, TypeError) as exc:
+                raise NormalizationError(
+                    "DeepSeek did not return valid JSON after one retry"
+                ) from exc
         _repair_ordinary_sudoku_json(envelope)
-        self._validate_envelope(envelope, allow_sudoku_conflicts=True)
+        if not isinstance(envelope, dict):
+            raise NormalizationError("normalized envelope must be a JSON object")
         if preferred_kind is not None and envelope["kind"] != preferred_kind:
             raise NormalizationError(
                 f"Model kind {envelope['kind']} does not match selected kind {preferred_kind}"
             )
+        if preferred_kind == "rule_puzzle":
+            try:
+                validate_source(envelope.get("canonical"))
+            except RulePuzzleError as source_error:
+                repair_messages = [
+                    messages[0],
+                    {
+                        "role": "system",
+                        "content": (
+                            "The previous normalized Rule puzzle did not satisfy the source schema: "
+                            f"{source_error}. Re-read the original submission and return one corrected "
+                            "JSON envelope. Infer an integer symbols domain only when explicitly stated "
+                            "in the rules; do not invent values, solve the puzzle, or omit any clues."
+                        ),
+                    },
+                    messages[1],
+                ]
+                try:
+                    repaired = json.loads(self.provider.complete(repair_messages))
+                    if not isinstance(repaired, dict) or repaired.get("kind") != "rule_puzzle":
+                        raise NormalizationError(
+                            "DeepSeek schema repair did not return a Rule puzzle envelope"
+                        )
+                    validate_source(repaired.get("canonical"))
+                    envelope = repaired
+                except RulePuzzleError as repair_error:
+                    if "symbols must contain" in str(repair_error):
+                        raise NormalizationError(
+                            "按规则推理题需要 1–16 个不重复的整数候选符号；"
+                            "请在题目规则中写明有限数字范围后重试。"
+                        ) from repair_error
+                    raise NormalizationError(
+                        f"invalid normalized Rule puzzle after one schema repair: {repair_error}"
+                    ) from repair_error
+                except (json.JSONDecodeError, TypeError) as repair_error:
+                    raise NormalizationError(
+                        "DeepSeek could not repair the Rule puzzle schema after one retry"
+                    ) from repair_error
+        if preferred_kind is None and envelope.get("kind") == "rule_puzzle":
+            try:
+                validate_source(envelope.get("canonical"))
+            except RulePuzzleError as exc:
+                # Auto-classification must not block ordinary text because the model
+                # guessed a rule puzzle but failed to produce its executable source schema.
+                # Preserve the complete original submission and let the general Agent reason.
+                fallback_text = text or json.dumps(
+                    {"title": envelope.get("title"), "canonical": envelope.get("canonical")},
+                    ensure_ascii=False,
+                )
+                envelope["kind"] = "general"
+                envelope["canonical"] = {"text": fallback_text}
+                envelope.setdefault("warnings", []).append(
+                    "模型曾尝试识别为按规则推理题，但规则/实体/数字域结构不完整；已保留原题并转入普通谜题 Agent。若希望使用规则题组件，请在提交前明确选择“按规则推理”。"
+                )
+        self._validate_envelope(envelope, allow_sudoku_conflicts=True)
         source_hasher = hashlib.sha256()
         source_hasher.update(text.encode("utf-8"))
         if image is not None:
@@ -208,6 +288,10 @@ class DeepSeekNormalizer:
             try:
                 validate_source(canonical)
             except RulePuzzleError as exc:
+                if "symbols must contain" in str(exc):
+                    raise NormalizationError(
+                        "按规则推理题需要 1–16 个不重复的整数候选符号；请在题目规则中写明有限数字范围后重试。"
+                    ) from exc
                 raise NormalizationError(f"invalid normalized Rule puzzle: {exc}") from exc
         elif not isinstance(canonical.get("text"), str) or not canonical["text"].strip():
             raise NormalizationError("general canonical input requires non-empty text")

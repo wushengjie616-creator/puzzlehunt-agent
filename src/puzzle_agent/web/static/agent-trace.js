@@ -1,12 +1,73 @@
 (function agentTraceModule(root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
-  else root.buildAgentTraceSections = api.buildAgentTraceSections;
+  else {
+    root.buildAgentTraceSections = api.buildAgentTraceSections;
+    root.buildAgentConclusion = api.buildAgentConclusion;
+  }
 }(typeof globalThis === "undefined" ? this : globalThis, function buildAgentTraceModule() {
   const values = value => Array.isArray(value) ? value : [];
   const compact = value => typeof value === "string" ? value : JSON.stringify(value);
+  const toolNames = {
+    a1z26_decode: "A1Z26 解码",
+    grid_trace: "按方向移动并读取格子",
+    read_grid_path: "沿路径读取格子",
+    palindrome_mismatch: "提取镜像不匹配字母",
+    expand_symbol_groups: "展开符号分组",
+    decode_bacon_groups: "培根密码解码",
+  };
+  const roleNames = {
+    answer: "答案", instruction: "指令", ordering: "排序线索",
+    ordering_key: "排序键", parameter: "参数", transformed_artifact: "转换结果",
+    carrier: "载体",
+  };
+  const arrowNames = {N: "↑", E: "→", S: "↓", W: "←", NE: "↗", SE: "↘", SW: "↙", NW: "↖"};
+
+  function describeArguments(item) {
+    const args = item.arguments;
+    if (!args || !Object.keys(args).length) return "";
+    if (Array.isArray(args.moves)) {
+      return `（方向：${args.moves.map(move => arrowNames[move] || move).join(" ")}）`;
+    }
+    if (Array.isArray(args.numbers)) return `（数列：${args.numbers.join("、")}）`;
+    return `（输入：${compact(args)}）`;
+  }
 
   function buildAgentTraceSections(state) {
+    const process = [];
+    const validatedByEvidence = new Map();
+    values(state.validated_intermediate_answers).forEach(item => {
+      values(item.evidence_ids).forEach(id => {
+        if (!validatedByEvidence.has(id)) validatedByEvidence.set(id, []);
+        validatedByEvidence.get(id).push(item);
+      });
+    });
+    values(state.extractions).forEach(item => {
+      const evidenceId = item.evidence_id;
+      const tool = toolNames[item.tool] || item.tool || "确定性工具";
+      const args = describeArguments(item);
+      process.push(`${tool}${args} → ${compact(item.output)}`);
+      values(validatedByEvidence.get(evidenceId)).forEach(intermediate => {
+        const role = intermediate.intermediate_type || intermediate.role || "中间结果";
+        process.push(`核验为${roleNames[role] || role}：${intermediate.value}（证据 ${evidenceId}）`);
+      });
+      values(state.intermediate_answers)
+        .filter(intermediate => intermediate.value !== undefined
+          && values(intermediate.evidence_ids).includes(evidenceId)
+          && !values(state.validated_intermediate_answers).some(validated =>
+            validated.value === intermediate.value
+            && values(validated.evidence_ids).includes(evidenceId)))
+        .forEach(intermediate => {
+          const candidateRole = intermediate.intermediate_type || intermediate.role || "未分类";
+          process.push(`待核验中间候选（${roleNames[candidateRole] || candidateRole}）：${intermediate.value}（证据 ${evidenceId}，尚未通过中间结果核验）`);
+        });
+    });
+    if (!process.length) {
+      values(state.validated_intermediate_answers).forEach(item => {
+        const role = item.intermediate_type || item.role || "未分类";
+        process.push(`已核验中间结果（${roleNames[role] || role}）：${item.value}；证据：${values(item.evidence_ids).join("、") || "缺失"}`);
+      });
+    }
     const observations = values(state.observations).map(item => item.text || compact(item));
     if (state.input_assessment && Object.keys(state.input_assessment).length) {
       observations.push(`输入完整性：${state.input_assessment.completeness || "unknown"}`);
@@ -64,13 +125,36 @@
       terminal.push(`终局检查：${Object.entries(state.verification_checks).map(([key, value]) => `${key}=${value}`).join("，")}`);
     }
     if (!terminal.length) terminal.push(state.status === "SOLVED" ? "全部机器门通过。" : "尚未形成终局结论。");
-    return [
+    const sections = [
       {title: "看到什么", items: observations},
       {title: "联想到什么", items: associations},
       {title: "查了什么", items: research},
       {title: "怎么验证", items: verification},
       {title: "为什么接受或停下", items: terminal},
     ];
+    const answerCandidates = values(state.answer_candidates).map(item =>
+      `${item.answer || "（空）"} · 置信度 ${item.confidence || "未提供"} · 证据：${values(item.evidence_ids).join("、") || "未关联"}`
+    );
+    if (answerCandidates.length) {
+      sections.unshift({title: "答案候选（尚未通过终局核验）", items: answerCandidates});
+    }
+    if (process.length) sections.unshift({title: "推理过程（可核验）", items: process});
+    return sections;
   }
-  return {buildAgentTraceSections};
+
+  function buildAgentConclusion(state) {
+    if (state.status === "SOLVED" && typeof state.final_answer === "string" && state.final_answer.trim()) {
+      return `答案是：${state.final_answer.trim()}（已通过核验）`;
+    }
+    if (state.status === "CANCELLED") return "推理已由玩家终止，未给出最终答案";
+    const candidates = [...new Set(values(state.answer_candidates)
+      .map(item => typeof item.answer === "string" ? item.answer.trim() : "")
+      .filter(Boolean))];
+    if (candidates.length === 1) return `可能答案是：${candidates[0]}（未通过终局核验）`;
+    if (candidates.length > 1) return `可能答案有：${candidates.join(" / ")}（均未通过终局核验）`;
+    if (state.status === "EXHAUSTED") return "未得出有效答案（推理预算已耗尽）";
+    if (state.status === "BLOCKED_INPUT") return "未得出有效答案（缺少必要输入）";
+    return "未得出有效答案（当前推理未通过核验）";
+  }
+  return {buildAgentTraceSections, buildAgentConclusion};
 }));

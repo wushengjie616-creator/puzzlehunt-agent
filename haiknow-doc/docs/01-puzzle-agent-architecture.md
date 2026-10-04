@@ -17,6 +17,15 @@ Web 默认仅监听 `127.0.0.1`。站点把题目入口、`/paper-puzzles` 纸�
 账号系统，也不把 API Key、原图或 base64 放入浏览器响应和事件。原图只在内存中经过解码、像素限制与
 重编码，规范化线程结束后释放。
 
+确认入口在规范化完成后签发回执。同一 Intake 对同一份 canonical 重复确认时返回原回执；如果确认后尝试
+更换 canonical 则拒绝。浏览器确认按钮在确认与启动解题期间保持禁用，避免重复点击启动多个 session。
+普通谜题运行异常会记录完整服务端堆栈、把 session 标记为 `FAILED` 并返回结构化 JSON 错误；浏览器会按
+确认、创建会话或 Agent 推理阶段显示错误，并兼容代理或服务器返回的纯文本错误响应。
+
+三个页面的首屏都有用途与起步指引：主页说明题型选择、提交、识别校对和推理过程；纸笔页区分需要
+DeepSeek 的解题组件、完全本地的扫雷与未知规则题；密码页区分快速转换、规则搜索和视觉对照表。指引只
+解释入口、操作顺序和可信边界，不改变 API 或解题流程。
+
 `/api/bootstrap` 只返回 DeepSeek 是否已配置、视觉/Agent 模型名和非敏感提示，不返回 Key。启动时按
 进程环境 > `.env.local` > `.env` 加载 allowlisted `DEEPSEEK_*` 配置；未配置时首页在提交前禁用规范化并
 提示创建 `.env` 或 `.env.local`。“已配置”仅表示 Key 存在，不代表网络、余额或凭据已通过
@@ -39,6 +48,14 @@ text / image / mixed
 首页支持点击选择和拖拽图片，但两条路径共用同一套 MIME、magic、大小、像素与重编码安全门。题型可选
 auto/general/sudoku/nonogram/rule_puzzle；纸笔子页通过 allowlist query 预选，服务端再次校验。显式题型进入 normalizer
 prompt，输出 kind 不一致即失败关闭，不能静默落到通用 Agent。
+
+DeepSeek JSON 模式若偶发返回空或不可解析内容，normalizer 会在同一输入上追加一次明确的 JSON 格式纠正请求；
+仍不可解析时失败关闭。显式选择规则题时，如果 JSON 可解析但来源 schema 不完整，会带校验错误追加一次结构纠正请求，
+只允许依据原规则恢复有限候选域；题型不匹配或规则仍不完整则失败关闭，不会自动猜补。
+
+自动分类时，写有规则/说明本身不等同于 `rule_puzzle`：只有能完整提取有限整数符号域和显式实体/线索的有限域题才走规则推理组件。
+若模型误分为 `rule_puzzle` 但来源结构不合契约，自动模式保留原始文字（纯图片输入则保留识别到的结构 JSON）并转入 `general`，在确认页显示提醒；
+用户明确选择“按规则推理”时则不降级，缺少候选整数域会给出可操作的错误提示。
 
 确认阶段按题型渲染编辑器，而不向玩家暴露 canonical JSON：Sudoku 使用可编辑 N×N 网格并依据
 `box_rows/box_cols`（标准 9×9 默认 3×3）绘制粗分宫线，Nonogram 使用行列线索表，rule_puzzle 使用规则、
@@ -140,7 +157,7 @@ provider wrapper 在当前调用前后检查。若请求发生在一次非流式
 - 首轮局部语义覆盖不足一半时，框架可在计划前做一次恢复轮：已验证结果视为不可变锚点，未解单元重新物化；完全没有锚点时只生成 1–3 个题面可落地的高杠杆候选。恢复后禁止再进入工具重规划，保证总预算仍有界。
 - 计划轮至少保留两个 competing hypotheses，并选择可判别实验。
 - 观察轮保存题面明确给出的答案长度等 `answer_constraints`；计划轮最多保存四个带映射依据、不变量、预测和
-  证伪条件的 `representation_hypotheses`。表示只能在通用展开工具证明全组约束后升级为 evidence。
+  证伪条件的 `representation_hypotheses`。每种表示都必须关联成功的确定性工具证据；符号分组仍要求通用展开工具逐组通过不变量，其他表示由相应的确定性解码/提取工具结果核验。
 - 每个工具计划必须引用可见 signal，给出具体 prediction 与 falsifier；空计划保持为空，不再暗中回退到通用密码 shotgun。
 - 工具轮只运行白名单确定性工具，结果带 provenance 写入 evidence。
 - 评价轮必须消费工具或人工产生的新 evidence。
@@ -238,9 +255,7 @@ Unicode 图形猜字母。`ToolRegistry` 负责模型可计划调用的确定性
 
 阶段 memory 不是对话历史，而是结构化状态：`observations` 与 `flavor_associations` 保存题面事实和可检验联想，`attempts/evidence/extractions` 保存机械实验账本，`intermediate_answers` 保存候选载体，`validated_intermediate_answers` 只保存通过独立证据门的中间结果，`open_questions` 与 `unused_elements` 保存尚未闭合的推理债务。没有验证过的中间结果、或后两项非空时，机器终局门都不能接受 `SOLVED`。
 
-Web 不请求模型另写“思维过程”，而是将上述 state 投影为五段可审计 trace：看到、联想、资料路由、表示/
-工具验证以及接受或停下原因。其中同时展示输入充分性、线索角色、查询用途、留出验证、版本冲突与 typed
-blocker；旧 session 缺少新字段时按空集合显示。
+Web 不请求模型另写“思维过程”，而是将上述 state 投影为可审计 trace：醒目结论栏明确区分已核验答案、未核验的可能答案、未得出有效答案与主动终止；按 evidence ID 展示确定性工具调用、输入、输出与已验证中间结果。未验证中间候选及未过终局门的答案候选会显式标为待核验，不冒充最终答案。其余栏目展示看到、联想、资料路由、表示/工具验证以及接受或停下原因，同时呈现输入充分性、线索角色、查询用途、留出验证、版本冲突与 typed blocker；旧 session 缺少新字段时按空集合显示。
 
 周期报告不读取模型私有思维链。每个节点 trace 额外记录可观察效果：观察/联想数量、假设与计划数量、工具成功/失败和 extraction 增量、评价的 verify/replan 决策、阶段 memory 债务，以及终局是否接受答案。错误题的因果 usefulness 仍标 `UNASSESSABLE`，但报告会显示实际行为及 `FAILED_TOOL_CALLS`、`EMPTY_PLAN`、`PROVIDER_ERROR` 等问题，不再只给空泛激活率。
 

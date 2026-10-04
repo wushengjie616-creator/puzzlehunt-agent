@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 from copy import deepcopy
+import logging
 import os
 from pathlib import Path
 import secrets
@@ -26,6 +27,7 @@ from puzzle_agent.cipher_reference import BRAILLE_TABLE, SEMAPHORE_TABLE, search
 
 
 _STATIC = Path(__file__).with_name("static")
+_LOGGER = logging.getLogger(__name__)
 _WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 _ALLOWED_HOSTS = {"127.0.0.1", "localhost", "testserver", "::1"}
 
@@ -148,7 +150,7 @@ def create_app(
     def static_asset(name: str):
         if name not in {
             "app.js", "cipher-tools.js", "paper-puzzles.js",
-            "styles.css", "sudoku-navigation.js", "agent-trace.js",
+            "styles.css", "sudoku-navigation.js", "agent-trace.js", "response-error.js",
         }:
             raise HTTPException(404)
         return FileResponse(_STATIC / name)
@@ -334,10 +336,18 @@ def create_app(
     @app.post("/api/intakes/{intake_id}/confirm")
     async def confirm_intake(intake_id: str, request: Request):
         record = get_intake_record(intake_id)
-        if record["status"] != "READY_FOR_CONFIRMATION":
-            raise HTTPException(409, "Intake is not ready for confirmation")
         body = await request.json()
         canonical = body.get("canonical") if isinstance(body, dict) else None
+        if record["status"] == "CONFIRMED":
+            if canonical == record.get("confirmed_canonical"):
+                return {
+                    "intake_id": intake_id,
+                    "receipt": record["receipt"],
+                    "canonical_hash": canonical_hash(canonical),
+                }
+            raise HTTPException(409, "Intake was already confirmed with different input")
+        if record["status"] != "READY_FOR_CONFIRMATION":
+            raise HTTPException(409, "Intake is not ready for confirmation")
         envelope = deepcopy(record["envelope"])
         envelope["canonical"] = canonical
         try:
@@ -439,9 +449,16 @@ def create_app(
         if app.state.agent_provider is None:
             raise HTTPException(503, "DEEPSEEK_API_KEY is required to run the complex Agent")
         session["status"] = "RUNNING"
-        result = app.state.complex_manager.run(
-            session["complex_session_id"], app.state.agent_provider
-        )
+        try:
+            result = app.state.complex_manager.run(
+                session["complex_session_id"], app.state.agent_provider
+            )
+        except Exception as exc:
+            session["status"] = "FAILED"
+            _LOGGER.exception("Complex Agent run failed for session %s", session_id)
+            raise HTTPException(
+                500, "Agent run failed; inspect the local server log for details"
+            ) from exc
         session["status"] = result.get("status", "UNKNOWN")
         session["result"] = result
         return deepcopy(result)

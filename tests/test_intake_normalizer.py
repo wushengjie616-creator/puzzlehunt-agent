@@ -26,6 +26,42 @@ def png_bytes(width=2, height=2):
 
 
 class IntakeNormalizerTests(unittest.TestCase):
+    def test_normalizer_retries_once_with_json_specific_repair_instruction(self):
+        envelope = {
+            "kind": "general", "title": "文字题", "confidence": 0.9,
+            "warnings": [], "canonical": {"text": "请解题"},
+        }
+
+        class TransientlyMalformedProvider:
+            def __init__(self):
+                self.calls = []
+
+            def complete(self, messages):
+                self.calls.append(messages)
+                return "not-json" if len(self.calls) == 1 else json.dumps(envelope)
+
+        provider = TransientlyMalformedProvider()
+        result = DeepSeekNormalizer(provider).normalize(text="请解题")
+
+        self.assertEqual(result["envelope"], envelope)
+        self.assertEqual(len(provider.calls), 2)
+        self.assertIn("one valid JSON object", provider.calls[1][1]["content"])
+        self.assertIn('"kind":"general"', provider.calls[1][1]["content"])
+
+    def test_normalizer_still_fails_closed_after_one_malformed_json_retry(self):
+        class AlwaysMalformedProvider:
+            def __init__(self):
+                self.calls = 0
+
+            def complete(self, messages):
+                self.calls += 1
+                return "not-json"
+
+        provider = AlwaysMalformedProvider()
+        with self.assertRaisesRegex(NormalizationError, "after one retry"):
+            DeepSeekNormalizer(provider).normalize(text="请解题")
+        self.assertEqual(provider.calls, 2)
+
     def test_text_and_image_always_pass_through_provider_content_parts(self):
         provider = FakeProvider({
             "kind": "sudoku",
@@ -53,6 +89,83 @@ class IntakeNormalizerTests(unittest.TestCase):
             DeepSeekNormalizer(BadProvider()).normalize(text="x")
         with self.assertRaisesRegex(NormalizationError, "kind"):
             DeepSeekNormalizer(FakeProvider({"canonical": {}})).normalize(text="x")
+
+    def test_auto_route_preserves_invalid_rule_classification_as_general_text(self):
+        provider = FakeProvider({
+            "kind": "rule_puzzle", "title": "带规则的谜题", "confidence": 0.7,
+            "warnings": [],
+            "canonical": {
+                "rules": [{"id": "r1", "text": "按规则连接字母。"}],
+                "symbols": [], "entities": [], "clues": [],
+            },
+        })
+
+        result = DeepSeekNormalizer(provider).normalize(
+            text="请按规则连接字母，得到一个英文单词。"
+        )
+
+        self.assertEqual(result["envelope"]["kind"], "general")
+        self.assertIn("请按规则连接字母", result["envelope"]["canonical"]["text"])
+        self.assertTrue(any("普通谜题" in warning for warning in result["envelope"]["warnings"]))
+        self.assertIn(
+            "Merely having written instructions, rules, or clues does not make a puzzle a rule_puzzle",
+            provider.calls[0][0]["content"],
+        )
+
+    def test_explicit_rule_puzzle_selection_does_not_silently_downgrade_bad_source(self):
+        provider = FakeProvider({
+            "kind": "rule_puzzle", "title": "规则题", "confidence": 0.7,
+            "warnings": [],
+            "canonical": {
+                "rules": [{"id": "r1", "text": "A 小于 B。"}],
+                "symbols": [], "entities": [], "clues": [],
+            },
+        })
+
+        with self.assertRaisesRegex(NormalizationError, "候选符号"):
+            DeepSeekNormalizer(provider).normalize(
+                text="规则与题面", preferred_kind="rule_puzzle"
+            )
+
+    def test_explicit_rule_puzzle_repairs_schema_once_from_original_rules(self):
+        corrected = {
+            "kind": "rule_puzzle", "title": "大小关系", "confidence": 0.9,
+            "warnings": [], "canonical": {
+                "rules": [{"id": "r1", "text": "A 与 B 取 1、2，且 A 小于 B。"}],
+                "symbols": [1, 2],
+                "entities": [
+                    {"id": "A", "label": "A", "value": None},
+                    {"id": "B", "label": "B", "value": None},
+                ],
+                "clues": [{"id": "c1", "text": "A < B", "entity_ids": ["A", "B"]}],
+            },
+        }
+
+        class SchemaRepairProvider:
+            def __init__(self):
+                self.calls = []
+
+            def complete(self, messages):
+                self.calls.append(messages)
+                if len(self.calls) == 1:
+                    return json.dumps({
+                        "kind": "rule_puzzle", "title": "大小关系", "confidence": 0.9,
+                        "warnings": [], "canonical": {
+                            "rules": [{"id": "r1", "text": "A 与 B 取 1、2，且 A 小于 B。"}],
+                            "symbols": [], "entities": [], "clues": [],
+                        },
+                    }, ensure_ascii=False)
+                return json.dumps(corrected, ensure_ascii=False)
+
+        provider = SchemaRepairProvider()
+        result = DeepSeekNormalizer(provider).normalize(
+            text="A 与 B 取 1、2，且 A 小于 B。", preferred_kind="rule_puzzle"
+        )
+
+        self.assertEqual(result["envelope"]["canonical"]["symbols"], [1, 2])
+        self.assertEqual(len(provider.calls), 2)
+        self.assertIn("did not satisfy", provider.calls[1][1]["content"])
+        self.assertIn("symbols must contain", provider.calls[1][1]["content"])
 
     def test_nonogram_envelope_is_supported_and_validated(self):
         canonical = {

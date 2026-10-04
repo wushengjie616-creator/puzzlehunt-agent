@@ -1143,11 +1143,25 @@ def _verify(provider: StageProvider, state: PuzzleGraphState) -> PuzzleGraphStat
         item.get("id") for item in representations
         if assessment_by_id.get(item.get("id")) == "supports"
     }
+    successful_representation_attempts = {
+        (item.get("tool"), item.get("representation_id"))
+        for item in attempts
+        if item.get("outcome") in {"completed", "candidates_found"}
+    }
     representation_evidence = [
         item for item in state.get("evidence", [])
-        if item.get("tool") == "expand_symbol_groups"
-        and item.get("representation_id") in active_representation_ids
-        and item.get("all_passed") is True
+        if item.get("representation_id") in active_representation_ids
+        and (
+            (
+                item.get("tool") == "expand_symbol_groups"
+                and item.get("all_passed") is True
+            )
+            or (
+                item.get("kind") == "deterministic_tool_result"
+                and (item.get("tool"), item.get("representation_id"))
+                in successful_representation_attempts
+            )
+        )
     ]
     representation_gate = bool(representations) and (
         not active_representation_ids or not representation_evidence

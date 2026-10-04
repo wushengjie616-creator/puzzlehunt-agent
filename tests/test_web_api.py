@@ -7,6 +7,7 @@ import unittest
 
 from fastapi.testclient import TestClient
 
+from puzzle_agent.intake.normalizer import DeepSeekNormalizer
 from puzzle_agent.web.app import create_app
 
 
@@ -87,6 +88,149 @@ class WebApiTests(unittest.TestCase):
         })
         self.assertEqual(bypass.status_code, 403)
 
+    def test_auto_classified_invalid_rule_text_can_confirm_and_enter_general_agent(self):
+        original_text = "请按规则连接字母，得到一个英文单词。"
+
+        class MisclassifyingProvider:
+            def complete(self, _messages):
+                return json.dumps({
+                    "kind": "rule_puzzle", "title": "规则谜题", "confidence": 0.8,
+                    "warnings": [], "canonical": {
+                        "rules": [{"id": "r1", "text": "按规则连接字母。"}],
+                        "symbols": [], "entities": [], "clues": [],
+                    },
+                }, ensure_ascii=False)
+
+        class CaptureManager:
+            def __init__(self):
+                self.text = None
+
+            def create(self, puzzle):
+                self.text = puzzle.content
+                return "general-session"
+
+        manager = CaptureManager()
+        client = TestClient(create_app(
+            normalizer=DeepSeekNormalizer(MisclassifyingProvider()),
+            receipt_secret=b"g" * 32, capability_token="fallback-capability",
+        ))
+        client.app.state.complex_manager = manager
+        headers = dict(self.headers, **{"X-Puzzle-Capability": "fallback-capability"})
+        started = client.post("/api/intakes", headers=headers, json={"text": original_text})
+        self.assertEqual(started.status_code, 202, started.text)
+        intake_id = started.json()["intake_id"]
+        for _ in range(100):
+            intake = client.get(f"/api/intakes/{intake_id}").json()
+            if intake.get("status") in {"READY_FOR_CONFIRMATION", "FAILED"}:
+                break
+            time.sleep(0.01)
+
+        self.assertEqual(intake["status"], "READY_FOR_CONFIRMATION")
+        self.assertEqual(intake["envelope"]["kind"], "general")
+        self.assertEqual(intake["envelope"]["canonical"]["text"], original_text)
+        canonical = intake["envelope"]["canonical"]
+        confirmed = client.post(
+            f"/api/intakes/{intake['intake_id']}/confirm", headers=headers,
+            json={"canonical": canonical},
+        )
+        session = client.post("/api/sessions", headers=headers, json={
+            "intake_id": intake["intake_id"], "canonical": canonical,
+            "receipt": confirmed.json()["receipt"],
+        })
+
+        self.assertEqual(confirmed.status_code, 200)
+        self.assertEqual(session.status_code, 201)
+        self.assertEqual(session.json()["kind"], "general")
+        self.assertEqual(manager.text, original_text)
+
+    def test_confirming_same_canonical_twice_returns_the_original_receipt(self):
+        started = self.client.post("/api/intakes", headers=self.headers, json={"text": "数独"})
+        intake_id = started.json()["intake_id"]
+        intake = self._wait_for_intake(intake_id)
+        self.assertEqual(intake["status"], "READY_FOR_CONFIRMATION")
+        canonical = intake["envelope"]["canonical"]
+        url = f"/api/intakes/{intake_id}/confirm"
+
+        first = self.client.post(url, headers=self.headers, json={"canonical": canonical})
+        repeated = self.client.post(url, headers=self.headers, json={"canonical": canonical})
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(repeated.status_code, 200)
+        self.assertEqual(repeated.json()["receipt"], first.json()["receipt"])
+
+        changed = json.loads(json.dumps(canonical))
+        changed["grid"][0][1] = 2
+        rejected = self.client.post(url, headers=self.headers, json={"canonical": changed})
+        self.assertEqual(rejected.status_code, 409)
+
+    def test_browser_error_reader_preserves_plain_text_server_errors(self):
+        home = self.client.get("/")
+        self.assertIn('/static/response-error.js', home.text)
+        script = self.client.get("/static/response-error.js")
+        self.assertEqual(script.status_code, 200)
+        probe = subprocess.run(
+            [
+                "node", "-e",
+                "const {responseErrorMessage}=require('./src/puzzle_agent/web/static/response-error.js');"
+                "Promise.all(["
+                "responseErrorMessage({status:500,text:async()=>\"Internal Server Error\"}),"
+                "responseErrorMessage({status:422,text:async()=>JSON.stringify({detail:\"bad input\"})})"
+                "]).then(x=>console.log(JSON.stringify(x)));",
+            ],
+            cwd=Path(__file__).resolve().parents[1],
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        self.assertEqual(json.loads(probe.stdout), ["Internal Server Error", "bad input"])
+
+    def test_agent_run_exception_is_logged_and_returned_as_json(self):
+        class GeneralNormalizer:
+            def normalize(self, **_kwargs):
+                return {
+                    "source_hash": "run-failure-source", "envelope_hash": "run-failure-envelope",
+                    "envelope": {
+                        "kind": "general", "title": "Test", "confidence": 1.0,
+                        "warnings": [], "canonical": {"text": "test puzzle"},
+                    },
+                }
+
+        class BrokenManager:
+            def create(self, *_args, **_kwargs):
+                return "fake-complex-session"
+
+            def run(self, *_args, **_kwargs):
+                raise RuntimeError("provider transport failed")
+
+        with tempfile.TemporaryDirectory() as directory:
+            client = TestClient(create_app(
+                normalizer=GeneralNormalizer(), agent_provider=object(),
+                sessions_root=Path(directory), receipt_secret=b"e" * 32,
+                capability_token="run-failure-capability",
+            ))
+            client.app.state.complex_manager = BrokenManager()
+            headers = {
+                "X-Puzzle-Capability": "run-failure-capability", "Origin": "http://testserver",
+                "Content-Type": "application/json",
+            }
+            intake_id = client.post("/api/intakes", headers=headers, json={"text": "test puzzle"}).json()["intake_id"]
+            for _ in range(100):
+                intake = client.get(f"/api/intakes/{intake_id}").json()
+                if intake["status"] in {"READY_FOR_CONFIRMATION", "FAILED"}:
+                    break
+                time.sleep(0.01)
+            canonical = intake["envelope"]["canonical"]
+            receipt = client.post(
+                f"/api/intakes/{intake_id}/confirm", headers=headers, json={"canonical": canonical}
+            ).json()["receipt"]
+            created = client.post("/api/sessions", headers=headers, json={
+                "intake_id": intake_id, "canonical": canonical, "receipt": receipt,
+            }).json()
+            response = client.post(f"/api/sessions/{created['session_id']}/run", headers=headers, json={})
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()["detail"], "Agent run failed; inspect the local server log for details")
+
     def test_write_routes_reject_cross_site_wrong_host_and_missing_token(self):
         self.assertEqual(self.client.post("/api/intakes", json={"text": "x"}).status_code, 403)
         cross_site = dict(self.headers, Origin="https://evil.example")
@@ -110,6 +254,8 @@ class WebApiTests(unittest.TestCase):
         self.assertNotIn("修改 JSON", response.text)
         script = self.client.get("/static/app.js").text
         self.assertIn('dropZone.addEventListener(eventName,event=>', script)
+        self.assertIn("if(confirmationInFlight)return", script)
+        self.assertIn("confirmButton.disabled=true", script)
         self.assertIn("function renderCanonicalEditor", script)
         self.assertIn("function collectCanonical", script)
         self.assertIn('value="rule_puzzle"', response.text)
@@ -120,6 +266,29 @@ class WebApiTests(unittest.TestCase):
         bootstrap = self.client.get("/api/bootstrap").json()
         self.assertEqual(bootstrap["capability_token"], "test-capability")
         self.assertFalse(bootstrap["login_required"])
+
+    def test_every_frontend_page_explains_what_to_use_and_how_to_start(self):
+        home = self.client.get("/")
+        self.assertEqual(home.status_code, 200)
+        self.assertIn('aria-labelledby="home-guide-title"', home.text)
+        for phrase in ("第一次使用", "选择题型", "提交文字或图片", "核对识别结果", "查看推理过程"):
+            self.assertIn(phrase, home.text)
+        self.assertIn("稳定演示优先粘贴文字", home.text)
+
+        paper = self.client.get("/paper-puzzles")
+        self.assertEqual(paper.status_code, 200)
+        self.assertIn('aria-labelledby="paper-guide-title"', paper.text)
+        for phrase in ("纸笔区怎么选", "解题组件", "本地游戏", "按规则推理"):
+            self.assertIn(phrase, paper.text)
+        self.assertIn("需要 DeepSeek", paper.text)
+        self.assertIn("不调用 DeepSeek", paper.text)
+
+        cipher_page = self.client.get("/cipher-tools")
+        self.assertEqual(cipher_page.status_code, 200)
+        self.assertIn('aria-labelledby="cipher-guide-title"', cipher_page.text)
+        for phrase in ("密码区怎么用", "快速转换", "搜索密码规则", "对照视觉表"):
+            self.assertIn(phrase, cipher_page.text)
+        self.assertIn("候选不是答案", cipher_page.text)
 
     def test_sudoku_keyboard_navigation_clamps_at_edges_without_changing_values(self):
         home = self.client.get("/")
@@ -167,6 +336,12 @@ class WebApiTests(unittest.TestCase):
             "reasoning_reference_hints": [{"name": "模板归纳"}],
             "research_ledger": [{"query": "固定宽度编码", "purpose": "routing", "proves_answer": False}],
             "representation_hypotheses": [{"id": "r1", "prediction": "all groups have width five"}],
+            "extractions": [
+                {"tool": "a1z26_decode", "arguments": {"numbers": [6, 15, 12, 12, 15, 23]}, "output": "FOLLOW", "evidence_id": "tool-1"},
+                {"tool": "grid_trace", "arguments": {"moves": ["N", "E", "E", "S", "S", "W"]}, "output": "SECRET", "evidence_id": "tool-2"},
+            ],
+            "validated_intermediate_answers": [{"value": "FOLLOW", "role": "instruction", "evidence_ids": ["tool-1"]}],
+            "answer_candidates": [{"answer": "SECRET", "confidence": "high", "evidence_ids": ["tool-2"]}],
             "evidence": [{"tool": "expand_symbol_groups", "all_passed": True}],
             "representation_assessment": [{"representation_id": "r1", "effect": "supports"}],
             "verification_checks": {"format": True},
@@ -190,19 +365,52 @@ class WebApiTests(unittest.TestCase):
         sections = json.loads(probe.stdout)
         self.assertEqual(
             [section["title"] for section in sections],
-            ["看到什么", "联想到什么", "查了什么", "怎么验证", "为什么接受或停下"],
+            ["推理过程（可核验）", "答案候选（尚未通过终局核验）", "看到什么", "联想到什么", "查了什么", "怎么验证", "为什么接受或停下"],
         )
-        self.assertIn("three uneven groups", sections[0]["items"][0])
-        self.assertTrue(any("输入完整性" in item for item in sections[0]["items"]))
-        self.assertTrue(any("decoder" in item for item in sections[1]["items"]))
-        self.assertTrue(any("模板归纳" in item for item in sections[2]["items"]))
-        self.assertTrue(any("proves_answer=false" in item for item in sections[2]["items"]))
-        self.assertTrue(any("r1" in item and "supports" in item for item in sections[3]["items"]))
-        self.assertTrue(any("核验等级：recomputed" in item for item in sections[3]["items"]))
-        self.assertTrue(any("版本冲突已解决" in item for item in sections[4]["items"]))
+        self.assertIn("A1Z26 解码", sections[0]["items"][0])
+        self.assertIn("FOLLOW", sections[0]["items"][0])
+        self.assertIn("指令", sections[0]["items"][1])
+        self.assertIn("按方向移动", sections[0]["items"][2])
+        self.assertIn("SECRET", sections[0]["items"][2])
+        self.assertEqual(sections[1]["title"], "答案候选（尚未通过终局核验）")
+        self.assertIn("SECRET", sections[1]["items"][0])
+        self.assertIn("three uneven groups", sections[2]["items"][0])
+        self.assertTrue(any("输入完整性" in item for item in sections[2]["items"]))
+        self.assertTrue(any("decoder" in item for item in sections[3]["items"]))
+        self.assertTrue(any("模板归纳" in item for item in sections[4]["items"]))
+        self.assertTrue(any("proves_answer=false" in item for item in sections[4]["items"]))
+        self.assertTrue(any("r1" in item and "supports" in item for item in sections[5]["items"]))
+        self.assertTrue(any("核验等级：recomputed" in item for item in sections[5]["items"]))
+        self.assertTrue(any("版本冲突已解决" in item for item in sections[6]["items"]))
         app_script = self.client.get("/static/app.js").text
         self.assertIn("buildAgentTraceSections", app_script)
         self.assertIn("renderAgentTrace", app_script)
+        self.assertIn("buildAgentConclusion(state)", app_script)
+        self.assertIn('role="status" aria-live="polite"', home.text)
+
+    def test_agent_conclusion_distinguishes_solved_candidate_and_no_answer(self):
+        probe = subprocess.run(
+            [
+                "node", "-e",
+                "const t=require('./src/puzzle_agent/web/static/agent-trace.js');"
+                "const states=["
+                "{status:'SOLVED',final_answer:'SECRET'},"
+                "{status:'NEEDS_REVIEW',answer_candidates:[{answer:'SECRET'}]},"
+                "{status:'NEEDS_REVIEW',answer_candidates:[]},"
+                "{status:'CANCELLED',answer_candidates:[{answer:'SECRET'}]}"
+                "];console.log(JSON.stringify(states.map(state=>typeof t.buildAgentConclusion==='function'?t.buildAgentConclusion(state):'missing')));",
+            ],
+            cwd=Path(__file__).resolve().parents[1],
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        self.assertEqual(json.loads(probe.stdout), [
+            "答案是：SECRET（已通过核验）",
+            "可能答案是：SECRET（未通过终局核验）",
+            "未得出有效答案（当前推理未通过核验）",
+            "推理已由玩家终止，未给出最终答案",
+        ])
 
     def test_player_selected_kind_reaches_normalizer_and_sudoku_can_stop_after_one_step(self):
         started = self.client.post("/api/intakes", headers=self.headers, json={
