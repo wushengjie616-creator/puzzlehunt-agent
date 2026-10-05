@@ -1,8 +1,30 @@
 # Puzzle Solving Agent
 
-一个面向 PuzzleHunt、纸笔谜题和古典密码题的本地解谜 Agent。它既能用 DeepSeek 观察、提出假设和验证答案，也把重复而可验证的部分交给确定性脚本；核心原则是：**模型负责理解与归纳，程序负责约束、重放和失败关闭。**
+## 这是什么
 
-如果你第一次接触这个仓库，从本页顺序阅读即可。若你准备把项目交给 Codex，请让它先读本 README，再按“给 Codex 的接手入口”继续。
+一个**本地运行**的解谜工具，帮你解 PuzzleHunt（协作解谜活动）、纸笔谜题（数独、数织、扫雷等）和古典密码（凯撒、培根、盲文、旗语等）。上传题目图片或文字，它会调用 DeepSeek 观察、提出假设并验证答案；对数独、数织、密码这类有确定规则的题，则由内置脚本直接计算，不依赖模型、也不花钱。
+
+三个典型用途：
+
+- **自己解题**：上传题面，看它一步步“看到什么 → 想到什么 → 怎么验证 → 为什么接受或停下”。
+- **给同事演示**：按下方「推荐演示路线」逐级演示，从零费用到图片识别。
+- **离线用工具**：数独、数织、扫雷、密码转换不配置 Key 也能直接用。
+
+> ⚠️ **需要 DeepSeek API Key**：图片识别和普通复杂题推理会调用 DeepSeek，**可能产生费用**。没有 Key 时，题面识别入口会明确显示不可用，但密码工具、数独、数织、扫雷仍可离线使用。
+
+如果你第一次接触这个仓库，从本页顺序阅读即可。
+
+## 术语速查
+
+| 词 | 一句话解释 |
+|---|---|
+| PuzzleHunt | 一组相互关联、需协作解开的谜题组成的解谜活动/比赛 |
+| DeepSeek | 本项目调用的外部大模型服务，负责“看题、联想、假设、验证”；需 API Key，按调用计费 |
+| CCBC | 一套中文密码/解谜赛事（cipherpuzzles 系列，第 16 届为 CCBC16）；本项目从其公开题面蒸馏通用解法，不复制原题/题解 |
+| oracle | 基准题的标准答案文件，用于评测对错，与题目输入物理隔离 |
+| benchmark / fixture | 用于评测与演示的标准化题目数据集 |
+| replay | 用确定性脚本重放一次求解过程，同输入得到同结果 |
+| 失败关闭（fail-closed） | 拿不准时就明确报错或停下，而不是假装解出来 |
 
 ## 一分钟认识项目
 
@@ -199,7 +221,30 @@ puzzle-agent benchmark --help
 
 CCBC 资料用于学习通用方法，不把官方题面/题解直接交给模型。派生 benchmark 更换主题、数据和答案，并在 runtime 与 evaluator 之间隔离 oracle。
 
-## 给 Codex 的接手入口
+## 进阶能力入口
+
+- CLI artifact、history、branch、finalize：运行 `puzzle-agent session --help`，并参考 [当前架构](haiknow-doc/docs/01-puzzle-agent-architecture.md)。
+- 原创 dev/blind benchmark：运行 `puzzle-agent benchmark --help`。
+- 周期评测和一次性 hard set：运行 `puzzle-agent cycle --help`；这类真实模型任务可能高费用，默认不要启动。
+- Git 自动发布器：运行 `puzzle-agent automation --help`；它有独立 allowlist、secret scan 和工作树稳定门，不是普通开发的必需步骤。
+- CCBC 推理方法：阅读 [TRACE-LIFT](research/ccbc16/methodology.md) 与 [HA-BRIDGE](research/human-association-reasoning.md)。
+
+## 文档入口
+
+- [项目知识索引](haiknow-doc/docs/index-by-topic.md)：按“第一次了解、开发修改、推理研究、历史追溯”路由。
+- [当前架构与运行契约](haiknow-doc/docs/01-puzzle-agent-architecture.md)：当前行为的权威说明。
+- [Agent 设计学习日志](haiknow-doc/docs/02-agent-design-journey.md)：为什么形成现在的架构。
+- [纸笔谜题演示题库](examples/paper-puzzle-demos/README.md)：运营演示和离线复算。
+- [普通谜题中等难度演示](examples/general-puzzle-demos/README.md)：三种分层机制、图片题面、独立 oracle 与工具轨迹。
+- [CCBC16 标准推理轨迹](haiknow-doc/docs/03-ccbc16-24-case-solution-guide.md)：复杂题研究材料。
+
+历史 plan/task 用于追溯决策与实施证据，不应替代上述 current 文档。完整历史路由见项目知识索引。
+
+## 面向开发者 / AI 接手
+
+以下内容面向需要接手、修改或维护代码的开发者与 AI 助手；只做演示/运营的读者可跳过。若你准备把项目交给 Codex，请让它先读本 README，再按下方「给 Codex 的接手入口」继续。
+
+### 给 Codex 的接手入口
 
 当本 README 被交给 Codex 时，按以下顺序建立项目上下文：
 
@@ -236,7 +281,7 @@ git diff --check
 
 除非用户明确授权，Codex 不应：调用付费 DeepSeek benchmark、启动 24 小时 scheduler、push/merge、公开部署本地 Web、执行 destructive Git 操作，或把 fake/scripted provider 的通过描述成真实模型能力。
 
-## 开发验证
+### 开发验证
 
 完整离线回归：
 
@@ -252,22 +297,3 @@ git diff --check
 ```
 
 测试默认完全离线。只有显式使用真实 provider，例如 `benchmark run --provider deepseek`、`cycle schedule --provider deepseek` 或 Web 提交题目，才会调用 DeepSeek。
-
-## 进阶能力入口
-
-- CLI artifact、history、branch、finalize：运行 `puzzle-agent session --help`，并参考 [当前架构](haiknow-doc/docs/01-puzzle-agent-architecture.md)。
-- 原创 dev/blind benchmark：运行 `puzzle-agent benchmark --help`。
-- 周期评测和一次性 hard set：运行 `puzzle-agent cycle --help`；这类真实模型任务可能高费用，默认不要启动。
-- Git 自动发布器：运行 `puzzle-agent automation --help`；它有独立 allowlist、secret scan 和工作树稳定门，不是普通开发的必需步骤。
-- CCBC 推理方法：阅读 [TRACE-LIFT](research/ccbc16/methodology.md) 与 [HA-BRIDGE](research/human-association-reasoning.md)。
-
-## 文档入口
-
-- [项目知识索引](haiknow-doc/docs/index-by-topic.md)：按“第一次了解、开发修改、推理研究、历史追溯”路由。
-- [当前架构与运行契约](haiknow-doc/docs/01-puzzle-agent-architecture.md)：当前行为的权威说明。
-- [Agent 设计学习日志](haiknow-doc/docs/02-agent-design-journey.md)：为什么形成现在的架构。
-- [纸笔谜题演示题库](examples/paper-puzzle-demos/README.md)：运营演示和离线复算。
-- [普通谜题中等难度演示](examples/general-puzzle-demos/README.md)：三种分层机制、图片题面、独立 oracle 与工具轨迹。
-- [CCBC16 标准推理轨迹](haiknow-doc/docs/03-ccbc16-24-case-solution-guide.md)：复杂题研究材料。
-
-历史 plan/task 用于追溯决策与实施证据，不应替代上述 current 文档。完整历史路由见项目知识索引。
